@@ -6,7 +6,10 @@ include .env
 export
 endif
 
-.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install
+GOPATH_BIN := $(shell go env GOPATH)/bin
+SQLC := $(GOPATH_BIN)/sqlc
+
+.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate
 
 build:
 	go build -o $(BINARY) $(CMD)
@@ -40,3 +43,10 @@ migrate-status: build
 
 goose-install:
 	go install github.com/pressly/goose/v3/cmd/goose@latest
+
+sqlc-install:
+	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+
+sqlc-generate:
+	@test -x "$(SQLC)" || (echo "sqlc not found. Run: make sqlc-install" && exit 1)
+	$(SQLC) generate

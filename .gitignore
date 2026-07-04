@@ -2,6 +2,3 @@ bin/
 .env
 *.test
 tmp/
-
-# sqlc
-internal/db/sqlc/
