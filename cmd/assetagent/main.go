@@ -18,6 +18,7 @@ func main() {
 	}
 
 	root.Flags().Bool("version", false, "Print version and exit")
+	root.AddCommand(newMigrateCmd())
 	root.RunE = func(cmd *cobra.Command, args []string) error {
 		showVersion, _ := cmd.Flags().GetBool("version")
 		if showVersion {
