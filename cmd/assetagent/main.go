@@ -12,7 +12,7 @@ var version = "dev"
 func main() {
 	root := &cobra.Command{
 		Use:   "assetagent",
-		Short: "Local-first personal wealth and transaction platform",
+		Short: "AI native wealth management agent",
 	}
 
 	root.Flags().Bool("version", false, "Print version and exit")
