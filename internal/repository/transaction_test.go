@@ -223,6 +223,130 @@ func TestList_paginationAndDateFilter(t *testing.T) {
 	}
 }
 
+func TestList_filters(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx := context.Background()
+
+	container, err := postgres.Run(ctx,
+		"postgres:18-alpine",
+		postgres.WithDatabase("assetagent"),
+		postgres.WithUsername("assetagent"),
+		postgres.WithPassword("assetagent"),
+	)
+	if err != nil {
+		t.Fatalf("start postgres: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := container.Terminate(ctx); err != nil {
+			t.Fatalf("terminate postgres: %v", err)
+		}
+	})
+
+	connStr, err := container.ConnectionString(ctx, "sslmode=disable")
+	if err != nil {
+		t.Fatalf("connection string: %v", err)
+	}
+
+	waitForDB(ctx, t, connStr)
+
+	if err := db.RunMigrations(connStr, "up"); err != nil {
+		t.Fatalf("migrate up: %v", err)
+	}
+
+	pool, err := db.NewPool(ctx, connStr)
+	if err != nil {
+		t.Fatalf("new pool: %v", err)
+	}
+	t.Cleanup(pool.Close)
+
+	repo := repository.NewTransaction(pool)
+
+	amazon := sampleTransactionWithPurpose("Prime Video subscription")
+	amazon.Counterparty = "AMAZON DIGITAL GERMANY GMBH"
+	amazon.Amount = decimal.RequireFromString("-2.99")
+
+	netflix := sampleTransactionWithPurpose("Netflix monthly")
+	netflix.OrderAccount = "DE89370400440532013000"
+	netflix.Counterparty = "NETFLIX INTERNATIONAL B.V."
+	netflix.Amount = decimal.RequireFromString("-12.99")
+	netflix.BookingText = "SUBSCRIPTION PAYMENT"
+
+	for _, tx := range []domain.Transaction{amazon, netflix} {
+		if _, err := repo.Insert(ctx, tx); err != nil {
+			t.Fatalf("insert: %v", err)
+		}
+	}
+
+	account := "DE15100500006011880043"
+	result, err := repo.List(ctx, domain.ListParams{
+		Limit:   10,
+		Account: &account,
+	})
+	if err != nil {
+		t.Fatalf("list by account: %v", err)
+	}
+	if result.Total != 1 || result.Transactions[0].Counterparty != amazon.Counterparty {
+		t.Fatalf("account filter = %+v, want 1 amazon row", result)
+	}
+
+	counterparty := "NETFLIX"
+	result, err = repo.List(ctx, domain.ListParams{
+		Limit:        10,
+		Counterparty: &counterparty,
+	})
+	if err != nil {
+		t.Fatalf("list by counterparty: %v", err)
+	}
+	if result.Total != 1 || result.Transactions[0].Purpose != "Netflix monthly" {
+		t.Fatalf("counterparty filter = %+v", result)
+	}
+
+	min := decimal.RequireFromString("-5")
+	max := decimal.RequireFromString("0")
+	result, err = repo.List(ctx, domain.ListParams{
+		Limit:     10,
+		MinAmount: &min,
+		MaxAmount: &max,
+	})
+	if err != nil {
+		t.Fatalf("list by amount: %v", err)
+	}
+	if result.Total != 1 || !result.Transactions[0].Amount.Equal(amazon.Amount) {
+		t.Fatalf("amount filter = %+v", result)
+	}
+
+	search := "subscription"
+	result, err = repo.List(ctx, domain.ListParams{
+		Limit:  10,
+		Search: &search,
+	})
+	if err != nil {
+		t.Fatalf("list by search: %v", err)
+	}
+	if result.Total != 2 {
+		t.Fatalf("search total = %d, want 2", result.Total)
+	}
+
+	result, err = repo.List(ctx, domain.ListParams{
+		Limit:   10,
+		Sort:    domain.SortAmount,
+		SortAsc: true,
+	})
+	if err != nil {
+		t.Fatalf("list sorted: %v", err)
+	}
+	if len(result.Transactions) != 2 {
+		t.Fatalf("len = %d, want 2", len(result.Transactions))
+	}
+	if result.Transactions[0].Amount.GreaterThan(result.Transactions[1].Amount) {
+		t.Fatalf("expected ascending amount sort, got %s then %s",
+			result.Transactions[0].Amount, result.Transactions[1].Amount)
+	}
+}
+
 func sampleTransactionWithPurpose(purpose string) domain.Transaction {
 	tx := sampleTransaction()
 	tx.Purpose = purpose

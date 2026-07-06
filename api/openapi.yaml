@@ -44,6 +44,45 @@ paths:
           schema:
             type: string
             format: date
+        - name: account
+          in: query
+          description: Filter by order account (exact match)
+          schema:
+            type: string
+        - name: counterparty
+          in: query
+          description: Filter by counterparty name prefix
+          schema:
+            type: string
+        - name: min_amount
+          in: query
+          description: Minimum amount (inclusive)
+          schema:
+            type: string
+        - name: max_amount
+          in: query
+          description: Maximum amount (inclusive)
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [booking_date, amount, counterparty]
+            default: booking_date
+        - name: order
+          in: query
+          description: Sort direction
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: q
+          in: query
+          description: Search purpose, counterparty, and booking text
+          schema:
+            type: string
       responses:
         "200":
           description: Paginated transactions

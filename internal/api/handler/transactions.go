@@ -9,6 +9,7 @@ import (
 	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/abteilung6/assetagent/internal/service"
 	openapi_types "github.com/oapi-codegen/runtime/types"
+	"github.com/shopspring/decimal"
 )
 
 type ListService interface {
@@ -28,20 +29,13 @@ func (h *Handler) GetHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetTransactions(w http.ResponseWriter, r *http.Request, params gen.GetTransactionsParams) {
-	listParams := domain.ListParams{}
-	if params.Limit != nil {
-		listParams.Limit = *params.Limit
-	}
-	if params.Offset != nil {
-		listParams.Offset = *params.Offset
-	}
-	if params.From != nil {
-		t := params.From.Time
-		listParams.FromDate = &t
-	}
-	if params.To != nil {
-		t := params.To.Time
-		listParams.ToDate = &t
+	listParams, err := toListParams(params)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, gen.Error{
+			Error:   "validation_failed",
+			Message: err.Error(),
+		})
+		return
 	}
 
 	result, err := h.list.ListTransactions(r.Context(), listParams)
@@ -83,6 +77,56 @@ func (h *Handler) GetTransactions(w http.ResponseWriter, r *http.Request, params
 			Total:  result.Total,
 		},
 	})
+}
+
+func toListParams(params gen.GetTransactionsParams) (domain.ListParams, error) {
+	listParams := domain.ListParams{}
+	if params.Limit != nil {
+		listParams.Limit = *params.Limit
+	}
+	if params.Offset != nil {
+		listParams.Offset = *params.Offset
+	}
+	if params.From != nil {
+		t := params.From.Time
+		listParams.FromDate = &t
+	}
+	if params.To != nil {
+		t := params.To.Time
+		listParams.ToDate = &t
+	}
+	if params.Account != nil {
+		listParams.Account = params.Account
+	}
+	if params.Counterparty != nil {
+		listParams.Counterparty = params.Counterparty
+	}
+	if params.Q != nil {
+		listParams.Search = params.Q
+	}
+	if params.MinAmount != nil {
+		amount, err := decimal.NewFromString(*params.MinAmount)
+		if err != nil {
+			return domain.ListParams{}, errors.New("invalid min_amount")
+		}
+		listParams.MinAmount = &amount
+	}
+	if params.MaxAmount != nil {
+		amount, err := decimal.NewFromString(*params.MaxAmount)
+		if err != nil {
+			return domain.ListParams{}, errors.New("invalid max_amount")
+		}
+		listParams.MaxAmount = &amount
+	}
+	if params.Sort != nil {
+		listParams.Sort = domain.SortField(*params.Sort)
+	}
+	listParams.SortAsc = false
+	if params.Order != nil {
+		listParams.SortAsc = *params.Order == gen.Asc
+	}
+
+	return listParams, nil
 }
 
 func toAPITransaction(tx domain.Transaction) gen.Transaction {

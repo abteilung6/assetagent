@@ -8,6 +8,7 @@ import (
 
 	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/abteilung6/assetagent/internal/service"
+	"github.com/shopspring/decimal"
 )
 
 type fakeListRepo struct {
@@ -84,5 +85,75 @@ func TestListTransactions_passesDateFilters(t *testing.T) {
 	}
 	if repo.params.ToDate == nil || !repo.params.ToDate.Equal(to) {
 		t.Fatalf("to date not passed through")
+	}
+}
+
+func TestListTransactions_rejectsInvalidSort(t *testing.T) {
+	svc := service.NewList(&fakeListRepo{})
+
+	_, err := svc.ListTransactions(context.Background(), domain.ListParams{
+		Sort: domain.SortField("unknown"),
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid sort")
+	}
+	var validationErr service.ValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("error type = %T, want ValidationError", err)
+	}
+}
+
+func TestListTransactions_rejectsMinGreaterThanMax(t *testing.T) {
+	svc := service.NewList(&fakeListRepo{})
+
+	min := decimal.RequireFromString("100")
+	max := decimal.RequireFromString("10")
+
+	_, err := svc.ListTransactions(context.Background(), domain.ListParams{
+		MinAmount: &min,
+		MaxAmount: &max,
+	})
+	if err == nil {
+		t.Fatal("expected error for min > max")
+	}
+	var validationErr service.ValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("error type = %T, want ValidationError", err)
+	}
+}
+
+func TestListTransactions_passesFilters(t *testing.T) {
+	repo := &fakeListRepo{result: domain.ListResult{Total: 0}}
+	svc := service.NewList(repo)
+
+	account := "DE15100500006011880043"
+	counterparty := "AMAZON"
+	search := "Prime"
+	min := decimal.RequireFromString("-10")
+	max := decimal.RequireFromString("0")
+
+	_, err := svc.ListTransactions(context.Background(), domain.ListParams{
+		Account:      &account,
+		Counterparty: &counterparty,
+		Search:       &search,
+		MinAmount:    &min,
+		MaxAmount:    &max,
+		Sort:         domain.SortAmount,
+		SortAsc:      true,
+	})
+	if err != nil {
+		t.Fatalf("ListTransactions: %v", err)
+	}
+	if repo.params.Account == nil || *repo.params.Account != account {
+		t.Fatalf("account not passed through")
+	}
+	if repo.params.Counterparty == nil || *repo.params.Counterparty != counterparty {
+		t.Fatalf("counterparty not passed through")
+	}
+	if repo.params.Search == nil || *repo.params.Search != search {
+		t.Fatalf("search not passed through")
+	}
+	if !repo.params.SortAsc || repo.params.Sort != domain.SortAmount {
+		t.Fatalf("sort params = %q asc=%v, want amount true", repo.params.Sort, repo.params.SortAsc)
 	}
 }

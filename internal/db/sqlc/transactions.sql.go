@@ -29,15 +29,38 @@ SELECT COUNT(*)::bigint AS count
 FROM transactions
 WHERE ($1::date IS NULL OR booking_date >= $1::date)
   AND ($2::date IS NULL OR booking_date <= $2::date)
+  AND ($3::text IS NULL OR order_account = $3)
+  AND ($4::text IS NULL OR counterparty ILIKE $4 || '%')
+  AND ($5::numeric IS NULL OR amount >= $5::numeric)
+  AND ($6::numeric IS NULL OR amount <= $6::numeric)
+  AND (
+    $7::text IS NULL
+    OR purpose ILIKE '%' || $7 || '%'
+    OR counterparty ILIKE '%' || $7 || '%'
+    OR booking_text ILIKE '%' || $7 || '%'
+  )
 `
 
 type CountTransactionsFilteredParams struct {
-	FromDate pgtype.Date `json:"from_date"`
-	ToDate   pgtype.Date `json:"to_date"`
+	FromDate     pgtype.Date    `json:"from_date"`
+	ToDate       pgtype.Date    `json:"to_date"`
+	Account      pgtype.Text    `json:"account"`
+	Counterparty pgtype.Text    `json:"counterparty"`
+	MinAmount    pgtype.Numeric `json:"min_amount"`
+	MaxAmount    pgtype.Numeric `json:"max_amount"`
+	Search       pgtype.Text    `json:"search"`
 }
 
 func (q *Queries) CountTransactionsFiltered(ctx context.Context, arg CountTransactionsFilteredParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countTransactionsFiltered, arg.FromDate, arg.ToDate)
+	row := q.db.QueryRow(ctx, countTransactionsFiltered,
+		arg.FromDate,
+		arg.ToDate,
+		arg.Account,
+		arg.Counterparty,
+		arg.MinAmount,
+		arg.MaxAmount,
+		arg.Search,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -214,21 +237,51 @@ SELECT
 FROM transactions
 WHERE ($1::date IS NULL OR booking_date >= $1::date)
   AND ($2::date IS NULL OR booking_date <= $2::date)
-ORDER BY booking_date DESC
-LIMIT $4 OFFSET $3
+  AND ($3::text IS NULL OR order_account = $3)
+  AND ($4::text IS NULL OR counterparty ILIKE $4 || '%')
+  AND ($5::numeric IS NULL OR amount >= $5::numeric)
+  AND ($6::numeric IS NULL OR amount <= $6::numeric)
+  AND (
+    $7::text IS NULL
+    OR purpose ILIKE '%' || $7 || '%'
+    OR counterparty ILIKE '%' || $7 || '%'
+    OR booking_text ILIKE '%' || $7 || '%'
+  )
+ORDER BY
+  CASE WHEN $8 = 'amount' AND COALESCE($9, false) THEN amount END ASC NULLS LAST,
+  CASE WHEN $8 = 'amount' AND NOT COALESCE($9, false) THEN amount END DESC NULLS LAST,
+  CASE WHEN $8 = 'counterparty' AND COALESCE($9, false) THEN counterparty END ASC NULLS LAST,
+  CASE WHEN $8 = 'counterparty' AND NOT COALESCE($9, false) THEN counterparty END DESC NULLS LAST,
+  CASE WHEN ($8 IS NULL OR $8 = 'booking_date') AND COALESCE($9, false) THEN booking_date END ASC NULLS LAST,
+  CASE WHEN ($8 IS NULL OR $8 = 'booking_date') AND NOT COALESCE($9, false) THEN booking_date END DESC NULLS LAST
+LIMIT $11 OFFSET $10
 `
 
 type ListTransactionsParams struct {
-	FromDate pgtype.Date `json:"from_date"`
-	ToDate   pgtype.Date `json:"to_date"`
-	Offset   int32       `json:"offset"`
-	Limit    int32       `json:"limit"`
+	FromDate     pgtype.Date    `json:"from_date"`
+	ToDate       pgtype.Date    `json:"to_date"`
+	Account      pgtype.Text    `json:"account"`
+	Counterparty pgtype.Text    `json:"counterparty"`
+	MinAmount    pgtype.Numeric `json:"min_amount"`
+	MaxAmount    pgtype.Numeric `json:"max_amount"`
+	Search       pgtype.Text    `json:"search"`
+	SortField    interface{}    `json:"sort_field"`
+	SortAsc      interface{}    `json:"sort_asc"`
+	Offset       int32          `json:"offset"`
+	Limit        int32          `json:"limit"`
 }
 
 func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]Transaction, error) {
 	rows, err := q.db.Query(ctx, listTransactions,
 		arg.FromDate,
 		arg.ToDate,
+		arg.Account,
+		arg.Counterparty,
+		arg.MinAmount,
+		arg.MaxAmount,
+		arg.Search,
+		arg.SortField,
+		arg.SortAsc,
 		arg.Offset,
 		arg.Limit,
 	)

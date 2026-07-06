@@ -107,3 +107,39 @@ func TestGetTransactions_invalidDate_returns400(t *testing.T) {
 		t.Fatalf("error = %q, want validation_failed", resp.Error)
 	}
 }
+
+func TestGetTransactions_mapsFilterParams(t *testing.T) {
+	list := &stubListService{result: domain.ListResult{Total: 0}}
+
+	router := chi.NewRouter()
+	gen.HandlerWithOptions(handler.New(list), gen.ChiServerOptions{
+		BaseRouter:       router,
+		ErrorHandlerFunc: handler.APIErrorHandler,
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/transactions?account=DE15100500006011880043&counterparty=AMAZON&min_amount=-10&max_amount=0&sort=amount&order=asc&q=Prime", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if list.params.Account == nil || *list.params.Account != "DE15100500006011880043" {
+		t.Fatalf("account = %v, want DE15100500006011880043", list.params.Account)
+	}
+	if list.params.Counterparty == nil || *list.params.Counterparty != "AMAZON" {
+		t.Fatalf("counterparty = %v, want AMAZON", list.params.Counterparty)
+	}
+	if list.params.Search == nil || *list.params.Search != "Prime" {
+		t.Fatalf("search = %v, want Prime", list.params.Search)
+	}
+	if list.params.Sort != domain.SortAmount || !list.params.SortAsc {
+		t.Fatalf("sort = %q asc=%v, want amount true", list.params.Sort, list.params.SortAsc)
+	}
+	if list.params.MinAmount == nil || !list.params.MinAmount.Equal(decimal.RequireFromString("-10")) {
+		t.Fatalf("min_amount = %v", list.params.MinAmount)
+	}
+	if list.params.MaxAmount == nil || !list.params.MaxAmount.Equal(decimal.RequireFromString("0")) {
+		t.Fatalf("max_amount = %v", list.params.MaxAmount)
+	}
+}

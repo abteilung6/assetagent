@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/shopspring/decimal"
 )
 
 type Transaction struct {
@@ -47,21 +48,30 @@ func (r *Transaction) Count(ctx context.Context) (int64, error) {
 }
 
 func (r *Transaction) List(ctx context.Context, params domain.ListParams) (domain.ListResult, error) {
-	filter := sqldb.CountTransactionsFilteredParams{
-		FromDate: dateFromPtr(params.FromDate),
-		ToDate:   dateFromPtr(params.ToDate),
-	}
+	filter := buildFilterParams(params)
 
 	total, err := r.queries.CountTransactionsFiltered(ctx, filter)
 	if err != nil {
 		return domain.ListResult{}, err
 	}
 
+	var sortField any
+	if params.Sort != "" {
+		sortField = string(params.Sort)
+	}
+
 	rows, err := r.queries.ListTransactions(ctx, sqldb.ListTransactionsParams{
-		FromDate: filter.FromDate,
-		ToDate:   filter.ToDate,
-		Limit:    int32(params.Limit),
-		Offset:   int32(params.Offset),
+		FromDate:     filter.FromDate,
+		ToDate:       filter.ToDate,
+		Account:      filter.Account,
+		Counterparty: filter.Counterparty,
+		MinAmount:    filter.MinAmount,
+		MaxAmount:    filter.MaxAmount,
+		Search:       filter.Search,
+		SortField:    sortField,
+		SortAsc:      params.SortAsc,
+		Limit:        int32(params.Limit),
+		Offset:       int32(params.Offset),
 	})
 	if err != nil {
 		return domain.ListResult{}, err
@@ -76,6 +86,18 @@ func (r *Transaction) List(ctx context.Context, params domain.ListParams) (domai
 		Transactions: transactions,
 		Total:        total,
 	}, nil
+}
+
+func buildFilterParams(params domain.ListParams) sqldb.CountTransactionsFilteredParams {
+	return sqldb.CountTransactionsFilteredParams{
+		FromDate:     dateFromPtr(params.FromDate),
+		ToDate:       dateFromPtr(params.ToDate),
+		Account:      textFromPtr(params.Account),
+		Counterparty: textFromPtr(params.Counterparty),
+		MinAmount:    numericFromPtr(params.MinAmount),
+		MaxAmount:    numericFromPtr(params.MaxAmount),
+		Search:       textFromPtr(params.Search),
+	}
 }
 
 func rowToDomain(row sqldb.Transaction) domain.Transaction {
@@ -114,6 +136,15 @@ func ptrFromText(value pgtype.Text) *string {
 	}
 	s := value.String
 	return &s
+}
+
+func numericFromPtr(value *decimal.Decimal) pgtype.Numeric {
+	if value == nil {
+		return pgtype.Numeric{}
+	}
+	var n pgtype.Numeric
+	_ = n.Scan(value.String())
+	return n
 }
 
 func buildParams(tx domain.Transaction, fingerprint string) sqldb.InsertTransactionParams {

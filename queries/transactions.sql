@@ -56,7 +56,17 @@ SELECT COUNT(*)::bigint AS count FROM transactions;
 SELECT COUNT(*)::bigint AS count
 FROM transactions
 WHERE (sqlc.narg('from_date')::date IS NULL OR booking_date >= sqlc.narg('from_date')::date)
-  AND (sqlc.narg('to_date')::date IS NULL OR booking_date <= sqlc.narg('to_date')::date);
+  AND (sqlc.narg('to_date')::date IS NULL OR booking_date <= sqlc.narg('to_date')::date)
+  AND (sqlc.narg('account')::text IS NULL OR order_account = sqlc.narg('account'))
+  AND (sqlc.narg('counterparty')::text IS NULL OR counterparty ILIKE sqlc.narg('counterparty') || '%')
+  AND (sqlc.narg('min_amount')::numeric IS NULL OR amount >= sqlc.narg('min_amount')::numeric)
+  AND (sqlc.narg('max_amount')::numeric IS NULL OR amount <= sqlc.narg('max_amount')::numeric)
+  AND (
+    sqlc.narg('search')::text IS NULL
+    OR purpose ILIKE '%' || sqlc.narg('search') || '%'
+    OR counterparty ILIKE '%' || sqlc.narg('search') || '%'
+    OR booking_text ILIKE '%' || sqlc.narg('search') || '%'
+  );
 
 -- name: ListTransactions :many
 SELECT
@@ -82,5 +92,21 @@ SELECT
 FROM transactions
 WHERE (sqlc.narg('from_date')::date IS NULL OR booking_date >= sqlc.narg('from_date')::date)
   AND (sqlc.narg('to_date')::date IS NULL OR booking_date <= sqlc.narg('to_date')::date)
-ORDER BY booking_date DESC
+  AND (sqlc.narg('account')::text IS NULL OR order_account = sqlc.narg('account'))
+  AND (sqlc.narg('counterparty')::text IS NULL OR counterparty ILIKE sqlc.narg('counterparty') || '%')
+  AND (sqlc.narg('min_amount')::numeric IS NULL OR amount >= sqlc.narg('min_amount')::numeric)
+  AND (sqlc.narg('max_amount')::numeric IS NULL OR amount <= sqlc.narg('max_amount')::numeric)
+  AND (
+    sqlc.narg('search')::text IS NULL
+    OR purpose ILIKE '%' || sqlc.narg('search') || '%'
+    OR counterparty ILIKE '%' || sqlc.narg('search') || '%'
+    OR booking_text ILIKE '%' || sqlc.narg('search') || '%'
+  )
+ORDER BY
+  CASE WHEN sqlc.narg('sort_field') = 'amount' AND COALESCE(sqlc.narg('sort_asc'), false) THEN amount END ASC NULLS LAST,
+  CASE WHEN sqlc.narg('sort_field') = 'amount' AND NOT COALESCE(sqlc.narg('sort_asc'), false) THEN amount END DESC NULLS LAST,
+  CASE WHEN sqlc.narg('sort_field') = 'counterparty' AND COALESCE(sqlc.narg('sort_asc'), false) THEN counterparty END ASC NULLS LAST,
+  CASE WHEN sqlc.narg('sort_field') = 'counterparty' AND NOT COALESCE(sqlc.narg('sort_asc'), false) THEN counterparty END DESC NULLS LAST,
+  CASE WHEN (sqlc.narg('sort_field') IS NULL OR sqlc.narg('sort_field') = 'booking_date') AND COALESCE(sqlc.narg('sort_asc'), false) THEN booking_date END ASC NULLS LAST,
+  CASE WHEN (sqlc.narg('sort_field') IS NULL OR sqlc.narg('sort_field') = 'booking_date') AND NOT COALESCE(sqlc.narg('sort_asc'), false) THEN booking_date END DESC NULLS LAST
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');

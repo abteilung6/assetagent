@@ -13,6 +13,45 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for GetTransactionsParamsSort.
+const (
+	Amount       GetTransactionsParamsSort = "amount"
+	BookingDate  GetTransactionsParamsSort = "booking_date"
+	Counterparty GetTransactionsParamsSort = "counterparty"
+)
+
+// Valid indicates whether the value is a known member of the GetTransactionsParamsSort enum.
+func (e GetTransactionsParamsSort) Valid() bool {
+	switch e {
+	case Amount:
+		return true
+	case BookingDate:
+		return true
+	case Counterparty:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetTransactionsParamsOrder.
+const (
+	Asc  GetTransactionsParamsOrder = "asc"
+	Desc GetTransactionsParamsOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the GetTransactionsParamsOrder enum.
+func (e GetTransactionsParamsOrder) Valid() bool {
+	switch e {
+	case Asc:
+		return true
+	case Desc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Error defines model for Error.
 type Error struct {
 	Error   string `json:"error"`
@@ -69,7 +108,34 @@ type GetTransactionsParams struct {
 
 	// To Booking date upper bound (inclusive), YYYY-MM-DD
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+
+	// Account Filter by order account (exact match)
+	Account *string `form:"account,omitempty" json:"account,omitempty"`
+
+	// Counterparty Filter by counterparty name prefix
+	Counterparty *string `form:"counterparty,omitempty" json:"counterparty,omitempty"`
+
+	// MinAmount Minimum amount (inclusive)
+	MinAmount *string `form:"min_amount,omitempty" json:"min_amount,omitempty"`
+
+	// MaxAmount Maximum amount (inclusive)
+	MaxAmount *string `form:"max_amount,omitempty" json:"max_amount,omitempty"`
+
+	// Sort Sort field
+	Sort *GetTransactionsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Order Sort direction
+	Order *GetTransactionsParamsOrder `form:"order,omitempty" json:"order,omitempty"`
+
+	// Q Search purpose, counterparty, and booking text
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
 }
+
+// GetTransactionsParamsSort defines parameters for GetTransactions.
+type GetTransactionsParamsSort string
+
+// GetTransactionsParamsOrder defines parameters for GetTransactions.
+type GetTransactionsParamsOrder string
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -177,6 +243,97 @@ func (siw *ServerInterfaceWrapper) GetTransactions(w http.ResponseWriter, r *htt
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "account" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "account", r.URL.Query(), &params.Account, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "account"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "account", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "counterparty" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "counterparty", r.URL.Query(), &params.Counterparty, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "counterparty"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "counterparty", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "min_amount" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "min_amount", r.URL.Query(), &params.MinAmount, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "min_amount"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "min_amount", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "max_amount" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "max_amount", r.URL.Query(), &params.MaxAmount, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "max_amount"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "max_amount", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order", r.URL.Query(), &params.Order, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
 		}
 		return
 	}

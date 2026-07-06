@@ -37,6 +37,21 @@ func (s *List) ListTransactions(ctx context.Context, params domain.ListParams) (
 	if params.Offset < 0 {
 		return domain.ListResult{}, ValidationError{Message: "offset must be non-negative"}
 	}
+	if params.Sort != "" && !isValidSortField(params.Sort) {
+		return domain.ListResult{}, ValidationError{Message: fmt.Sprintf("sort must be one of: booking_date, amount, counterparty")}
+	}
+	if params.MinAmount != nil && params.MaxAmount != nil && params.MinAmount.GreaterThan(*params.MaxAmount) {
+		return domain.ListResult{}, ValidationError{Message: "min_amount must be less than or equal to max_amount"}
+	}
 
 	return s.repo.List(ctx, params)
+}
+
+func isValidSortField(field domain.SortField) bool {
+	switch field {
+	case domain.SortBookingDate, domain.SortAmount, domain.SortCounterparty:
+		return true
+	default:
+		return false
+	}
 }
