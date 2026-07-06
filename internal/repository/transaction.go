@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/abteilung6/assetagent/internal/domain"
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
@@ -43,6 +44,76 @@ func (r *Transaction) BatchInsert(ctx context.Context, txs []domain.Transaction)
 
 func (r *Transaction) Count(ctx context.Context) (int64, error) {
 	return r.queries.CountTransactions(ctx)
+}
+
+func (r *Transaction) List(ctx context.Context, params domain.ListParams) (domain.ListResult, error) {
+	filter := sqldb.CountTransactionsFilteredParams{
+		FromDate: dateFromPtr(params.FromDate),
+		ToDate:   dateFromPtr(params.ToDate),
+	}
+
+	total, err := r.queries.CountTransactionsFiltered(ctx, filter)
+	if err != nil {
+		return domain.ListResult{}, err
+	}
+
+	rows, err := r.queries.ListTransactions(ctx, sqldb.ListTransactionsParams{
+		FromDate: filter.FromDate,
+		ToDate:   filter.ToDate,
+		Limit:    int32(params.Limit),
+		Offset:   int32(params.Offset),
+	})
+	if err != nil {
+		return domain.ListResult{}, err
+	}
+
+	transactions := make([]domain.Transaction, len(rows))
+	for i, row := range rows {
+		transactions[i] = rowToDomain(row)
+	}
+
+	return domain.ListResult{
+		Transactions: transactions,
+		Total:        total,
+	}, nil
+}
+
+func rowToDomain(row sqldb.Transaction) domain.Transaction {
+	return domain.Transaction{
+		ID:                             row.ID,
+		OrderAccount:                   row.OrderAccount,
+		BookingDate:                    row.BookingDate.Time,
+		ValueDate:                      row.ValueDate.Time,
+		BookingText:                    row.BookingText,
+		Purpose:                        row.Purpose,
+		CreditorID:                     row.CreditorID,
+		MandateReference:               row.MandateReference,
+		EndToEndReference:              row.EndToEndReference,
+		CollectionReference:            row.CollectionReference,
+		DirectDebitOriginalAmount:      row.DirectDebitOriginalAmount,
+		ChargebackExpenseReimbursement: row.ChargebackExpenseReimbursement,
+		Counterparty:                   row.Counterparty,
+		CounterpartyIBAN:               ptrFromText(row.CounterpartyIban),
+		CounterpartyBIC:                ptrFromText(row.CounterpartyBic),
+		Amount:                         row.Amount,
+		Currency:                       row.Currency,
+		Info:                           row.Info,
+	}
+}
+
+func dateFromPtr(value *time.Time) pgtype.Date {
+	if value == nil {
+		return pgtype.Date{}
+	}
+	return pgtype.Date{Time: *value, Valid: true}
+}
+
+func ptrFromText(value pgtype.Text) *string {
+	if !value.Valid {
+		return nil
+	}
+	s := value.String
+	return &s
 }
 
 func buildParams(tx domain.Transaction, fingerprint string) sqldb.InsertTransactionParams {

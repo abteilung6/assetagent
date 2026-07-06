@@ -4,15 +4,71 @@
 package gen
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Error defines model for Error.
+type Error struct {
+	Error   string `json:"error"`
+	Message string `json:"message"`
+}
 
 // HealthResponse defines model for HealthResponse.
 type HealthResponse struct {
 	Status string `json:"status"`
+}
+
+// Pagination defines model for Pagination.
+type Pagination struct {
+	Limit  int   `json:"limit"`
+	Offset int   `json:"offset"`
+	Total  int64 `json:"total"`
+}
+
+// Transaction defines model for Transaction.
+type Transaction struct {
+	Amount                         string             `json:"amount"`
+	BookingDate                    openapi_types.Date `json:"booking_date"`
+	BookingText                    string             `json:"booking_text"`
+	ChargebackExpenseReimbursement string             `json:"chargeback_expense_reimbursement"`
+	CollectionReference            string             `json:"collection_reference"`
+	Counterparty                   string             `json:"counterparty"`
+	CounterpartyBic                *string            `json:"counterparty_bic,omitempty"`
+	CounterpartyIban               *string            `json:"counterparty_iban,omitempty"`
+	CreditorId                     string             `json:"creditor_id"`
+	Currency                       string             `json:"currency"`
+	DirectDebitOriginalAmount      string             `json:"direct_debit_original_amount"`
+	EndToEndReference              string             `json:"end_to_end_reference"`
+	Id                             openapi_types.UUID `json:"id"`
+	Info                           string             `json:"info"`
+	MandateReference               string             `json:"mandate_reference"`
+	OrderAccount                   string             `json:"order_account"`
+	Purpose                        string             `json:"purpose"`
+	ValueDate                      openapi_types.Date `json:"value_date"`
+}
+
+// TransactionListResponse defines model for TransactionListResponse.
+type TransactionListResponse struct {
+	Data       []Transaction `json:"data"`
+	Pagination Pagination    `json:"pagination"`
+}
+
+// GetTransactionsParams defines parameters for GetTransactions.
+type GetTransactionsParams struct {
+	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// From Booking date lower bound (inclusive), YYYY-MM-DD
+	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Booking date upper bound (inclusive), YYYY-MM-DD
+	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
 
 // ServerInterface represents all server handlers.
@@ -20,6 +76,9 @@ type ServerInterface interface {
 	// Health check
 	// (GET /api/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// List transactions
+	// (GET /api/transactions)
+	GetTransactions(w http.ResponseWriter, r *http.Request, params GetTransactionsParams)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -29,6 +88,12 @@ type Unimplemented struct{}
 // Health check
 // (GET /api/health)
 func (_ Unimplemented) GetHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List transactions
+// (GET /api/transactions)
+func (_ Unimplemented) GetTransactions(w http.ResponseWriter, r *http.Request, params GetTransactionsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -46,6 +111,78 @@ func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTransactions operation middleware
+func (siw *ServerInterfaceWrapper) GetTransactions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTransactionsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTransactions(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -170,6 +307,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/health", wrapper.GetHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/transactions", wrapper.GetTransactions)
 	})
 
 	return r

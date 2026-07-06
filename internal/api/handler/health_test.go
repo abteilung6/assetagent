@@ -1,6 +1,7 @@
 package handler_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -8,12 +9,19 @@ import (
 
 	"github.com/abteilung6/assetagent/internal/api/gen"
 	"github.com/abteilung6/assetagent/internal/api/handler"
+	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/go-chi/chi/v5"
 )
 
+type noopList struct{}
+
+func (noopList) ListTransactions(context.Context, domain.ListParams) (domain.ListResult, error) {
+	return domain.ListResult{}, nil
+}
+
 func TestGetHealth(t *testing.T) {
 	router := chi.NewRouter()
-	gen.HandlerFromMux(handler.New(), router)
+	gen.HandlerFromMux(handler.New(noopList{}), router)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
 	rec := httptest.NewRecorder()

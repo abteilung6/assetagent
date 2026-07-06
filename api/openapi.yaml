@@ -14,6 +14,49 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+  /api/transactions:
+    get:
+      operationId: getTransactions
+      summary: List transactions
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: from
+          in: query
+          description: Booking date lower bound (inclusive), YYYY-MM-DD
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          description: Booking date upper bound (inclusive), YYYY-MM-DD
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Paginated transactions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionListResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     Error:
@@ -34,3 +77,90 @@ components:
         status:
           type: string
           example: ok
+    Pagination:
+      type: object
+      required:
+        - limit
+        - offset
+        - total
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+          format: int64
+    Transaction:
+      type: object
+      required:
+        - id
+        - order_account
+        - booking_date
+        - value_date
+        - booking_text
+        - purpose
+        - creditor_id
+        - mandate_reference
+        - end_to_end_reference
+        - collection_reference
+        - direct_debit_original_amount
+        - chargeback_expense_reimbursement
+        - counterparty
+        - amount
+        - currency
+        - info
+      properties:
+        id:
+          type: string
+          format: uuid
+        order_account:
+          type: string
+        booking_date:
+          type: string
+          format: date
+        value_date:
+          type: string
+          format: date
+        booking_text:
+          type: string
+        purpose:
+          type: string
+        creditor_id:
+          type: string
+        mandate_reference:
+          type: string
+        end_to_end_reference:
+          type: string
+        collection_reference:
+          type: string
+        direct_debit_original_amount:
+          type: string
+        chargeback_expense_reimbursement:
+          type: string
+        counterparty:
+          type: string
+        counterparty_iban:
+          type: string
+          nullable: true
+        counterparty_bic:
+          type: string
+          nullable: true
+        amount:
+          type: string
+        currency:
+          type: string
+        info:
+          type: string
+    TransactionListResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        pagination:
+          $ref: "#/components/schemas/Pagination"

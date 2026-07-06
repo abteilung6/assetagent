@@ -51,3 +51,36 @@ RETURNING id;
 
 -- name: CountTransactions :one
 SELECT COUNT(*)::bigint AS count FROM transactions;
+
+-- name: CountTransactionsFiltered :one
+SELECT COUNT(*)::bigint AS count
+FROM transactions
+WHERE (sqlc.narg('from_date')::date IS NULL OR booking_date >= sqlc.narg('from_date')::date)
+  AND (sqlc.narg('to_date')::date IS NULL OR booking_date <= sqlc.narg('to_date')::date);
+
+-- name: ListTransactions :many
+SELECT
+    id,
+    order_account,
+    booking_date,
+    value_date,
+    booking_text,
+    purpose,
+    creditor_id,
+    mandate_reference,
+    end_to_end_reference,
+    collection_reference,
+    direct_debit_original_amount,
+    chargeback_expense_reimbursement,
+    counterparty,
+    counterparty_iban,
+    counterparty_bic,
+    amount,
+    currency,
+    info,
+    fingerprint
+FROM transactions
+WHERE (sqlc.narg('from_date')::date IS NULL OR booking_date >= sqlc.narg('from_date')::date)
+  AND (sqlc.narg('to_date')::date IS NULL OR booking_date <= sqlc.narg('to_date')::date)
+ORDER BY booking_date DESC
+LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');

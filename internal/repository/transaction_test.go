@@ -137,6 +137,92 @@ func TestBatchInsert_duplicates(t *testing.T) {
 	}
 }
 
+func TestList_paginationAndDateFilter(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx := context.Background()
+
+	container, err := postgres.Run(ctx,
+		"postgres:18-alpine",
+		postgres.WithDatabase("assetagent"),
+		postgres.WithUsername("assetagent"),
+		postgres.WithPassword("assetagent"),
+	)
+	if err != nil {
+		t.Fatalf("start postgres: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := container.Terminate(ctx); err != nil {
+			t.Fatalf("terminate postgres: %v", err)
+		}
+	})
+
+	connStr, err := container.ConnectionString(ctx, "sslmode=disable")
+	if err != nil {
+		t.Fatalf("connection string: %v", err)
+	}
+
+	waitForDB(ctx, t, connStr)
+
+	if err := db.RunMigrations(connStr, "up"); err != nil {
+		t.Fatalf("migrate up: %v", err)
+	}
+
+	pool, err := db.NewPool(ctx, connStr)
+	if err != nil {
+		t.Fatalf("new pool: %v", err)
+	}
+	t.Cleanup(pool.Close)
+
+	repo := repository.NewTransaction(pool)
+
+	early := sampleTransactionWithPurpose("early december")
+	early.BookingDate = time.Date(2025, 12, 1, 0, 0, 0, 0, time.UTC)
+	early.ValueDate = early.BookingDate
+
+	late := sampleTransactionWithPurpose("late december")
+	late.BookingDate = time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)
+	late.ValueDate = late.BookingDate
+
+	for _, tx := range []domain.Transaction{early, late} {
+		if _, err := repo.Insert(ctx, tx); err != nil {
+			t.Fatalf("insert: %v", err)
+		}
+	}
+
+	from := time.Date(2025, 12, 15, 0, 0, 0, 0, time.UTC)
+	result, err := repo.List(ctx, domain.ListParams{
+		Limit:    10,
+		Offset:   0,
+		FromDate: &from,
+	})
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if result.Total != 1 {
+		t.Fatalf("total = %d, want 1", result.Total)
+	}
+	if len(result.Transactions) != 1 {
+		t.Fatalf("len(transactions) = %d, want 1", len(result.Transactions))
+	}
+	if result.Transactions[0].Purpose != "late december" {
+		t.Fatalf("purpose = %q, want late december", result.Transactions[0].Purpose)
+	}
+
+	page, err := repo.List(ctx, domain.ListParams{Limit: 1, Offset: 1})
+	if err != nil {
+		t.Fatalf("list page: %v", err)
+	}
+	if page.Total != 2 {
+		t.Fatalf("total = %d, want 2", page.Total)
+	}
+	if len(page.Transactions) != 1 {
+		t.Fatalf("len(transactions) = %d, want 1", len(page.Transactions))
+	}
+}
+
 func sampleTransactionWithPurpose(purpose string) domain.Transaction {
 	tx := sampleTransaction()
 	tx.Purpose = purpose
