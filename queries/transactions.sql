@@ -16,10 +16,37 @@ INSERT INTO transactions (
     counterparty_bic,
     amount,
     currency,
-    info
+    info,
+    fingerprint
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
 )
+RETURNING id;
+
+-- name: InsertTransactionIfNew :one
+INSERT INTO transactions (
+    order_account,
+    booking_date,
+    value_date,
+    booking_text,
+    purpose,
+    creditor_id,
+    mandate_reference,
+    end_to_end_reference,
+    collection_reference,
+    direct_debit_original_amount,
+    chargeback_expense_reimbursement,
+    counterparty,
+    counterparty_iban,
+    counterparty_bic,
+    amount,
+    currency,
+    info,
+    fingerprint
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+)
+ON CONFLICT (fingerprint) DO NOTHING
 RETURNING id;
 
 -- name: CountTransactions :one

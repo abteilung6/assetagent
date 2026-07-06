@@ -29,4 +29,5 @@ type Transaction struct {
 	Amount                         decimal.Decimal `json:"amount"`
 	Currency                       string          `json:"currency"`
 	Info                           string          `json:"info"`
+	Fingerprint                    string          `json:"fingerprint"`
 }

@@ -2,10 +2,12 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/abteilung6/assetagent/internal/domain"
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -19,7 +21,32 @@ func NewTransaction(pool *pgxpool.Pool) *Transaction {
 }
 
 func (r *Transaction) Insert(ctx context.Context, tx domain.Transaction) (uuid.UUID, error) {
-	return r.queries.InsertTransaction(ctx, sqldb.InsertTransactionParams{
+	return r.queries.InsertTransaction(ctx, buildParams(tx, domain.Fingerprint(tx)))
+}
+
+func (r *Transaction) BatchInsert(ctx context.Context, txs []domain.Transaction) (inserted, duplicates int, err error) {
+	for _, tx := range txs {
+		params := buildIfNewParams(tx, domain.Fingerprint(tx))
+		_, err := r.queries.InsertTransactionIfNew(ctx, params)
+		if errors.Is(err, pgx.ErrNoRows) {
+			duplicates++
+			continue
+		}
+		if err != nil {
+			return inserted, duplicates, err
+		}
+		inserted++
+	}
+
+	return inserted, duplicates, nil
+}
+
+func (r *Transaction) Count(ctx context.Context) (int64, error) {
+	return r.queries.CountTransactions(ctx)
+}
+
+func buildParams(tx domain.Transaction, fingerprint string) sqldb.InsertTransactionParams {
+	return sqldb.InsertTransactionParams{
 		OrderAccount:                   tx.OrderAccount,
 		BookingDate:                    pgtype.Date{Time: tx.BookingDate, Valid: true},
 		ValueDate:                      pgtype.Date{Time: tx.ValueDate, Valid: true},
@@ -37,11 +64,12 @@ func (r *Transaction) Insert(ctx context.Context, tx domain.Transaction) (uuid.U
 		Amount:                         tx.Amount,
 		Currency:                       tx.Currency,
 		Info:                           tx.Info,
-	})
+		Fingerprint:                    fingerprint,
+	}
 }
 
-func (r *Transaction) Count(ctx context.Context) (int64, error) {
-	return r.queries.CountTransactions(ctx)
+func buildIfNewParams(tx domain.Transaction, fingerprint string) sqldb.InsertTransactionIfNewParams {
+	return sqldb.InsertTransactionIfNewParams(buildParams(tx, fingerprint))
 }
 
 func textFromPtr(value *string) pgtype.Text {

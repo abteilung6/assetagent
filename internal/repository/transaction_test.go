@@ -2,6 +2,7 @@ package repository_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -64,6 +65,82 @@ func TestInsert(t *testing.T) {
 	if count != 1 {
 		t.Fatalf("count = %d, want 1", count)
 	}
+}
+
+func TestBatchInsert_duplicates(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx := context.Background()
+
+	container, err := postgres.Run(ctx,
+		"postgres:18-alpine",
+		postgres.WithDatabase("assetagent"),
+		postgres.WithUsername("assetagent"),
+		postgres.WithPassword("assetagent"),
+	)
+	if err != nil {
+		t.Fatalf("start postgres: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := container.Terminate(ctx); err != nil {
+			t.Fatalf("terminate postgres: %v", err)
+		}
+	})
+
+	connStr, err := container.ConnectionString(ctx, "sslmode=disable")
+	if err != nil {
+		t.Fatalf("connection string: %v", err)
+	}
+
+	waitForDB(ctx, t, connStr)
+
+	if err := db.RunMigrations(connStr, "up"); err != nil {
+		t.Fatalf("migrate up: %v", err)
+	}
+
+	pool, err := db.NewPool(ctx, connStr)
+	if err != nil {
+		t.Fatalf("new pool: %v", err)
+	}
+	t.Cleanup(pool.Close)
+
+	repo := repository.NewTransaction(pool)
+	transactions := make([]domain.Transaction, 100)
+	for i := range transactions {
+		transactions[i] = sampleTransactionWithPurpose(fmt.Sprintf("import row %d", i))
+	}
+
+	inserted, duplicates, err := repo.BatchInsert(ctx, transactions)
+	if err != nil {
+		t.Fatalf("batch insert: %v", err)
+	}
+	if inserted != 100 || duplicates != 0 {
+		t.Fatalf("first batch inserted=%d duplicates=%d, want 100/0", inserted, duplicates)
+	}
+
+	inserted, duplicates, err = repo.BatchInsert(ctx, transactions)
+	if err != nil {
+		t.Fatalf("batch insert retry: %v", err)
+	}
+	if inserted != 0 || duplicates != 100 {
+		t.Fatalf("second batch inserted=%d duplicates=%d, want 0/100", inserted, duplicates)
+	}
+
+	count, err := repo.Count(ctx)
+	if err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if count != 100 {
+		t.Fatalf("count = %d, want 100", count)
+	}
+}
+
+func sampleTransactionWithPurpose(purpose string) domain.Transaction {
+	tx := sampleTransaction()
+	tx.Purpose = purpose
+	return tx
 }
 
 func sampleTransaction() domain.Transaction {

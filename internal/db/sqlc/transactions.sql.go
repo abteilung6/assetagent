@@ -42,9 +42,10 @@ INSERT INTO transactions (
     counterparty_bic,
     amount,
     currency,
-    info
+    info,
+    fingerprint
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
 )
 RETURNING id
 `
@@ -67,6 +68,7 @@ type InsertTransactionParams struct {
 	Amount                         decimal.Decimal `json:"amount"`
 	Currency                       string          `json:"currency"`
 	Info                           string          `json:"info"`
+	Fingerprint                    string          `json:"fingerprint"`
 }
 
 func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionParams) (uuid.UUID, error) {
@@ -88,6 +90,81 @@ func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionPa
 		arg.Amount,
 		arg.Currency,
 		arg.Info,
+		arg.Fingerprint,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertTransactionIfNew = `-- name: InsertTransactionIfNew :one
+INSERT INTO transactions (
+    order_account,
+    booking_date,
+    value_date,
+    booking_text,
+    purpose,
+    creditor_id,
+    mandate_reference,
+    end_to_end_reference,
+    collection_reference,
+    direct_debit_original_amount,
+    chargeback_expense_reimbursement,
+    counterparty,
+    counterparty_iban,
+    counterparty_bic,
+    amount,
+    currency,
+    info,
+    fingerprint
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+)
+ON CONFLICT (fingerprint) DO NOTHING
+RETURNING id
+`
+
+type InsertTransactionIfNewParams struct {
+	OrderAccount                   string          `json:"order_account"`
+	BookingDate                    pgtype.Date     `json:"booking_date"`
+	ValueDate                      pgtype.Date     `json:"value_date"`
+	BookingText                    string          `json:"booking_text"`
+	Purpose                        string          `json:"purpose"`
+	CreditorID                     string          `json:"creditor_id"`
+	MandateReference               string          `json:"mandate_reference"`
+	EndToEndReference              string          `json:"end_to_end_reference"`
+	CollectionReference            string          `json:"collection_reference"`
+	DirectDebitOriginalAmount      string          `json:"direct_debit_original_amount"`
+	ChargebackExpenseReimbursement string          `json:"chargeback_expense_reimbursement"`
+	Counterparty                   string          `json:"counterparty"`
+	CounterpartyIban               pgtype.Text     `json:"counterparty_iban"`
+	CounterpartyBic                pgtype.Text     `json:"counterparty_bic"`
+	Amount                         decimal.Decimal `json:"amount"`
+	Currency                       string          `json:"currency"`
+	Info                           string          `json:"info"`
+	Fingerprint                    string          `json:"fingerprint"`
+}
+
+func (q *Queries) InsertTransactionIfNew(ctx context.Context, arg InsertTransactionIfNewParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, insertTransactionIfNew,
+		arg.OrderAccount,
+		arg.BookingDate,
+		arg.ValueDate,
+		arg.BookingText,
+		arg.Purpose,
+		arg.CreditorID,
+		arg.MandateReference,
+		arg.EndToEndReference,
+		arg.CollectionReference,
+		arg.DirectDebitOriginalAmount,
+		arg.ChargebackExpenseReimbursement,
+		arg.Counterparty,
+		arg.CounterpartyIban,
+		arg.CounterpartyBic,
+		arg.Amount,
+		arg.Currency,
+		arg.Info,
+		arg.Fingerprint,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
