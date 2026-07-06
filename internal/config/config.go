@@ -11,6 +11,7 @@ import (
 
 type Config struct {
 	DatabaseURL string
+	APIAddr     string
 	LogLevel    slog.Level
 	LogFormat   string
 }
@@ -35,6 +36,7 @@ func Load() (Config, error) {
 
 	return Config{
 		DatabaseURL: databaseURL,
+		APIAddr:     envOrDefault("API_ADDR", ":8080"),
 		LogLevel:    level,
 		LogFormat:   format,
 	}, nil

@@ -8,6 +8,7 @@ import (
 
 func TestLoad_defaults(t *testing.T) {
 	t.Setenv("DATABASE_URL", "")
+	t.Setenv("API_ADDR", "")
 	t.Setenv("LOG_LEVEL", "")
 	t.Setenv("LOG_FORMAT", "")
 
@@ -17,6 +18,9 @@ func TestLoad_defaults(t *testing.T) {
 	}
 	if cfg.DatabaseURL != "" {
 		t.Errorf("DatabaseURL = %q, want empty", cfg.DatabaseURL)
+	}
+	if cfg.APIAddr != ":8080" {
+		t.Errorf("APIAddr = %q, want :8080", cfg.APIAddr)
 	}
 	if cfg.LogLevel != slog.LevelInfo {
 		t.Errorf("LogLevel = %v, want info", cfg.LogLevel)
@@ -28,6 +32,7 @@ func TestLoad_defaults(t *testing.T) {
 
 func TestLoad_overrides(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/assetagent?sslmode=disable")
+	t.Setenv("API_ADDR", ":9090")
 	t.Setenv("LOG_LEVEL", "debug")
 	t.Setenv("LOG_FORMAT", "json")
 
@@ -37,6 +42,9 @@ func TestLoad_overrides(t *testing.T) {
 	}
 	if cfg.DatabaseURL != "postgres://user:pass@localhost:5432/assetagent?sslmode=disable" {
 		t.Errorf("DatabaseURL = %q, want postgres URL", cfg.DatabaseURL)
+	}
+	if cfg.APIAddr != ":9090" {
+		t.Errorf("APIAddr = %q, want :9090", cfg.APIAddr)
 	}
 	if cfg.LogLevel != slog.LevelDebug {
 		t.Errorf("LogLevel = %v, want debug", cfg.LogLevel)
@@ -77,6 +85,7 @@ func TestLoad_validationErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("DATABASE_URL", "")
+			t.Setenv("API_ADDR", "")
 			t.Setenv("LOG_LEVEL", "")
 			t.Setenv("LOG_FORMAT", "")
 

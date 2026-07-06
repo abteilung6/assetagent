@@ -8,8 +8,9 @@ endif
 
 GOPATH_BIN := $(shell go env GOPATH)/bin
 SQLC := $(GOPATH_BIN)/sqlc
+OAPICODEGEN := $(GOPATH_BIN)/oapi-codegen
 
-.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate import
+.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate api-install api-generate import serve
 
 build:
 	go build -o $(BINARY) $(CMD)
@@ -51,5 +52,15 @@ sqlc-generate:
 	@test -x "$(SQLC)" || (echo "sqlc not found. Run: make sqlc-install" && exit 1)
 	$(SQLC) generate
 
+api-install:
+	go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+
+api-generate:
+	@test -x "$(OAPICODEGEN)" || (echo "oapi-codegen not found. Run: make api-install" && exit 1)
+	$(OAPICODEGEN) -config oapi-codegen.yaml api/openapi.yaml
+
 import: build
 	./$(BINARY) import $(FILE)
+
+serve: build
+	./$(BINARY) serve
