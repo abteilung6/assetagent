@@ -9,7 +9,7 @@ endif
 GOPATH_BIN := $(shell go env GOPATH)/bin
 SQLC := $(GOPATH_BIN)/sqlc
 
-.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate
+.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate import
 
 build:
 	go build -o $(BINARY) $(CMD)
@@ -50,3 +50,6 @@ sqlc-install:
 sqlc-generate:
 	@test -x "$(SQLC)" || (echo "sqlc not found. Run: make sqlc-install" && exit 1)
 	$(SQLC) generate
+
+import: build
+	./$(BINARY) import $(FILE)
