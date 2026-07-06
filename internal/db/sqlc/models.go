@@ -3,3 +3,30 @@
 //   sqlc v1.31.1
 
 package db
+
+import (
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
+)
+
+type Transaction struct {
+	ID                             uuid.UUID       `json:"id"`
+	OrderAccount                   string          `json:"order_account"`
+	BookingDate                    pgtype.Date     `json:"booking_date"`
+	ValueDate                      pgtype.Date     `json:"value_date"`
+	BookingText                    string          `json:"booking_text"`
+	Purpose                        string          `json:"purpose"`
+	CreditorID                     string          `json:"creditor_id"`
+	MandateReference               string          `json:"mandate_reference"`
+	EndToEndReference              string          `json:"end_to_end_reference"`
+	CollectionReference            string          `json:"collection_reference"`
+	DirectDebitOriginalAmount      string          `json:"direct_debit_original_amount"`
+	ChargebackExpenseReimbursement string          `json:"chargeback_expense_reimbursement"`
+	Counterparty                   string          `json:"counterparty"`
+	CounterpartyIban               pgtype.Text     `json:"counterparty_iban"`
+	CounterpartyBic                pgtype.Text     `json:"counterparty_bic"`
+	Amount                         decimal.Decimal `json:"amount"`
+	Currency                       string          `json:"currency"`
+	Info                           string          `json:"info"`
+}

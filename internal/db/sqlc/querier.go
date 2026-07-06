@@ -6,9 +6,13 @@ package db
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
+	CountTransactions(ctx context.Context) (int64, error)
+	InsertTransaction(ctx context.Context, arg InsertTransactionParams) (uuid.UUID, error)
 	Ping(ctx context.Context) (int32, error)
 }
 
