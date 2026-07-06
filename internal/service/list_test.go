@@ -42,9 +42,8 @@ func TestListTransactions_rejectsLimitAboveMax(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for limit > max")
 	}
-	var validationErr service.ValidationError
-	if !errors.As(err, &validationErr) {
-		t.Fatalf("error type = %T, want ValidationError", err)
+	if !errors.Is(err, service.ErrInvalidLimit) {
+		t.Fatalf("error = %v, want ErrInvalidLimit", err)
 	}
 }
 
@@ -55,9 +54,8 @@ func TestListTransactions_rejectsNegativeOffset(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for negative offset")
 	}
-	var validationErr service.ValidationError
-	if !errors.As(err, &validationErr) {
-		t.Fatalf("error type = %T, want ValidationError", err)
+	if !errors.Is(err, service.ErrInvalidOffset) {
+		t.Fatalf("error = %v, want ErrInvalidOffset", err)
 	}
 }
 
@@ -97,9 +95,8 @@ func TestListTransactions_rejectsInvalidSort(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid sort")
 	}
-	var validationErr service.ValidationError
-	if !errors.As(err, &validationErr) {
-		t.Fatalf("error type = %T, want ValidationError", err)
+	if !errors.Is(err, service.ErrInvalidSort) {
+		t.Fatalf("error = %v, want ErrInvalidSort", err)
 	}
 }
 
@@ -116,9 +113,8 @@ func TestListTransactions_rejectsMinGreaterThanMax(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for min > max")
 	}
-	var validationErr service.ValidationError
-	if !errors.As(err, &validationErr) {
-		t.Fatalf("error type = %T, want ValidationError", err)
+	if !errors.Is(err, service.ErrInvalidAmountRange) {
+		t.Fatalf("error = %v, want ErrInvalidAmountRange", err)
 	}
 }
 

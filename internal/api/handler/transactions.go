@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"github.com/abteilung6/assetagent/internal/api/gen"
@@ -31,27 +30,13 @@ func (h *Handler) GetHealth(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetTransactions(w http.ResponseWriter, r *http.Request, params gen.GetTransactionsParams) {
 	listParams, err := toListParams(params)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, gen.Error{
-			Error:   "validation_failed",
-			Message: err.Error(),
-		})
+		writeServiceError(w, err)
 		return
 	}
 
 	result, err := h.list.ListTransactions(r.Context(), listParams)
 	if err != nil {
-		var validationErr service.ValidationError
-		if errors.As(err, &validationErr) {
-			writeJSON(w, http.StatusBadRequest, gen.Error{
-				Error:   "validation_failed",
-				Message: validationErr.Message,
-			})
-			return
-		}
-		writeJSON(w, http.StatusInternalServerError, gen.Error{
-			Error:   "internal_error",
-			Message: "failed to list transactions",
-		})
+		writeServiceError(w, err)
 		return
 	}
 
@@ -82,6 +67,9 @@ func (h *Handler) GetTransactions(w http.ResponseWriter, r *http.Request, params
 func toListParams(params gen.GetTransactionsParams) (domain.ListParams, error) {
 	listParams := domain.ListParams{}
 	if params.Limit != nil {
+		if *params.Limit == 0 {
+			return domain.ListParams{}, service.ErrInvalidLimit
+		}
 		listParams.Limit = *params.Limit
 	}
 	if params.Offset != nil {
@@ -107,14 +95,14 @@ func toListParams(params gen.GetTransactionsParams) (domain.ListParams, error) {
 	if params.MinAmount != nil {
 		amount, err := decimal.NewFromString(*params.MinAmount)
 		if err != nil {
-			return domain.ListParams{}, errors.New("invalid min_amount")
+			return domain.ListParams{}, service.ErrInvalidMinAmount
 		}
 		listParams.MinAmount = &amount
 	}
 	if params.MaxAmount != nil {
 		amount, err := decimal.NewFromString(*params.MaxAmount)
 		if err != nil {
-			return domain.ListParams{}, errors.New("invalid max_amount")
+			return domain.ListParams{}, service.ErrInvalidMaxAmount
 		}
 		listParams.MaxAmount = &amount
 	}
@@ -150,20 +138,4 @@ func toAPITransaction(tx domain.Transaction) gen.Transaction {
 		Currency:                       tx.Currency,
 		Info:                           tx.Info,
 	}
-}
-
-func APIErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
-	var invalid *gen.InvalidParamFormatError
-	if errors.As(err, &invalid) {
-		writeJSON(w, http.StatusBadRequest, gen.Error{
-			Error:   "validation_failed",
-			Message: invalid.Error(),
-		})
-		return
-	}
-
-	writeJSON(w, http.StatusBadRequest, gen.Error{
-		Error:   "bad_request",
-		Message: err.Error(),
-	})
 }

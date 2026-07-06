@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/abteilung6/assetagent/internal/domain"
 )
@@ -19,29 +18,21 @@ func NewList(repo ListRepository) *List {
 	return &List{repo: repo}
 }
 
-type ValidationError struct {
-	Message string
-}
-
-func (e ValidationError) Error() string {
-	return e.Message
-}
-
 func (s *List) ListTransactions(ctx context.Context, params domain.ListParams) (domain.ListResult, error) {
 	if params.Limit <= 0 {
 		params.Limit = domain.DefaultListLimit
 	}
 	if params.Limit > domain.MaxListLimit {
-		return domain.ListResult{}, ValidationError{Message: fmt.Sprintf("limit must be between 1 and %d", domain.MaxListLimit)}
+		return domain.ListResult{}, ErrInvalidLimit
 	}
 	if params.Offset < 0 {
-		return domain.ListResult{}, ValidationError{Message: "offset must be non-negative"}
+		return domain.ListResult{}, ErrInvalidOffset
 	}
 	if params.Sort != "" && !isValidSortField(params.Sort) {
-		return domain.ListResult{}, ValidationError{Message: fmt.Sprintf("sort must be one of: booking_date, amount, counterparty")}
+		return domain.ListResult{}, ErrInvalidSort
 	}
 	if params.MinAmount != nil && params.MaxAmount != nil && params.MinAmount.GreaterThan(*params.MaxAmount) {
-		return domain.ListResult{}, ValidationError{Message: "min_amount must be less than or equal to max_amount"}
+		return domain.ListResult{}, ErrInvalidAmountRange
 	}
 
 	return s.repo.List(ctx, params)
