@@ -12,8 +12,10 @@ import (
 
 type Querier interface {
 	CountTransactions(ctx context.Context) (int64, error)
+	CountTransactionsFiltered(ctx context.Context, arg CountTransactionsFilteredParams) (int64, error)
 	InsertTransaction(ctx context.Context, arg InsertTransactionParams) (uuid.UUID, error)
 	InsertTransactionIfNew(ctx context.Context, arg InsertTransactionIfNewParams) (uuid.UUID, error)
+	ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]Transaction, error)
 	Ping(ctx context.Context) (int32, error)
 }
 

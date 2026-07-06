@@ -24,6 +24,25 @@ func (q *Queries) CountTransactions(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countTransactionsFiltered = `-- name: CountTransactionsFiltered :one
+SELECT COUNT(*)::bigint AS count
+FROM transactions
+WHERE ($1::date IS NULL OR booking_date >= $1::date)
+  AND ($2::date IS NULL OR booking_date <= $2::date)
+`
+
+type CountTransactionsFilteredParams struct {
+	FromDate pgtype.Date `json:"from_date"`
+	ToDate   pgtype.Date `json:"to_date"`
+}
+
+func (q *Queries) CountTransactionsFiltered(ctx context.Context, arg CountTransactionsFilteredParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countTransactionsFiltered, arg.FromDate, arg.ToDate)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const insertTransaction = `-- name: InsertTransaction :one
 INSERT INTO transactions (
     order_account,
@@ -169,4 +188,84 @@ func (q *Queries) InsertTransactionIfNew(ctx context.Context, arg InsertTransact
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const listTransactions = `-- name: ListTransactions :many
+SELECT
+    id,
+    order_account,
+    booking_date,
+    value_date,
+    booking_text,
+    purpose,
+    creditor_id,
+    mandate_reference,
+    end_to_end_reference,
+    collection_reference,
+    direct_debit_original_amount,
+    chargeback_expense_reimbursement,
+    counterparty,
+    counterparty_iban,
+    counterparty_bic,
+    amount,
+    currency,
+    info,
+    fingerprint
+FROM transactions
+WHERE ($1::date IS NULL OR booking_date >= $1::date)
+  AND ($2::date IS NULL OR booking_date <= $2::date)
+ORDER BY booking_date DESC
+LIMIT $4 OFFSET $3
+`
+
+type ListTransactionsParams struct {
+	FromDate pgtype.Date `json:"from_date"`
+	ToDate   pgtype.Date `json:"to_date"`
+	Offset   int32       `json:"offset"`
+	Limit    int32       `json:"limit"`
+}
+
+func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]Transaction, error) {
+	rows, err := q.db.Query(ctx, listTransactions,
+		arg.FromDate,
+		arg.ToDate,
+		arg.Offset,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Transaction{}
+	for rows.Next() {
+		var i Transaction
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrderAccount,
+			&i.BookingDate,
+			&i.ValueDate,
+			&i.BookingText,
+			&i.Purpose,
+			&i.CreditorID,
+			&i.MandateReference,
+			&i.EndToEndReference,
+			&i.CollectionReference,
+			&i.DirectDebitOriginalAmount,
+			&i.ChargebackExpenseReimbursement,
+			&i.Counterparty,
+			&i.CounterpartyIban,
+			&i.CounterpartyBic,
+			&i.Amount,
+			&i.Currency,
+			&i.Info,
+			&i.Fingerprint,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
