@@ -10,7 +10,10 @@ GOPATH_BIN := $(shell go env GOPATH)/bin
 SQLC := $(GOPATH_BIN)/sqlc
 OAPICODEGEN := $(GOPATH_BIN)/oapi-codegen
 
-.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate api-install api-generate import serve
+OLLAMA_MODEL ?= llama3.2
+OLLAMA_BASE_URL ?= http://localhost:11434
+
+.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate api-install api-generate import serve ollama-pull ollama-logs
 
 build:
 	go build -o $(BINARY) $(CMD)
@@ -32,6 +35,12 @@ dev-ps:
 
 dev-logs:
 	docker compose logs -f postgres
+
+ollama-logs:
+	docker compose logs -f ollama
+
+ollama-pull:
+	curl -fsS "$(OLLAMA_BASE_URL)/api/pull" -d '{"name":"$(OLLAMA_MODEL)"}'
 
 migrate-up: build
 	./$(BINARY) migrate up

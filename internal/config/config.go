@@ -10,10 +10,12 @@ import (
 )
 
 type Config struct {
-	DatabaseURL string
-	APIAddr     string
-	LogLevel    slog.Level
-	LogFormat   string
+	DatabaseURL   string
+	APIAddr       string
+	OllamaBaseURL string
+	OllamaModel   string
+	LogLevel      slog.Level
+	LogFormat     string
 }
 
 func Load() (Config, error) {
@@ -34,11 +36,18 @@ func Load() (Config, error) {
 		}
 	}
 
+	ollamaBaseURL := envOrDefault("OLLAMA_BASE_URL", "http://localhost:11434")
+	if err := validateHTTPBaseURL(ollamaBaseURL, "OLLAMA_BASE_URL"); err != nil {
+		return Config{}, err
+	}
+
 	return Config{
-		DatabaseURL: databaseURL,
-		APIAddr:     envOrDefault("API_ADDR", ":8080"),
-		LogLevel:    level,
-		LogFormat:   format,
+		DatabaseURL:   databaseURL,
+		APIAddr:       envOrDefault("API_ADDR", ":8080"),
+		OllamaBaseURL: ollamaBaseURL,
+		OllamaModel:   envOrDefault("OLLAMA_MODEL", "llama3.2"),
+		LogLevel:      level,
+		LogFormat:     format,
 	}, nil
 }
 
@@ -74,6 +83,20 @@ func validateDatabaseURL(raw string) error {
 	}
 	if u.Host == "" {
 		return errors.New("DATABASE_URL: host is required")
+	}
+	return nil
+}
+
+func validateHTTPBaseURL(raw, envName string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("%s: %w", envName, err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("%s: scheme must be http or https, got %q", envName, u.Scheme)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("%s: host is required", envName)
 	}
 	return nil
 }

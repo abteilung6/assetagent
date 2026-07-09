@@ -11,6 +11,8 @@ func TestLoad_defaults(t *testing.T) {
 	t.Setenv("API_ADDR", "")
 	t.Setenv("LOG_LEVEL", "")
 	t.Setenv("LOG_FORMAT", "")
+	t.Setenv("OLLAMA_BASE_URL", "")
+	t.Setenv("OLLAMA_MODEL", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -21,6 +23,12 @@ func TestLoad_defaults(t *testing.T) {
 	}
 	if cfg.APIAddr != ":8080" {
 		t.Errorf("APIAddr = %q, want :8080", cfg.APIAddr)
+	}
+	if cfg.OllamaBaseURL != "http://localhost:11434" {
+		t.Errorf("OllamaBaseURL = %q, want http://localhost:11434", cfg.OllamaBaseURL)
+	}
+	if cfg.OllamaModel != "llama3.2" {
+		t.Errorf("OllamaModel = %q, want llama3.2", cfg.OllamaModel)
 	}
 	if cfg.LogLevel != slog.LevelInfo {
 		t.Errorf("LogLevel = %v, want info", cfg.LogLevel)
@@ -35,6 +43,8 @@ func TestLoad_overrides(t *testing.T) {
 	t.Setenv("API_ADDR", ":9090")
 	t.Setenv("LOG_LEVEL", "debug")
 	t.Setenv("LOG_FORMAT", "json")
+	t.Setenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+	t.Setenv("OLLAMA_MODEL", "qwen2.5:7b")
 
 	cfg, err := Load()
 	if err != nil {
@@ -45,6 +55,12 @@ func TestLoad_overrides(t *testing.T) {
 	}
 	if cfg.APIAddr != ":9090" {
 		t.Errorf("APIAddr = %q, want :9090", cfg.APIAddr)
+	}
+	if cfg.OllamaBaseURL != "http://127.0.0.1:11434" {
+		t.Errorf("OllamaBaseURL = %q, want http://127.0.0.1:11434", cfg.OllamaBaseURL)
+	}
+	if cfg.OllamaModel != "qwen2.5:7b" {
+		t.Errorf("OllamaModel = %q, want qwen2.5:7b", cfg.OllamaModel)
 	}
 	if cfg.LogLevel != slog.LevelDebug {
 		t.Errorf("LogLevel = %v, want debug", cfg.LogLevel)
@@ -80,6 +96,11 @@ func TestLoad_validationErrors(t *testing.T) {
 			env:    map[string]string{"DATABASE_URL": "postgres:///dbname"},
 			errMsg: "host is required",
 		},
+		{
+			name:   "invalid ollama base url scheme",
+			env:    map[string]string{"OLLAMA_BASE_URL": "ftp://localhost:11434"},
+			errMsg: "OLLAMA_BASE_URL",
+		},
 	}
 
 	for _, tt := range tests {
@@ -88,6 +109,8 @@ func TestLoad_validationErrors(t *testing.T) {
 			t.Setenv("API_ADDR", "")
 			t.Setenv("LOG_LEVEL", "")
 			t.Setenv("LOG_FORMAT", "")
+			t.Setenv("OLLAMA_BASE_URL", "")
+			t.Setenv("OLLAMA_MODEL", "")
 
 			for k, v := range tt.env {
 				t.Setenv(k, v)
