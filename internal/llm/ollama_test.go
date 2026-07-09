@@ -88,7 +88,7 @@ func TestOllama_Complete_toolCall(t *testing.T) {
 				"role":"assistant",
 				"content":"",
 				"tool_calls":[
-					{"function":{"name":"get_monthly_cashflow","arguments":{"from":"2025-12-01","to":"2025-12-31"}}}
+					{"function":{"name":"get_cashflow","arguments":{"from":"2025-12-01","to":"2025-12-31"}}}
 				]
 			}
 		}`))
@@ -99,7 +99,7 @@ func TestOllama_Complete_toolCall(t *testing.T) {
 	resp, err := client.Complete(context.Background(), llm.CompletionRequest{
 		Messages: []llm.Message{{Role: llm.RoleUser, Content: "December spending?"}},
 		Tools: []llm.Tool{{
-			Name:        "get_monthly_cashflow",
+			Name:        "get_cashflow",
 			Description: "Monthly cashflow",
 			Parameters:  json.RawMessage(`{"type":"object","properties":{"from":{"type":"string"},"to":{"type":"string"}}}`),
 		}},
@@ -110,7 +110,7 @@ func TestOllama_Complete_toolCall(t *testing.T) {
 	if len(resp.ToolCalls) != 1 {
 		t.Fatalf("len(ToolCalls) = %d, want 1", len(resp.ToolCalls))
 	}
-	if resp.ToolCalls[0].Name != "get_monthly_cashflow" {
+	if resp.ToolCalls[0].Name != "get_cashflow" {
 		t.Fatalf("tool name = %q", resp.ToolCalls[0].Name)
 	}
 }

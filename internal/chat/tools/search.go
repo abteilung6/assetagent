@@ -41,7 +41,7 @@ func searchTool(lister TransactionLister) toolEntry {
 	return toolEntry{
 		definition: llm.Tool{
 			Name: searchToolName,
-			Description: "Search transactions by purpose, counterparty, or booking text within an optional date range.",
+			Description: "Search individual transactions by text in purpose, counterparty, or booking text. Requires q. Not for spending totals — use get_cashflow for how much was spent in a period.",
 			Parameters: json.RawMessage(`{
 				"type": "object",
 				"properties": {

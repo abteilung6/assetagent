@@ -41,7 +41,7 @@ type fakeTools struct {
 
 func (f *fakeTools) Tools() []llm.Tool {
 	return []llm.Tool{{
-		Name:        "get_monthly_cashflow",
+		Name:        "get_cashflow",
 		Description: "Cashflow",
 		Parameters:  json.RawMessage(`{"type":"object"}`),
 	}}
@@ -89,7 +89,7 @@ func TestService_Chat_toolLoop(t *testing.T) {
 		responses: []llm.CompletionResponse{
 			{
 				ToolCalls: []llm.ToolCall{{
-					Name:      "get_monthly_cashflow",
+					Name:      "get_cashflow",
 					Arguments: json.RawMessage(`{"from":"2025-12-01","to":"2025-12-31"}`),
 				}},
 			},
@@ -116,7 +116,7 @@ func TestService_Chat_toolLoop(t *testing.T) {
 	if len(result.ToolCalls) != 1 {
 		t.Fatalf("tool calls = %+v", result.ToolCalls)
 	}
-	if result.ToolCalls[0].Name != "get_monthly_cashflow" {
+	if result.ToolCalls[0].Name != "get_cashflow" {
 		t.Fatalf("tool name = %q", result.ToolCalls[0].Name)
 	}
 	if len(tools.calls) != 1 {
@@ -153,7 +153,7 @@ func TestService_Chat_toolErrorReturnedToModel(t *testing.T) {
 		responses: []llm.CompletionResponse{
 			{
 				ToolCalls: []llm.ToolCall{{
-					Name:      "get_monthly_cashflow",
+					Name:      "get_cashflow",
 					Arguments: json.RawMessage(`{}`),
 				}},
 			},
@@ -190,11 +190,11 @@ func TestService_Chat_toolErrorReturnedToModel(t *testing.T) {
 func TestService_Chat_maxTurnsExceeded(t *testing.T) {
 	llmClient := &fakeLLM{
 		responses: []llm.CompletionResponse{
-			{ToolCalls: []llm.ToolCall{{Name: "get_monthly_cashflow", Arguments: json.RawMessage(`{"from":"2025-12-01","to":"2025-12-31"}`)}}},
-			{ToolCalls: []llm.ToolCall{{Name: "get_monthly_cashflow", Arguments: json.RawMessage(`{"from":"2025-11-01","to":"2025-11-30"}`)}}},
-			{ToolCalls: []llm.ToolCall{{Name: "get_monthly_cashflow", Arguments: json.RawMessage(`{"from":"2025-10-01","to":"2025-10-31"}`)}}},
-			{ToolCalls: []llm.ToolCall{{Name: "get_monthly_cashflow", Arguments: json.RawMessage(`{"from":"2025-09-01","to":"2025-09-30"}`)}}},
-			{ToolCalls: []llm.ToolCall{{Name: "get_monthly_cashflow", Arguments: json.RawMessage(`{"from":"2025-08-01","to":"2025-08-31"}`)}}},
+			{ToolCalls: []llm.ToolCall{{Name: "get_cashflow", Arguments: json.RawMessage(`{"from":"2025-12-01","to":"2025-12-31"}`)}}},
+			{ToolCalls: []llm.ToolCall{{Name: "get_cashflow", Arguments: json.RawMessage(`{"from":"2025-11-01","to":"2025-11-30"}`)}}},
+			{ToolCalls: []llm.ToolCall{{Name: "get_cashflow", Arguments: json.RawMessage(`{"from":"2025-10-01","to":"2025-10-31"}`)}}},
+			{ToolCalls: []llm.ToolCall{{Name: "get_cashflow", Arguments: json.RawMessage(`{"from":"2025-09-01","to":"2025-09-30"}`)}}},
+			{ToolCalls: []llm.ToolCall{{Name: "get_cashflow", Arguments: json.RawMessage(`{"from":"2025-08-01","to":"2025-08-31"}`)}}},
 		},
 	}
 	svc := chat.NewService(llmClient, &fakeTools{

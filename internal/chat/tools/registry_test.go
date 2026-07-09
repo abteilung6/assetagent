@@ -65,7 +65,7 @@ func TestRegistry_tools(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		"get_monthly_cashflow",
+		"get_cashflow",
 		"get_top_counterparties",
 		"search_transactions",
 	} {
@@ -85,7 +85,7 @@ func TestRegistry_executeCashflow(t *testing.T) {
 	}
 	registry := tools.NewRegistry(tools.Dependencies{Reports: reports, Lister: &fakeLister{}})
 
-	raw, err := registry.Execute(context.Background(), "get_monthly_cashflow", json.RawMessage(`{
+	raw, err := registry.Execute(context.Background(), "get_cashflow", json.RawMessage(`{
 		"from": "2025-06-01",
 		"to": "2025-06-30"
 	}`))
@@ -228,7 +228,7 @@ func TestRegistry_invalidCashflowDates(t *testing.T) {
 		Lister:  &fakeLister{},
 	})
 
-	_, err := registry.Execute(context.Background(), "get_monthly_cashflow", json.RawMessage(`{
+	_, err := registry.Execute(context.Background(), "get_cashflow", json.RawMessage(`{
 		"from": "2025-12-31",
 		"to": "2025-12-01"
 	}`))

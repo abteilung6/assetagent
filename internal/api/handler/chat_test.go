@@ -31,7 +31,7 @@ func TestPostChat_returnsGroundedAnswer(t *testing.T) {
 		result: chat.Result{
 			Answer: "You spent 15.98 EUR in December.",
 			ToolCalls: []chat.ToolCall{{
-				Name:   "get_monthly_cashflow",
+				Name:   "get_cashflow",
 				Input:  json.RawMessage(`{"from":"2025-12-01","to":"2025-12-31"}`),
 				Result: json.RawMessage(`{"income":"0","expenses":"15.98","net":"-15.98","currency":"EUR"}`),
 			}},
@@ -63,7 +63,7 @@ func TestPostChat_returnsGroundedAnswer(t *testing.T) {
 	if len(resp.ToolCalls) != 1 {
 		t.Fatalf("tool calls = %+v", resp.ToolCalls)
 	}
-	if resp.ToolCalls[0].Name != "get_monthly_cashflow" {
+	if resp.ToolCalls[0].Name != "get_cashflow" {
 		t.Fatalf("tool name = %q", resp.ToolCalls[0].Name)
 	}
 	if len(chatSvc.input) != 1 || chatSvc.input[0].Role != llm.RoleUser {

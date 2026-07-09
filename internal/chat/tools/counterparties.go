@@ -36,7 +36,7 @@ func counterpartiesTool(reports Reports) toolEntry {
 	return toolEntry{
 		definition: llm.Tool{
 			Name: counterpartiesToolName,
-			Description: "Get the top counterparties by total spending in a booking-date range.",
+			Description: "Get the top counterparties by total spending in a booking-date range. Optional limit caps how many names are returned (max 20).",
 			Parameters: json.RawMessage(`{
 				"type": "object",
 				"properties": {

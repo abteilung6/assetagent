@@ -9,7 +9,7 @@ import (
 	"github.com/abteilung6/assetagent/internal/llm"
 )
 
-const cashflowToolName = "get_monthly_cashflow"
+const cashflowToolName = "get_cashflow"
 
 type cashflowArgs struct {
 	From string `json:"from"`
@@ -27,12 +27,12 @@ func cashflowTool(reports Reports) toolEntry {
 	return toolEntry{
 		definition: llm.Tool{
 			Name: cashflowToolName,
-			Description: "Get total income, expenses, and net cashflow for a booking-date range.",
+			Description: "Get total income, expenses, and net for any inclusive booking-date range (single day, month, or calendar year). Use only from and to — no limit parameter.",
 			Parameters: json.RawMessage(`{
 				"type": "object",
 				"properties": {
-					"from": {"type": "string", "description": "Start date (YYYY-MM-DD, inclusive)"},
-					"to": {"type": "string", "description": "End date (YYYY-MM-DD, inclusive)"}
+					"from": {"type": "string", "description": "Start date (YYYY-MM-DD, inclusive). Must be on or before to."},
+					"to": {"type": "string", "description": "End date (YYYY-MM-DD, inclusive). Example calendar year 2025: from=2025-01-01, to=2025-12-31."}
 				},
 				"required": ["from", "to"]
 			}`),
