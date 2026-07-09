@@ -148,6 +148,45 @@ func TestService_Chat_rejectsInvalidRole(t *testing.T) {
 	}
 }
 
+func TestService_Chat_toolErrorReturnedToModel(t *testing.T) {
+	llmClient := &fakeLLM{
+		responses: []llm.CompletionResponse{
+			{
+				ToolCalls: []llm.ToolCall{{
+					Name:      "get_monthly_cashflow",
+					Arguments: json.RawMessage(`{}`),
+				}},
+			},
+			{
+				Content: "Which month would you like me to check?",
+			},
+		},
+	}
+	tools := &fakeTools{err: errors.New("from and to are required (YYYY-MM-DD)")}
+	svc := chat.NewService(llmClient, tools, chat.DefaultConfig())
+
+	result, err := svc.Chat(context.Background(), []chat.Message{{
+		Role:    llm.RoleUser,
+		Content: "How much did I spend?",
+	}})
+	if err != nil {
+		t.Fatalf("Chat: %v", err)
+	}
+	if result.Answer != "Which month would you like me to check?" {
+		t.Fatalf("answer = %q", result.Answer)
+	}
+	if len(result.ToolCalls) != 1 {
+		t.Fatalf("tool calls = %+v", result.ToolCalls)
+	}
+	var toolResult map[string]string
+	if err := json.Unmarshal(result.ToolCalls[0].Result, &toolResult); err != nil {
+		t.Fatalf("unmarshal tool result: %v", err)
+	}
+	if toolResult["error"] == "" {
+		t.Fatalf("tool result = %+v, want error field", toolResult)
+	}
+}
+
 func TestService_Chat_maxTurnsExceeded(t *testing.T) {
 	llmClient := &fakeLLM{
 		responses: []llm.CompletionResponse{

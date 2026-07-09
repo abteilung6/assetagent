@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/abteilung6/assetagent/internal/llm"
 )
@@ -20,6 +21,7 @@ var (
 const defaultSystemPrompt = `You are a personal finance assistant for the user's bank transactions.
 Use the available tools to look up cashflow, counterparties, and transactions before answering.
 Only state numbers that come from tool results.
+If a tool returns an error or the user did not specify a time period, ask a clarifying question instead of guessing dates.
 If tools cannot answer the question, say so clearly.
 Do not provide investment advice.`
 
@@ -84,7 +86,7 @@ func (s *Service) Chat(ctx context.Context, messages []Message) (Result, error) 
 
 	conversation := []llm.Message{{
 		Role:    llm.RoleSystem,
-		Content: s.cfg.SystemPrompt,
+		Content: systemPrompt(s.cfg.SystemPrompt),
 	}}
 
 	for _, msg := range messages {
@@ -123,7 +125,7 @@ func (s *Service) Chat(ctx context.Context, messages []Message) (Result, error) 
 		for _, call := range resp.ToolCalls {
 			result, err := s.tools.Execute(ctx, call.Name, call.Arguments)
 			if err != nil {
-				return Result{}, fmt.Errorf("execute tool %q: %w", call.Name, err)
+				result = encodeToolError(err)
 			}
 
 			toolCalls = append(toolCalls, ToolCall{
@@ -150,4 +152,17 @@ func validateInputMessage(msg Message) error {
 	default:
 		return fmt.Errorf("%w: %q", ErrInvalidRole, msg.Role)
 	}
+}
+
+func systemPrompt(base string) string {
+	today := time.Now().Format("2006-01-02")
+	return fmt.Sprintf("%s\nToday's date is %s.", base, today)
+}
+
+func encodeToolError(err error) json.RawMessage {
+	payload, marshalErr := json.Marshal(map[string]string{"error": err.Error()})
+	if marshalErr != nil {
+		return json.RawMessage(`{"error":"tool execution failed"}`)
+	}
+	return payload
 }
