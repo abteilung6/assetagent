@@ -13,6 +13,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ChatMessageRole.
+const (
+	Assistant ChatMessageRole = "assistant"
+	System    ChatMessageRole = "system"
+	User      ChatMessageRole = "user"
+)
+
+// Valid indicates whether the value is a known member of the ChatMessageRole enum.
+func (e ChatMessageRole) Valid() bool {
+	switch e {
+	case Assistant:
+		return true
+	case System:
+		return true
+	case User:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetTransactionsParamsSort.
 const (
 	Amount       GetTransactionsParamsSort = "amount"
@@ -50,6 +71,33 @@ func (e GetTransactionsParamsOrder) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// ChatMessage defines model for ChatMessage.
+type ChatMessage struct {
+	Content string          `json:"content"`
+	Role    ChatMessageRole `json:"role"`
+}
+
+// ChatMessageRole defines model for ChatMessage.Role.
+type ChatMessageRole string
+
+// ChatRequest defines model for ChatRequest.
+type ChatRequest struct {
+	Messages []ChatMessage `json:"messages"`
+}
+
+// ChatResponse defines model for ChatResponse.
+type ChatResponse struct {
+	Answer    string         `json:"answer"`
+	ToolCalls []ChatToolCall `json:"tool_calls"`
+}
+
+// ChatToolCall defines model for ChatToolCall.
+type ChatToolCall struct {
+	Input  map[string]interface{} `json:"input"`
+	Name   string                 `json:"name"`
+	Result map[string]interface{} `json:"result"`
 }
 
 // Error defines model for Error.
@@ -137,8 +185,14 @@ type GetTransactionsParamsSort string
 // GetTransactionsParamsOrder defines parameters for GetTransactions.
 type GetTransactionsParamsOrder string
 
+// PostChatJSONRequestBody defines body for PostChat for application/json ContentType.
+type PostChatJSONRequestBody = ChatRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Send a chat message and receive a grounded finance answer
+	// (POST /api/chat)
+	PostChat(w http.ResponseWriter, r *http.Request)
 	// Health check
 	// (GET /api/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
@@ -150,6 +204,12 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// Send a chat message and receive a grounded finance answer
+// (POST /api/chat)
+func (_ Unimplemented) PostChat(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // Health check
 // (GET /api/health)
@@ -171,6 +231,20 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// PostChat operation middleware
+func (siw *ServerInterfaceWrapper) PostChat(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostChat(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Request) {
@@ -462,6 +536,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/chat", wrapper.PostChat)
+	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/health", wrapper.GetHealth)
 	})

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/abteilung6/assetagent/internal/api/gen"
+	"github.com/abteilung6/assetagent/internal/chat"
 	"github.com/abteilung6/assetagent/internal/service"
 )
 
@@ -27,6 +28,16 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		return
 	}
 	writeInternalError(w, "failed to list transactions")
+}
+
+func writeChatError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, chat.ErrEmptyMessages),
+		errors.Is(err, chat.ErrInvalidRole):
+		writeValidationError(w, err.Error())
+	default:
+		writeInternalError(w, "failed to process chat request")
+	}
 }
 
 func mapServiceError(w http.ResponseWriter, err error) bool {

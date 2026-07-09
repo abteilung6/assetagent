@@ -8,8 +8,11 @@ import (
 
 	"github.com/abteilung6/assetagent/internal/api/gen"
 	"github.com/abteilung6/assetagent/internal/api/handler"
+	"github.com/abteilung6/assetagent/internal/chat"
+	"github.com/abteilung6/assetagent/internal/chat/tools"
 	"github.com/abteilung6/assetagent/internal/config"
 	"github.com/abteilung6/assetagent/internal/db"
+	"github.com/abteilung6/assetagent/internal/llm"
 	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/abteilung6/assetagent/internal/service"
 	"github.com/go-chi/chi/v5"
@@ -40,9 +43,19 @@ func newServeCmd() *cobra.Command {
 
 			txRepo := repository.NewTransaction(pool)
 			listSvc := service.NewList(txRepo)
+			reportsRepo := repository.NewReports(pool)
+			toolRegistry := tools.NewRegistry(tools.Dependencies{
+				Reports: reportsRepo,
+				Lister:  txRepo,
+			})
+			chatSvc := chat.NewService(
+				llm.NewOllama(cfg.OllamaBaseURL, cfg.OllamaModel),
+				toolRegistry,
+				chat.DefaultConfig(),
+			)
 
 			router := chi.NewRouter()
-			gen.HandlerWithOptions(handler.New(listSvc), gen.ChiServerOptions{
+			gen.HandlerWithOptions(handler.New(listSvc, chatSvc), gen.ChiServerOptions{
 				BaseRouter:       router,
 				ErrorHandlerFunc: handler.APIErrorHandler,
 			})

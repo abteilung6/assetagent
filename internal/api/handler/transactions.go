@@ -17,10 +17,11 @@ type ListService interface {
 
 type Handler struct {
 	list ListService
+	chat ChatService
 }
 
-func New(list ListService) *Handler {
-	return &Handler{list: list}
+func New(list ListService, chat ChatService) *Handler {
+	return &Handler{list: list, chat: chat}
 }
 
 func (h *Handler) GetHealth(w http.ResponseWriter, r *http.Request) {
