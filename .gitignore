@@ -2,3 +2,5 @@ bin/
 .env
 *.test
 tmp/
+console/node_modules/
+console/dist/
