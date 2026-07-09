@@ -76,6 +76,4 @@ make dev-up serve    # postgres + API (separate terminal)
 make console-dev     # Vite on :5173
 ```
 
-Or run both API and console together: `make dev`
-
 Without the API running, `/api/health` returns 500 from the Vite proxy and the header shows **API offline**.
