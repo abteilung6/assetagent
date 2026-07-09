@@ -1,0 +1,26 @@
+---
+description: React.FC component style for console frontend
+globs: console/**/*.tsx
+alwaysApply: false
+---
+
+# Console React components
+
+Hand-written components in `console/src` must use **`React.FC`** (not `function` declarations).
+
+```tsx
+import type React from "react";
+
+export const Example: React.FC = () => <div />;
+
+type CardProps = { title: string };
+export const Card: React.FC<CardProps> = ({ title }) => <h2>{title}</h2>;
+```
+
+**Exceptions (do not convert):**
+
+- `console/src/components/ui/**` — shadcn-generated; preserve for `shadcn add` / reinstall
+- `console/src/main.tsx` — entrypoint
+- Hooks and `src/lib/**` — not components
+
+Full console conventions: `console/AGENTS.md`
