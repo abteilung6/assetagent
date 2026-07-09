@@ -83,10 +83,12 @@ function columnCellClassName(columnId: string) {
 
 type TransactionTableProps = {
   transactions: Transaction[];
+  onRowClick?: (transaction: Transaction) => void;
 };
 
 export const TransactionTable: React.FC<TransactionTableProps> = ({
   transactions,
+  onRowClick,
 }) => {
   const table = useReactTable({
     data: transactions,
@@ -123,7 +125,11 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
       </TableHeader>
       <TableBody>
         {table.getRowModel().rows.map((row) => (
-          <TableRow key={row.id}>
+          <TableRow
+            key={row.id}
+            className={onRowClick ? "cursor-pointer" : undefined}
+            onClick={() => onRowClick?.(row.original)}
+          >
             {row.getVisibleCells().map((cell) => (
               <TableCell
                 key={cell.id}

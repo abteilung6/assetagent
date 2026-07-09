@@ -1,7 +1,9 @@
 import { useNavigate } from "@tanstack/react-router";
 import type React from "react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
+import type { Transaction } from "@/api/types.gen";
+import { TransactionDetailSheet } from "@/components/transaction-detail/sheet";
 import { TransactionFilters } from "@/components/transaction-filters/filters";
 import { TransactionPagination } from "@/components/transaction-table/pagination";
 import { TransactionTable } from "@/components/transaction-table/transaction-table";
@@ -17,6 +19,9 @@ import {
 const TransactionsPage: React.FC = () => {
   const search = transactionsRoute.useSearch();
   const navigate = useNavigate();
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const { data, isPending, isError } = useTransactions(
     toTransactionListQuery(search),
   );
@@ -42,6 +47,18 @@ const TransactionsPage: React.FC = () => {
     [search, setSearchParams],
   );
 
+  const handleRowClick = useCallback((transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setSheetOpen(true);
+  }, []);
+
+  const handleSheetOpenChange = useCallback((open: boolean) => {
+    setSheetOpen(open);
+    if (!open) {
+      setSelectedTransaction(null);
+    }
+  }, []);
+
   return (
     <div className="flex min-w-0 w-full max-w-full flex-col gap-4">
       <TransactionFilters params={search} onApply={setSearchParams} />
@@ -58,7 +75,10 @@ const TransactionsPage: React.FC = () => {
             <p className="text-muted-foreground">No transactions on this page.</p>
           ) : (
             <div className="min-w-0 overflow-x-auto">
-              <TransactionTable transactions={data.data} />
+              <TransactionTable
+                transactions={data.data}
+                onRowClick={handleRowClick}
+              />
             </div>
           )}
           <TransactionPagination
@@ -69,6 +89,12 @@ const TransactionsPage: React.FC = () => {
           />
         </div>
       )}
+
+      <TransactionDetailSheet
+        transaction={selectedTransaction}
+        open={sheetOpen}
+        onOpenChange={handleSheetOpenChange}
+      />
     </div>
   );
 };
