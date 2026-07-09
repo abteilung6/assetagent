@@ -13,7 +13,7 @@ OAPICODEGEN := $(GOPATH_BIN)/oapi-codegen
 OLLAMA_MODEL ?= llama3.2
 OLLAMA_BASE_URL ?= http://localhost:11434
 
-.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate api-install api-generate api-client-generate import serve ollama-pull ollama-logs console-install console-dev console-build console-test
+.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate api-install api-generate api-client-generate import serve ollama-pull ollama-logs console-install console-dev console-build console-test console-e2e-deps console-e2e-run console-e2e
 
 build:
 	go build -o $(BINARY) $(CMD)
@@ -88,3 +88,21 @@ console-build: api-client-generate
 
 console-test:
 	cd console && npm test
+
+PLAYWRIGHT_IMAGE ?= mcr.microsoft.com/playwright:v1.61.1-noble
+
+console-e2e-deps:
+	@echo "One-time host setup for local Playwright runs (requires sudo):"
+	@echo "  cd console && sudo npx playwright install-deps chromium"
+	cd console && npx playwright install chromium
+
+console-e2e-run:
+	docker run --rm --network host \
+		-v "$(CURDIR):/repo" \
+		-w /repo/console \
+		-e CI=1 \
+		$(PLAYWRIGHT_IMAGE) \
+		npm run e2e
+
+console-e2e: build dev-up console-install
+	$(MAKE) console-e2e-run
