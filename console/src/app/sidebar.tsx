@@ -12,6 +12,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
 
 export const AppSidebar: React.FC = () => {
   return (
@@ -35,7 +36,12 @@ export const AppSidebar: React.FC = () => {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                render={<Link to="/transactions" />}
+                render={
+                  <Link
+                    to="/transactions"
+                    search={defaultTransactionSearchParams}
+                  />
+                }
                 tooltip="Transactions"
               >
                 <Table2Icon />

@@ -8,6 +8,10 @@ import {
 
 import { AppLayout } from "@/app/layout";
 import TransactionsPage from "@/pages/transactions/page";
+import {
+  defaultTransactionSearchParams,
+  parseTransactionSearchParams,
+} from "@/pages/transactions/search-params";
 
 const rootRoute = createRootRoute({
   component: AppLayout,
@@ -17,7 +21,10 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   beforeLoad: () => {
-    throw redirect({ to: "/transactions" });
+    throw redirect({
+      to: "/transactions",
+      search: defaultTransactionSearchParams,
+    });
   },
 });
 
@@ -25,7 +32,11 @@ const transactionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/transactions",
   component: TransactionsPage,
+  validateSearch: (search) =>
+    parseTransactionSearchParams(search as Record<string, unknown>),
 });
+
+export { transactionsRoute };
 
 const routeTree = rootRoute.addChildren([indexRoute, transactionsRoute]);
 

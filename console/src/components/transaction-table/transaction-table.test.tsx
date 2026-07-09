@@ -23,9 +23,13 @@ describe("TransactionTable", () => {
 
     expect(screen.getByText("REWE Dortmund")).toBeInTheDocument();
     expect(screen.getByText("Salary January")).toBeInTheDocument();
-    expect(screen.getByText("-42.50")).toBeInTheDocument();
-    expect(screen.getByText("3200.00")).toBeInTheDocument();
+    expect(screen.getByText("-42.50 EUR")).toBeInTheDocument();
+    expect(screen.getByText("3200.00 EUR")).toBeInTheDocument();
     expect(screen.getByText("REWE Markt GmbH")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Date" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Amount" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "Account" }),
+    ).not.toBeInTheDocument();
   });
 });

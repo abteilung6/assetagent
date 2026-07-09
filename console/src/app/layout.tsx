@@ -31,7 +31,7 @@ export const AppLayout: React.FC = () => {
               <ThemeToggle />
             </div>
           </header>
-          <div className="flex flex-1 flex-col p-4">
+          <div className="flex min-w-0 flex-1 flex-col p-4">
             <Outlet />
           </div>
         </SidebarInset>

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 
 const SKELETON_ROWS = 5;
-const SKELETON_COLUMNS = 7;
+const SKELETON_COLUMNS = 4;
 
 export const TransactionTableSkeleton: React.FC = () => {
   return (
