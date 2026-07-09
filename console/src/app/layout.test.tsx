@@ -3,12 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as sdk from "@/api/sdk.gen";
 import { mockApiResponse } from "@/test/mocks";
+import { sampleTransactionList } from "@/test/fixtures";
 import { testRender } from "@/test/render";
 
 describe("AppLayout", () => {
   beforeEach(() => {
     vi.spyOn(sdk, "getHealth").mockResolvedValue(
       mockApiResponse({ status: "ok" }),
+    );
+    vi.spyOn(sdk, "getTransactions").mockResolvedValue(
+      mockApiResponse(sampleTransactionList()),
     );
   });
 
@@ -23,7 +27,7 @@ describe("AppLayout", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("assetagent")).toBeInTheDocument();
     expect(
-      screen.getByText("Transaction list will appear here."),
+      await screen.findByText("REWE Dortmund"),
     ).toBeInTheDocument();
   });
 
