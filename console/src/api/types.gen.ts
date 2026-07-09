@@ -45,6 +45,30 @@ export type TransactionListResponse = {
     pagination: Pagination;
 };
 
+export type ChatRequest = {
+    messages: Array<ChatMessage>;
+};
+
+export type ChatMessage = {
+    role: 'system' | 'user' | 'assistant';
+    content: string;
+};
+
+export type ChatResponse = {
+    answer: string;
+    tool_calls: Array<ChatToolCall>;
+};
+
+export type ChatToolCall = {
+    name: string;
+    input: {
+        [key: string]: unknown;
+    };
+    result: {
+        [key: string]: unknown;
+    };
+};
+
 export type GetHealthData = {
     body?: never;
     path?: never;
@@ -124,3 +148,32 @@ export type GetTransactionsResponses = {
 };
 
 export type GetTransactionsResponse = GetTransactionsResponses[keyof GetTransactionsResponses];
+
+export type PostChatData = {
+    body: ChatRequest;
+    path?: never;
+    query?: never;
+    url: '/api/chat';
+};
+
+export type PostChatErrors = {
+    /**
+     * Invalid request
+     */
+    400: Error;
+    /**
+     * Internal error
+     */
+    500: Error;
+};
+
+export type PostChatError = PostChatErrors[keyof PostChatErrors];
+
+export type PostChatResponses = {
+    /**
+     * Assistant answer with optional tool call trace
+     */
+    200: ChatResponse;
+};
+
+export type PostChatResponse = PostChatResponses[keyof PostChatResponses];

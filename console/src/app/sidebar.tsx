@@ -1,6 +1,6 @@
 import type React from "react";
 import { Link } from "@tanstack/react-router";
-import { Table2Icon, WalletIcon } from "lucide-react";
+import { MessageSquareIcon, Table2Icon, WalletIcon } from "lucide-react";
 
 import {
   Sidebar,
@@ -34,6 +34,15 @@ export const AppSidebar: React.FC = () => {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={<Link to="/chat" />}
+                tooltip="Chat"
+              >
+                <MessageSquareIcon />
+                <span>Chat</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={

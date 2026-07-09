@@ -7,11 +7,9 @@ import {
 } from "@tanstack/react-router";
 
 import { AppLayout } from "@/app/layout";
+import ChatPage from "@/pages/chat/page";
 import TransactionsPage from "@/pages/transactions/page";
-import {
-  defaultTransactionSearchParams,
-  parseTransactionSearchParams,
-} from "@/pages/transactions/search-params";
+import { parseTransactionSearchParams } from "@/pages/transactions/search-params";
 
 const rootRoute = createRootRoute({
   component: AppLayout,
@@ -21,10 +19,16 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   beforeLoad: () => {
-    throw redirect({
-      to: "/transactions",
-      search: defaultTransactionSearchParams,
-    });
+    throw redirect({ to: "/chat" });
+  },
+});
+
+const chatRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/chat",
+  component: ChatPage,
+  staticData: {
+    title: "Chat",
   },
 });
 
@@ -39,9 +43,13 @@ const transactionsRoute = createRoute({
     parseTransactionSearchParams(search as Record<string, unknown>),
 });
 
-export { transactionsRoute };
+export { chatRoute, transactionsRoute };
 
-const routeTree = rootRoute.addChildren([indexRoute, transactionsRoute]);
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  chatRoute,
+  transactionsRoute,
+]);
 
 export function createAppRouter(history?: RouterHistory) {
   return createRouter({

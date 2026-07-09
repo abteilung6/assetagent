@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetHealthData, GetHealthResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses } from './types.gen';
+import type { GetHealthData, GetHealthResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, PostChatData, PostChatErrors, PostChatResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -27,3 +27,15 @@ export const getHealth = <ThrowOnError extends boolean = false>(options?: Option
  * List transactions
  */
 export const getTransactions = <ThrowOnError extends boolean = false>(options?: Options<GetTransactionsData, ThrowOnError>): RequestResult<GetTransactionsResponses, GetTransactionsErrors, ThrowOnError> => (options?.client ?? client).get<GetTransactionsResponses, GetTransactionsErrors, ThrowOnError>({ url: '/api/transactions', ...options });
+
+/**
+ * Send a chat message and receive a grounded finance answer
+ */
+export const postChat = <ThrowOnError extends boolean = false>(options: Options<PostChatData, ThrowOnError>): RequestResult<PostChatResponses, PostChatErrors, ThrowOnError> => (options.client ?? client).post<PostChatResponses, PostChatErrors, ThrowOnError>({
+    url: '/api/chat',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
