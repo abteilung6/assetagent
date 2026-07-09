@@ -1,22 +1,55 @@
-import { render, type RenderOptions } from "@testing-library/react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { render, type RenderOptions, type RenderResult } from "@testing-library/react";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
+import type React from "react";
+import { isValidElement, useState } from "react";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { createAppRouter } from "@/router";
 
-type RenderWithRouterOptions = Omit<RenderOptions, "wrapper">;
+import { createTestQueryClient } from "./query-client";
 
-export function renderWithRouter(
-  initialRoute = "/transactions",
-  options?: RenderWithRouterOptions,
-) {
-  const history = createMemoryHistory({ initialEntries: [initialRoute] });
+const TestProviders: React.FC<React.PropsWithChildren> = ({ children }) => {
+  const [queryClient] = useState(() => createTestQueryClient());
+
+  return (
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </ThemeProvider>
+  );
+};
+
+type TestRenderOptions = Omit<RenderOptions, "wrapper"> & {
+  /** Mount the app router at this path. Omit when rendering a component directly. */
+  route?: string;
+};
+
+export function testRender(
+  ui: React.ReactElement,
+  options?: Omit<RenderOptions, "wrapper">,
+): RenderResult;
+
+export function testRender(options?: TestRenderOptions): RenderResult;
+
+export function testRender(
+  uiOrOptions?: React.ReactElement | TestRenderOptions,
+  maybeOptions?: Omit<RenderOptions, "wrapper">,
+): RenderResult {
+  if (isValidElement(uiOrOptions)) {
+    return render(uiOrOptions, {
+      wrapper: TestProviders,
+      ...maybeOptions,
+    });
+  }
+
+  const { route = "/transactions", ...renderOptions } = uiOrOptions ?? {};
+  const history = createMemoryHistory({ initialEntries: [route] });
   const router = createAppRouter(history);
 
   return render(
-    <ThemeProvider>
+    <TestProviders>
       <RouterProvider router={router} />
-    </ThemeProvider>,
-    options,
+    </TestProviders>,
+    renderOptions,
   );
 }

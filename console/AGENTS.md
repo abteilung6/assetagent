@@ -61,5 +61,21 @@ After `shadcn add`, move files from `console/@/` into `src/` if the CLI writes t
 ## Testing (from commit 18 onward)
 
 - Vitest + Testing Library
-- `renderWithRouter` for routed pages; `renderWithQuery` when TanStack Query is used
-- Mock generated SDK functions, not fetch/Axios directly
+- Use **`testRender`** from `@/test/render` for all component and page tests — it wraps `ThemeProvider` + `QueryClientProvider` (test client: no retries, `gcTime: 0`)
+  - Routed pages: `testRender({ route: "/transactions" })`
+  - Isolated components: `testRender(<MyComponent />)`
+- Mock generated SDK functions via `mockApiResponse()` in `@/test/mocks`, not `fetch` directly
+- `afterEach(cleanup)` runs globally in `src/test/setup.ts`
+
+## Local dev
+
+`console-dev` proxies `/api` to `http://localhost:8080`. Start the stack before the UI:
+
+```bash
+make dev-up serve    # postgres + API (separate terminal)
+make console-dev     # Vite on :5173
+```
+
+Or run both API and console together: `make dev`
+
+Without the API running, `/api/health` returns 500 from the Vite proxy and the header shows **API offline**.

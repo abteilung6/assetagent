@@ -13,7 +13,7 @@ OAPICODEGEN := $(GOPATH_BIN)/oapi-codegen
 OLLAMA_MODEL ?= llama3.2
 OLLAMA_BASE_URL ?= http://localhost:11434
 
-.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate api-install api-generate api-client-generate import serve ollama-pull ollama-logs console-install console-dev console-build console-test
+.PHONY: build test clean dev dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate api-install api-generate api-client-generate import serve ollama-pull ollama-logs console-install console-dev console-build console-test
 
 build:
 	go build -o $(BINARY) $(CMD)
@@ -77,10 +77,19 @@ import: build
 serve: build
 	./$(BINARY) serve
 
+dev: dev-up build
+	@echo "Starting API (:8080) and console (:5173). Ctrl+C stops both."
+	@trap 'kill 0' INT TERM; \
+	./$(BINARY) serve & \
+	cd console && npm run dev; \
+	wait
+
 console-install:
 	cd console && npm install
 
 console-dev:
+	@curl -sf http://localhost:8080/api/health >/dev/null 2>&1 || \
+		echo "Warning: API not reachable at :8080 — run 'make dev-up serve' or 'make dev' first"
 	cd console && npm run dev
 
 console-build: api-client-generate

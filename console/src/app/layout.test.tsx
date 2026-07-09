@@ -1,11 +1,22 @@
 import { screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { renderWithRouter } from "@/test/render";
+import * as sdk from "@/api/sdk.gen";
+import { mockApiResponse } from "@/test/mocks";
+import { testRender } from "@/test/render";
 
 describe("AppLayout", () => {
+  beforeEach(() => {
+    vi.spyOn(sdk, "getHealth").mockResolvedValue(
+      mockApiResponse({ status: "ok" }),
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
   it("renders sidebar and transactions page at /transactions", async () => {
-    renderWithRouter("/transactions");
+    testRender({ route: "/transactions" });
 
     expect(
       await screen.findByRole("heading", { name: "Transactions" }),
@@ -17,7 +28,7 @@ describe("AppLayout", () => {
   });
 
   it("redirects / to /transactions", async () => {
-    renderWithRouter("/");
+    testRender({ route: "/" });
 
     expect(
       await screen.findByRole("heading", { name: "Transactions" }),

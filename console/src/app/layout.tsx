@@ -9,6 +9,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { HealthStatus } from "@/components/health-status";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export const AppLayout: React.FC = () => {
@@ -25,7 +26,8 @@ export const AppLayout: React.FC = () => {
                 className="mr-2 data-vertical:h-4 data-vertical:self-auto"
               />
             </div>
-            <div className="ml-auto px-4">
+            <div className="ml-auto flex items-center gap-4 px-4">
+              <HealthStatus />
               <ThemeToggle />
             </div>
           </header>
