@@ -22,14 +22,14 @@ Design and implement the console like a **polished consumer product** (ChatGPT, 
 ```
 [scrollable message area — flex-1, overflow-y-auto]
 [optional error strip — one line, above composer]
-[composer pinned bottom — full width of column, not viewport]
+[composer pinned bottom — shrink-0, always visible; only messages scroll]
 ```
 
 - Empty state: one short line + subtle hint, centered — no illustrations unless requested.
 - User bubble: right-aligned, `bg-primary`, max ~85% width.
 - Assistant: left-aligned, `bg-muted`, answer text first.
 - **Evidence below answer** — tool/source cards inside the assistant block, separated by `border-t`, labeled “Based on your data”. Never interleave cards between user and answer.
-- Loading: single “Thinking…” bubble — no spinners everywhere.
+- Loading: one assistant bubble with **ThinkingIndicator** — bouncing dots, rotating status copy (“Checking your data…”), subtle shimmer lines; no global spinners.
 - Composer: textarea grows to ~4 lines; Enter sends, Shift+Enter newline; disabled state while pending.
 
 ## Grounded finance UX
@@ -66,5 +66,5 @@ Design and implement the console like a **polished consumer product** (ChatGPT, 
 ## Reference
 
 - Chat: `console/src/pages/chat/`, `components/chat/`
-- Patterns: `tool-evidence.tsx`, `tool-result-card.tsx`, `source-link.tsx`
+- Patterns: `tool-evidence.tsx`, `tool-result-card.tsx`, `source-link.tsx`, `thinking-indicator.tsx`
 - Code style: `console/AGENTS.md`, `.cursor/rules/console-react.mdc`

@@ -34,7 +34,7 @@ export const Composer: React.FC<ComposerProps> = ({
   };
 
   return (
-    <div className="border-t bg-background px-4 py-4">
+    <div className="shrink-0 border-t bg-background px-4 py-4">
       <div className="mx-auto flex w-full max-w-3xl items-end gap-2 rounded-2xl border bg-muted/30 p-2">
         <textarea
           value={value}

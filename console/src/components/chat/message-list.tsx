@@ -1,9 +1,11 @@
 import type React from "react";
+import { useEffect, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 
 import type { ChatUIMessage } from "@/hooks/use-chat";
 
+import { ThinkingIndicator } from "./thinking-indicator";
 import { ToolEvidence } from "./tool-evidence";
 
 type MessageListProps = {
@@ -15,8 +17,14 @@ export const MessageList: React.FC<MessageListProps> = ({
   messages,
   isPending = false,
 }) => {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView?.({ behavior: "smooth", block: "end" });
+  }, [messages, isPending]);
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 py-6">
       {messages.length === 0 ? (
         <div className="m-auto max-w-lg text-center text-muted-foreground">
           <p className="text-sm">
@@ -43,10 +51,11 @@ export const MessageList: React.FC<MessageListProps> = ({
             </article>
           ))}
           {isPending ? (
-            <article className="max-w-[85%] rounded-2xl bg-muted px-4 py-3 text-sm text-muted-foreground">
-              Thinking…
+            <article className="max-w-[85%] rounded-2xl bg-muted px-4 py-3">
+              <ThinkingIndicator />
             </article>
           ) : null}
+          <div ref={bottomRef} className="h-px shrink-0" aria-hidden />
         </div>
       )}
     </div>
