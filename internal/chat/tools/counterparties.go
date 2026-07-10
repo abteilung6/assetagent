@@ -16,12 +16,15 @@ const (
 )
 
 type counterpartiesArgs struct {
-	From  string `json:"from"`
-	To    string `json:"to"`
-	Limit *int   `json:"limit"`
+	From string `json:"from"`
+	To   string `json:"to"`
 }
 
 type counterpartiesResult struct {
+	OK             bool                      `json:"ok"`
+	From           string                    `json:"from"`
+	To             string                    `json:"to"`
+	Count          int                       `json:"count"`
 	Counterparties []counterpartySpendResult `json:"counterparties"`
 }
 
@@ -68,9 +71,14 @@ func runCounterparties(ctx context.Context, reports Reports, raw json.RawMessage
 		return counterpartiesResult{}, err
 	}
 
+	limitPtr, err := parseOptionalLimit(raw, "limit")
+	if err != nil {
+		return counterpartiesResult{}, err
+	}
+
 	limit := defaultCounterpartyLimit
-	if args.Limit != nil {
-		limit = *args.Limit
+	if limitPtr != nil {
+		limit = *limitPtr
 	}
 	if limit <= 0 {
 		return counterpartiesResult{}, errors.New("limit must be positive")
@@ -85,6 +93,9 @@ func runCounterparties(ctx context.Context, reports Reports, raw json.RawMessage
 	}
 
 	result := counterpartiesResult{
+		OK:             true,
+		From:           args.From,
+		To:             args.To,
 		Counterparties: make([]counterpartySpendResult, len(spends)),
 	}
 	for i, spend := range spends {
@@ -95,6 +106,7 @@ func runCounterparties(ctx context.Context, reports Reports, raw json.RawMessage
 			Currency:         "EUR",
 		}
 	}
+	result.Count = len(result.Counterparties)
 
 	return result, nil
 }

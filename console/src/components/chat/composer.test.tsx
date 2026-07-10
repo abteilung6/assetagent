@@ -44,7 +44,18 @@ describe("ChatPage", () => {
     const postChat = vi.spyOn(sdk, "postChat").mockResolvedValue(
       mockApiResponse({
         answer: "You spent 15.98 EUR in December.",
-        tool_calls: [],
+        tool_calls: [
+          {
+            name: "get_cashflow",
+            input: { from: "2025-12-01", to: "2025-12-31" },
+            result: {
+              income: "3200.00",
+              expenses: "15.98",
+              net: "3184.02",
+              currency: "EUR",
+            },
+          },
+        ],
       }),
     );
 
@@ -55,6 +66,11 @@ describe("ChatPage", () => {
     await user.click(screen.getByRole("button", { name: "Send message" }));
 
     expect(await screen.findByText("You spent 15.98 EUR in December.")).toBeInTheDocument();
+    expect(screen.getByText("Based on your data")).toBeInTheDocument();
+    expect(screen.getByText("Spending summary")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /view transactions/i }),
+    ).toBeInTheDocument();
     expect(postChat).toHaveBeenCalledWith(
       expect.objectContaining({
         body: {

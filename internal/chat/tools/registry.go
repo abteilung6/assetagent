@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/abteilung6/assetagent/internal/domain"
@@ -97,6 +100,47 @@ func parseDateRange(fromRaw, toRaw string) (time.Time, time.Time, error) {
 	}
 
 	return from, to, nil
+}
+
+func parseOptionalLimit(raw json.RawMessage, key string) (*int, error) {
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return nil, fmt.Errorf("invalid arguments: %w", err)
+	}
+
+	field, ok := payload[key]
+	if !ok || string(field) == "null" {
+		return nil, nil
+	}
+
+	return decodeLimitJSON(field)
+}
+
+func decodeLimitJSON(data json.RawMessage) (*int, error) {
+	var asInt int
+	if err := json.Unmarshal(data, &asInt); err == nil {
+		return &asInt, nil
+	}
+
+	var asFloat float64
+	if err := json.Unmarshal(data, &asFloat); err == nil {
+		if asFloat != math.Trunc(asFloat) {
+			return nil, errors.New("limit must be a whole number")
+		}
+		limit := int(asFloat)
+		return &limit, nil
+	}
+
+	var asString string
+	if err := json.Unmarshal(data, &asString); err == nil {
+		parsed, err := strconv.Atoi(strings.TrimSpace(asString))
+		if err != nil {
+			return nil, fmt.Errorf("invalid limit: %q", asString)
+		}
+		return &parsed, nil
+	}
+
+	return nil, errors.New("limit must be a number")
 }
 
 func decimalString(value interface{ String() string }) string {

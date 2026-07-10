@@ -2,12 +2,13 @@ import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
 import { postChatMutation } from "@/api/@tanstack/react-query.gen";
-import type { ChatMessage } from "@/api/types.gen";
+import type { ChatMessage, ChatToolCall } from "@/api/types.gen";
 
 export type ChatUIMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
+  toolCalls?: ChatToolCall[];
 };
 
 function toApiMessages(messages: ChatUIMessage[]): ChatMessage[] {
@@ -46,6 +47,7 @@ export function useChat() {
           id: crypto.randomUUID(),
           role: "assistant",
           content: response.answer,
+          toolCalls: response.tool_calls,
         },
       ]);
     },

@@ -1,0 +1,70 @@
+---
+description: Top-tier UX standards for console — ChatGPT-quality chat and clean finance UI
+globs: console/**/*
+alwaysApply: false
+---
+
+# Console UX — product quality bar
+
+Design and implement the console like a **polished consumer product** (ChatGPT, Linear, Stripe Dashboard). Prioritize clarity, calm visuals, and trust. When in doubt, remove noise.
+
+## Visual language
+
+- **Quiet chrome, loud content** — sidebar and header stay neutral; conversation and data are the focus.
+- **Generous whitespace** — `max-w-3xl` centered chat column; avoid full-bleed text walls.
+- **Rounded, soft surfaces** — `rounded-2xl` bubbles; `rounded-xl` cards; no harsh boxes.
+- **Typography hierarchy** — body `text-sm`; labels `text-xs text-muted-foreground`; one weight step for emphasis, not three.
+- **Color with purpose** — primary for user messages only; assistant on `bg-muted`; errors amber (recoverable), destructive red (fatal). Never decorate with color.
+- **Dark mode first-class** — test both themes; contrast must pass without glowing borders.
+
+## Chat layout (ChatGPT pattern)
+
+```
+[scrollable message area — flex-1, overflow-y-auto]
+[optional error strip — one line, above composer]
+[composer pinned bottom — full width of column, not viewport]
+```
+
+- Empty state: one short line + subtle hint, centered — no illustrations unless requested.
+- User bubble: right-aligned, `bg-primary`, max ~85% width.
+- Assistant: left-aligned, `bg-muted`, answer text first.
+- **Evidence below answer** — tool/source cards inside the assistant block, separated by `border-t`, labeled “Based on your data”. Never interleave cards between user and answer.
+- Loading: single “Thinking…” bubble — no spinners everywhere.
+- Composer: textarea grows to ~4 lines; Enter sends, Shift+Enter newline; disabled state while pending.
+
+## Grounded finance UX
+
+- **Never show raw API/Go errors** — map to plain language; keep JSON in collapsed “Technical details”.
+- **Human tool names** — “Spending summary”, not `get_cashflow`.
+- **Show the period** — always render the date range from tool input so users can spot model mistakes.
+- **Empty ≠ error** — “No outgoing payments in this period” is a valid outcome; don’t imply failure.
+- **One primary action per card** — “View transactions” with pre-filled filters; secondary “Open” per merchant row only when useful.
+- **Progressive disclosure** — summary metrics visible; raw tool payload hidden in `<details>`.
+
+## Interaction
+
+- Links to `/transactions` must preserve filter state in URL (shareable, back-button safe).
+- Click targets ≥ 44px where possible; visible focus rings (`focus-visible:ring`).
+- Prefer `Link` (TanStack Router) over `window.location` for in-app navigation.
+- Disable composer during flight; no duplicate sends.
+
+## Content and tone
+
+- UI copy: short, confident, no jargon (“Top counterparties”, not “tool invocation”).
+- Assistant answers are the product; UI labels support, never compete.
+- Format money consistently: `{amount} {currency}` tabular nums.
+
+## Anti-patterns (reject in review)
+
+- Raw error strings, stack traces, or `json:` blobs in the main UI
+- Multiple competing CTAs in one card
+- Tool names or snake_case in user-visible text
+- Full-width JSON debug panels by default
+- Modal dialogs for drill-down when a sheet or linked page suffices
+- Breaking layout shift when evidence cards appear — reserve min spacing
+
+## Reference
+
+- Chat: `console/src/pages/chat/`, `components/chat/`
+- Patterns: `tool-evidence.tsx`, `tool-result-card.tsx`, `source-link.tsx`
+- Code style: `console/AGENTS.md`, `.cursor/rules/console-react.mdc`

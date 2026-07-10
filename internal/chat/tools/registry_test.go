@@ -162,6 +162,29 @@ func TestRegistry_executeCounterparties(t *testing.T) {
 	}
 }
 
+func TestRegistry_executeCounterparties_stringLimit(t *testing.T) {
+	reports := &fakeReports{
+		counterparties: []domain.CounterpartySpend{{
+			Counterparty:     "REWE Markt GmbH",
+			TotalSpent:       decimal.RequireFromString("153.40"),
+			TransactionCount: 4,
+		}},
+	}
+	registry := tools.NewRegistry(tools.Dependencies{Reports: reports, Lister: &fakeLister{}})
+
+	_, err := registry.Execute(context.Background(), "get_top_counterparties", json.RawMessage(`{
+		"from": "2025-06-01",
+		"to": "2025-06-30",
+		"limit": "5"
+	}`))
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if reports.counterLimit != 5 {
+		t.Fatalf("limit = %d, want 5", reports.counterLimit)
+	}
+}
+
 func TestRegistry_executeSearch(t *testing.T) {
 	lister := &fakeLister{
 		result: domain.ListResult{

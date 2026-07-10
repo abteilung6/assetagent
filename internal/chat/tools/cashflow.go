@@ -17,6 +17,9 @@ type cashflowArgs struct {
 }
 
 type cashflowResult struct {
+	OK       bool   `json:"ok"`
+	From     string `json:"from"`
+	To       string `json:"to"`
 	Income   string `json:"income"`
 	Expenses string `json:"expenses"`
 	Net      string `json:"net"`
@@ -64,6 +67,9 @@ func runCashflow(ctx context.Context, reports Reports, raw json.RawMessage) (cas
 	}
 
 	return cashflowResult{
+		OK:       true,
+		From:     args.From,
+		To:       args.To,
 		Income:   decimalString(report.Income),
 		Expenses: decimalString(report.Expenses),
 		Net:      decimalString(report.Net),

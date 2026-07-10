@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 
 import type { ChatUIMessage } from "@/hooks/use-chat";
 
+import { ToolEvidence } from "./tool-evidence";
+
 type MessageListProps = {
   messages: ChatUIMessage[];
   isPending?: boolean;
@@ -28,13 +30,16 @@ export const MessageList: React.FC<MessageListProps> = ({
             <article
               key={message.id}
               className={cn(
-                "max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap",
+                "max-w-[85%] rounded-2xl px-4 py-3 text-sm",
                 message.role === "user"
-                  ? "ml-auto bg-primary text-primary-foreground"
+                  ? "ml-auto bg-primary text-primary-foreground whitespace-pre-wrap"
                   : "bg-muted text-foreground",
               )}
             >
-              {message.content}
+              <div className="whitespace-pre-wrap">{message.content}</div>
+              {message.role === "assistant" && message.toolCalls?.length ? (
+                <ToolEvidence toolCalls={message.toolCalls} />
+              ) : null}
             </article>
           ))}
           {isPending ? (

@@ -18,15 +18,15 @@ const (
 )
 
 type searchArgs struct {
-	Q     string  `json:"q"`
-	From  *string `json:"from"`
-	To    *string `json:"to"`
-	Limit *int    `json:"limit"`
+	Q    string  `json:"q"`
+	From *string `json:"from"`
+	To   *string `json:"to"`
 }
 
 type searchResult struct {
-	Total        int64                 `json:"total"`
-	Transactions []searchTransaction   `json:"transactions"`
+	OK           bool                `json:"ok"`
+	Total        int64               `json:"total"`
+	Transactions []searchTransaction `json:"transactions"`
 }
 
 type searchTransaction struct {
@@ -72,9 +72,14 @@ func runSearch(ctx context.Context, lister TransactionLister, raw json.RawMessag
 		return searchResult{}, errors.New("q is required")
 	}
 
+	limitPtr, err := parseOptionalLimit(raw, "limit")
+	if err != nil {
+		return searchResult{}, err
+	}
+
 	limit := defaultSearchLimit
-	if args.Limit != nil {
-		limit = *args.Limit
+	if limitPtr != nil {
+		limit = *limitPtr
 	}
 	if limit <= 0 {
 		return searchResult{}, errors.New("limit must be positive")
@@ -114,6 +119,7 @@ func runSearch(ctx context.Context, lister TransactionLister, raw json.RawMessag
 	}
 
 	result := searchResult{
+		OK:           true,
 		Total:        list.Total,
 		Transactions: make([]searchTransaction, len(list.Transactions)),
 	}

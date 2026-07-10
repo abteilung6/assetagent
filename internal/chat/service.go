@@ -30,10 +30,16 @@ Tool selection:
 Date rules:
 - Dates are inclusive YYYY-MM-DD; from must be on or before to.
 - Calendar year YYYY: from=YYYY-01-01, to=YYYY-12-31.
-- Named month: from first day to last day of that month in the relevant year.
+- Named month (e.g. "June 2025", "December 2025"): use only that month — from YYYY-MM-01 through the month's last day. Never expand a month question to year-to-date or the full year.
+- "Top N" or "top 5": pass limit as a JSON number (e.g. 5), not a string.
 - If the period is ambiguous, ask which dates — do not guess or swap from/to.
 
-When a tool returns {"error":...}, correct the arguments and retry before asking the user to confirm invalid ranges.`
+When a tool returns {"error":...}, correct the arguments and retry before asking the user to confirm invalid ranges.
+
+Result interpretation:
+- Only results containing "error" indicate failure.
+- Successful results include "ok":true. Empty lists, zero expenses, or total=0 are valid — they mean no matching spending in that period.
+- When ok is true, answer from the data. Do not say the tool failed and do not ask the user to reconfirm dates.`
 
 type ToolRunner interface {
 	Tools() []llm.Tool

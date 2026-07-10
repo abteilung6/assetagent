@@ -56,7 +56,11 @@ After `shadcn add`, move files from `console/@/` into `src/` if the CLI writes t
 
 - shadcn/ui **base-nova** defaults only — no custom colours or one-off components
 - Light and dark modes via `next-themes` + `ThemeProvider`
-- Phase 4 focuses on **transactions**; `/chat` starts in Phase 5
+- Primary product surface is **`/chat`** (ChatGPT-style); `/transactions` is evidence drill-down
+
+### UX quality bar
+
+Follow **`.cursor/rules/console-ux.mdc`** for layout, chat patterns, grounded evidence, copy, and anti-patterns. Target ChatGPT-level polish: calm chrome, clear hierarchy, progressive disclosure, no raw errors in the UI.
 
 ## Testing (from commit 18 onward)
 
