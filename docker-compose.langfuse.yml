@@ -97,7 +97,8 @@ services:
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-}
 
   clickhouse:
-    image: docker.io/clickhouse/clickhouse-server
+    # Pin to 25.8 — ClickHouse 26.x breaks Langfuse UI trace list (see langfuse#12576).
+    image: docker.io/clickhouse/clickhouse-server:25.8
     restart: always
     user: "101:101"
     environment:
