@@ -26,6 +26,22 @@ func (s *stubChatService) Chat(ctx context.Context, provider, model string, mess
 	return s.result, s.err
 }
 
+func (s *stubChatService) StreamChat(
+	ctx context.Context,
+	provider, model string,
+	messages []chat.Message,
+	write chat.StreamWriter,
+) error {
+	s.input = messages
+	if s.err != nil {
+		return write(chat.StreamEventError, map[string]string{"message": s.err.Error()})
+	}
+	return write(chat.StreamEventDone, map[string]any{
+		"answer":     s.result.Answer,
+		"tool_calls": s.result.ToolCalls,
+	})
+}
+
 func TestPostChat_returnsGroundedAnswer(t *testing.T) {
 	chatSvc := &stubChatService{
 		result: chat.Result{

@@ -11,6 +11,7 @@ import (
 
 type ChatService interface {
 	Chat(ctx context.Context, provider, model string, messages []chat.Message) (chat.Result, error)
+	StreamChat(ctx context.Context, provider, model string, messages []chat.Message, write chat.StreamWriter) error
 }
 
 func (h *Handler) PostChat(w http.ResponseWriter, r *http.Request) {

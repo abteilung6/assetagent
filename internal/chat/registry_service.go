@@ -43,3 +43,13 @@ func (s *RegistryService) Chat(
 	svc := NewService(resolved, s.tools, s.cfg)
 	return svc.Chat(ctx, messages)
 }
+
+func (s *RegistryService) StreamChat(
+	ctx context.Context,
+	provider string,
+	model string,
+	messages []Message,
+	write StreamWriter,
+) error {
+	return s.Stream(ctx, provider, model, messages, write)
+}

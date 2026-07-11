@@ -278,11 +278,17 @@ type GetTransactionsParamsOrder string
 // PostChatJSONRequestBody defines body for PostChat for application/json ContentType.
 type PostChatJSONRequestBody = ChatRequest
 
+// PostChatStreamJSONRequestBody defines body for PostChatStream for application/json ContentType.
+type PostChatStreamJSONRequestBody = ChatRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Send a chat message and receive a grounded finance answer
 	// (POST /api/chat)
 	PostChat(w http.ResponseWriter, r *http.Request)
+	// Stream a grounded finance answer as server-sent events
+	// (POST /api/chat/stream)
+	PostChatStream(w http.ResponseWriter, r *http.Request)
 	// Health check
 	// (GET /api/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
@@ -301,6 +307,12 @@ type Unimplemented struct{}
 // Send a chat message and receive a grounded finance answer
 // (POST /api/chat)
 func (_ Unimplemented) PostChat(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stream a grounded finance answer as server-sent events
+// (POST /api/chat/stream)
+func (_ Unimplemented) PostChatStream(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -336,6 +348,20 @@ func (siw *ServerInterfaceWrapper) PostChat(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostChat(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostChatStream operation middleware
+func (siw *ServerInterfaceWrapper) PostChatStream(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostChatStream(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -651,6 +677,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/chat", wrapper.PostChat)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/chat/stream", wrapper.PostChatStream)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/health", wrapper.GetHealth)
