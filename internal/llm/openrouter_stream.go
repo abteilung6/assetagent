@@ -53,6 +53,7 @@ func (o *OpenRouter) StreamComplete(
 
 	var content strings.Builder
 	toolCalls := newOpenRouterStreamToolCalls()
+	var usage Usage
 
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
@@ -94,6 +95,14 @@ func (o *OpenRouter) StreamComplete(
 		if len(delta.ToolCalls) > 0 {
 			toolCalls.add(delta.ToolCalls)
 		}
+
+		if chunk.Usage != nil {
+			usage = Usage{
+				PromptTokens:     chunk.Usage.PromptTokens,
+				CompletionTokens: chunk.Usage.CompletionTokens,
+				TotalTokens:      chunk.Usage.TotalTokens,
+			}
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -104,6 +113,7 @@ func (o *OpenRouter) StreamComplete(
 	return CompletionResponse{
 		Content:   content.String(),
 		ToolCalls: EnsureToolCallIDs(calls),
+		Usage:     usage,
 	}, nil
 }
 
@@ -111,6 +121,7 @@ type openRouterStreamChunk struct {
 	Choices []struct {
 		Delta openRouterStreamDelta `json:"delta"`
 	} `json:"choices"`
+	Usage *openRouterUsage `json:"usage,omitempty"`
 }
 
 type openRouterStreamDelta struct {

@@ -42,7 +42,7 @@ func (h *Handler) PostChatStream(w http.ResponseWriter, r *http.Request) {
 		model = *req.Model
 	}
 
-	ctx, endSpan := chat.StartHTTPChatSpan(r.Context(), provider, model, len(messages), true)
+	ctx, endSpan := chat.StartHTTPChatSpan(r.Context(), provider, model, len(messages), true, chat.LastUserMessage(messages))
 	defer endSpan()
 
 	initSSE(w)

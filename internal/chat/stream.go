@@ -93,12 +93,13 @@ func (s *Service) Stream(ctx context.Context, messages []Message, write StreamWr
 		})
 		if err != nil {
 			telemetry.RecordError(ctx, err)
-			endLLM()
+			endLLM(llm.CompletionResponse{})
 			return writeStreamError(write, err)
 		}
-		endLLM()
+		endLLM(resp)
 
 		if len(resp.ToolCalls) == 0 {
+			finishChatTrace(ctx, resp.Content, toolCalls, turn+1)
 			return write(StreamEventDone, streamDonePayload{
 				Answer:    resp.Content,
 				ToolCalls: toStreamToolCalls(toolCalls),
@@ -185,6 +186,8 @@ func (s *RegistryService) Stream(
 		attribute.String("chat.provider", string(resolvedProviderID(provider, providerID, s.registry))),
 		attribute.String("chat.model", resolved.Model()),
 	)
+	telemetry.SetTraceMetadata(ctx, "provider", string(resolvedProviderID(provider, providerID, s.registry)))
+	telemetry.SetTraceMetadata(ctx, "model", resolved.Model())
 
 	svc := NewService(resolved, s.tools, s.cfg)
 	return svc.Stream(ctx, messages, write)

@@ -128,12 +128,13 @@ func (s *Service) Chat(ctx context.Context, messages []Message) (Result, error) 
 		})
 		if err != nil {
 			telemetry.RecordError(ctx, err)
-			endLLM()
+			endLLM(llm.CompletionResponse{})
 			return Result{}, err
 		}
-		endLLM()
+		endLLM(resp)
 
 		if len(resp.ToolCalls) == 0 {
+			finishChatTrace(ctx, resp.Content, toolCalls, turn+1)
 			return Result{
 				Answer:    resp.Content,
 				ToolCalls: toolCalls,

@@ -48,6 +48,7 @@ func (o *Ollama) StreamComplete(
 	}
 
 	var final ollamaMessage
+	var usage Usage
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		if err := ctx.Err(); err != nil {
@@ -72,6 +73,11 @@ func (o *Ollama) StreamComplete(
 
 		if chunk.Done {
 			final = chunk.Message
+			usage = Usage{
+				PromptTokens:     chunk.PromptEvalCount,
+				CompletionTokens: chunk.EvalCount,
+				TotalTokens:      chunk.PromptEvalCount + chunk.EvalCount,
+			}
 		}
 	}
 
@@ -81,10 +87,13 @@ func (o *Ollama) StreamComplete(
 
 	completion := fromOllamaMessage(final)
 	completion.ToolCalls = EnsureToolCallIDs(completion.ToolCalls)
+	completion.Usage = usage
 	return completion, nil
 }
 
 type ollamaStreamChunk struct {
-	Message ollamaMessage `json:"message"`
-	Done    bool          `json:"done"`
+	Message         ollamaMessage `json:"message"`
+	Done            bool          `json:"done"`
+	PromptEvalCount int           `json:"prompt_eval_count,omitempty"`
+	EvalCount       int           `json:"eval_count,omitempty"`
 }

@@ -46,6 +46,8 @@ func (s *RegistryService) Chat(
 		attribute.String("chat.provider", string(resolvedProviderID(provider, providerID, s.registry))),
 		attribute.String("chat.model", resolved.Model()),
 	)
+	telemetry.SetTraceMetadata(ctx, "provider", string(resolvedProviderID(provider, providerID, s.registry)))
+	telemetry.SetTraceMetadata(ctx, "model", resolved.Model())
 
 	svc := NewService(resolved, s.tools, s.cfg)
 	return svc.Chat(ctx, messages)

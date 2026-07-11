@@ -130,7 +130,7 @@ func (o *OpenRouter) Complete(ctx context.Context, req CompletionRequest) (Compl
 		return CompletionResponse{}, fmt.Errorf("openrouter chat: empty choices")
 	}
 
-	return fromOpenRouterMessage(chatResp.Choices[0].Message), nil
+	return fromOpenRouterMessage(chatResp.Choices[0].Message, chatResp.Usage), nil
 }
 
 func (o *OpenRouter) setHeaders(req *http.Request) {
@@ -194,8 +194,15 @@ func toOpenRouterTools(tools []Tool) []openRouterTool {
 	return out
 }
 
-func fromOpenRouterMessage(msg openRouterMessage) CompletionResponse {
-	resp := CompletionResponse{Content: msg.Content}
+func fromOpenRouterMessage(msg openRouterMessage, usage openRouterUsage) CompletionResponse {
+	resp := CompletionResponse{
+		Content: msg.Content,
+		Usage: Usage{
+			PromptTokens:     usage.PromptTokens,
+			CompletionTokens: usage.CompletionTokens,
+			TotalTokens:      usage.TotalTokens,
+		},
+	}
 	if len(msg.ToolCalls) == 0 {
 		return resp
 	}
@@ -274,6 +281,13 @@ type openRouterChatResponse struct {
 	Choices []struct {
 		Message openRouterMessage `json:"message"`
 	} `json:"choices"`
+	Usage openRouterUsage `json:"usage"`
+}
+
+type openRouterUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
 }
 
 type openRouterMessage struct {

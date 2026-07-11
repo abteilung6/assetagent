@@ -40,6 +40,13 @@ type CompletionRequest struct {
 type CompletionResponse struct {
 	Content   string
 	ToolCalls []ToolCall
+	Usage     Usage
+}
+
+type Usage struct {
+	PromptTokens     int
+	CompletionTokens int
+	TotalTokens      int
 }
 
 type Provider interface {

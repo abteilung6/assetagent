@@ -87,9 +87,15 @@ func redactToolResult(result json.RawMessage) string {
 
 	if rows, ok := payload["counterparties"].([]any); ok {
 		out["counterparties_count"] = len(rows)
+		if top := summarizeCounterparties(rows, 3); len(top) > 0 {
+			out["top_counterparties"] = top
+		}
 	}
 	if rows, ok := payload["transactions"].([]any); ok {
 		out["transactions_count"] = len(rows)
+		if samples := summarizeTransactions(rows, 3); len(samples) > 0 {
+			out["transaction_samples"] = samples
+		}
 	}
 	if rows, ok := payload["items"].([]any); ok {
 		out["items_count"] = len(rows)
@@ -103,4 +109,52 @@ func redactToolResult(result json.RawMessage) string {
 		return ""
 	}
 	return string(encoded)
+}
+
+func summarizeCounterparties(rows []any, limit int) []map[string]any {
+	if limit <= 0 {
+		return nil
+	}
+
+	out := make([]map[string]any, 0, limit)
+	for i := 0; i < len(rows) && len(out) < limit; i++ {
+		row, ok := rows[i].(map[string]any)
+		if !ok {
+			continue
+		}
+		entry := make(map[string]any, 4)
+		for _, key := range []string{"counterparty", "total_spent", "transaction_count", "currency"} {
+			if value, ok := row[key]; ok {
+				entry[key] = value
+			}
+		}
+		if len(entry) > 0 {
+			out = append(out, entry)
+		}
+	}
+	return out
+}
+
+func summarizeTransactions(rows []any, limit int) []map[string]any {
+	if limit <= 0 {
+		return nil
+	}
+
+	out := make([]map[string]any, 0, limit)
+	for i := 0; i < len(rows) && len(out) < limit; i++ {
+		row, ok := rows[i].(map[string]any)
+		if !ok {
+			continue
+		}
+		entry := make(map[string]any, 4)
+		for _, key := range []string{"booking_date", "counterparty", "amount", "currency"} {
+			if value, ok := row[key]; ok {
+				entry[key] = value
+			}
+		}
+		if len(entry) > 0 {
+			out = append(out, entry)
+		}
+	}
+	return out
 }

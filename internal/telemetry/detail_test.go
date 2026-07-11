@@ -4,6 +4,13 @@ import (
 	"testing"
 )
 
+func TestTruncateText(t *testing.T) {
+	got := TruncateText("hello world", 5)
+	if got != "hello…" {
+		t.Fatalf("TruncateText() = %q, want hello…", got)
+	}
+}
+
 func TestRedactToolResult_metadataOnly(t *testing.T) {
 	raw := []byte(`{"ok":true,"expenses":"15.98","currency":"EUR","transactions":[{"purpose":"secret"}]}`)
 	got := RedactToolResult(TraceDetailMetadata, raw)
@@ -23,6 +30,23 @@ func TestRedactToolResult_aggregates(t *testing.T) {
 	}
 	if !contains(got, "15.98") {
 		t.Fatalf("RedactToolResult() = %q, want expenses", got)
+	}
+}
+
+func TestRedactToolResult_aggregatesCounterparties(t *testing.T) {
+	raw := []byte(`{
+		"ok":true,
+		"counterparties":[
+			{"counterparty":"ACME","total_spent":"42.00","transaction_count":3,"currency":"EUR"},
+			{"counterparty":"OTHER","total_spent":"10.00","transaction_count":1,"currency":"EUR"}
+		]
+	}`)
+	got := RedactToolResult(TraceDetailAggregates, raw)
+	if !contains(got, "ACME") {
+		t.Fatalf("RedactToolResult() = %q, want top counterparty name", got)
+	}
+	if !contains(got, "42.00") {
+		t.Fatalf("RedactToolResult() = %q, want total_spent", got)
 	}
 }
 

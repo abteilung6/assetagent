@@ -48,7 +48,7 @@ func (h *Handler) PostChat(w http.ResponseWriter, r *http.Request) {
 		model = *req.Model
 	}
 
-	ctx, endSpan := chat.StartHTTPChatSpan(r.Context(), provider, model, len(messages), false)
+	ctx, endSpan := chat.StartHTTPChatSpan(r.Context(), provider, model, len(messages), false, chat.LastUserMessage(messages))
 	defer endSpan()
 
 	result, err := h.chat.Chat(ctx, provider, model, messages)
