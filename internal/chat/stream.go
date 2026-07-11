@@ -32,8 +32,26 @@ type toolResultPayload struct {
 }
 
 type streamDonePayload struct {
-	Answer    string     `json:"answer"`
-	ToolCalls []ToolCall `json:"tool_calls"`
+	Answer    string                `json:"answer"`
+	ToolCalls []streamToolCallPayload `json:"tool_calls"`
+}
+
+type streamToolCallPayload struct {
+	Name   string          `json:"name"`
+	Input  json.RawMessage `json:"input"`
+	Result json.RawMessage `json:"result"`
+}
+
+func toStreamToolCalls(calls []ToolCall) []streamToolCallPayload {
+	out := make([]streamToolCallPayload, len(calls))
+	for i, call := range calls {
+		out[i] = streamToolCallPayload{
+			Name:   call.Name,
+			Input:  call.Input,
+			Result: call.Result,
+		}
+	}
+	return out
 }
 
 type streamErrorPayload struct {
@@ -76,7 +94,7 @@ func (s *Service) Stream(ctx context.Context, messages []Message, write StreamWr
 		if len(resp.ToolCalls) == 0 {
 			return write(StreamEventDone, streamDonePayload{
 				Answer:    resp.Content,
-				ToolCalls: toolCalls,
+				ToolCalls: toStreamToolCalls(toolCalls),
 			})
 		}
 

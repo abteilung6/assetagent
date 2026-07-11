@@ -15,15 +15,29 @@ const ChatPage: React.FC = () => {
     isError: modelsError,
     showModelSelect,
   } = useLLMModels();
-  const { messages, send, isPending, error } = useChat(selection);
+  const {
+    messages,
+    send,
+    stop,
+    isPending,
+    isStreaming,
+    streamingContent,
+    activeTool,
+    error,
+  } = useChat(selection);
 
-  const composerDisabled = !canChat || modelsLoading || isPending;
+  const composerDisabled = !canChat || modelsLoading;
   const showModelsError = modelsError || (!modelsLoading && !canChat);
   const showSendError = Boolean(error);
 
   return (
     <div className="-m-4 flex min-h-0 flex-1 flex-col overflow-hidden">
-      <MessageList messages={messages} isPending={isPending} />
+      <MessageList
+        messages={messages}
+        isPending={isPending}
+        streamingContent={streamingContent}
+        activeTool={activeTool}
+      />
       {showModelsError ? (
         <p className="shrink-0 px-4 pb-2 text-sm text-destructive">
           Assistant isn&apos;t configured. Check the API server settings.
@@ -36,6 +50,8 @@ const ChatPage: React.FC = () => {
       ) : null}
       <Composer
         onSend={send}
+        onStop={stop}
+        isStreaming={isStreaming}
         disabled={composerDisabled}
         modelOptions={options}
         modelSelection={selection}

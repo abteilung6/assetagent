@@ -7,6 +7,21 @@ import { Composer } from "@/components/chat/composer";
 import { mockApiResponse } from "@/test/mocks";
 import { testRender } from "@/test/render";
 
+function mockStreamResponse(body: string) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(body));
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: { "Content-Type": "text/event-stream" },
+  });
+}
+
 describe("Composer", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -25,6 +40,19 @@ describe("Composer", () => {
     await user.click(screen.getByRole("button", { name: "Send message" }));
 
     expect(onSend).toHaveBeenCalledWith("How much did I spend?");
+  });
+
+  it("shows a stop button while streaming", async () => {
+    const user = userEvent.setup();
+    const onStop = vi.fn();
+
+    testRender(
+      <Composer onSend={vi.fn()} onStop={onStop} isStreaming disabled />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Stop response" }));
+
+    expect(onStop).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -52,24 +80,25 @@ describe("ChatPage", () => {
     vi.restoreAllMocks();
   });
 
-  it("submits a message to the chat API", async () => {
+  it("submits a message to the streaming chat API", async () => {
     const user = userEvent.setup();
-    const postChat = vi.spyOn(sdk, "postChat").mockResolvedValue(
-      mockApiResponse({
-        answer: "You spent 15.98 EUR in December.",
-        tool_calls: [
-          {
-            name: "get_cashflow",
-            input: { from: "2025-12-01", to: "2025-12-31" },
-            result: {
-              income: "3200.00",
-              expenses: "15.98",
-              net: "3184.02",
-              currency: "EUR",
-            },
-          },
-        ],
-      }),
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      mockStreamResponse(
+        [
+          'event: tool_start',
+          'data: {"name":"get_cashflow","input":{"from":"2025-12-01","to":"2025-12-31"}}',
+          "",
+          'event: tool_result',
+          'data: {"name":"get_cashflow","result":{"income":"3200.00","expenses":"15.98","net":"3184.02","currency":"EUR"}}',
+          "",
+          'event: delta',
+          'data: {"content":"You spent 15.98 EUR in December."}',
+          "",
+          'event: done',
+          'data: {"answer":"You spent 15.98 EUR in December.","tool_calls":[{"name":"get_cashflow","input":{"from":"2025-12-01","to":"2025-12-31"},"result":{"income":"3200.00","expenses":"15.98","net":"3184.02","currency":"EUR"}}]}',
+          "",
+        ].join("\n"),
+      ),
     );
 
     testRender({ route: "/chat" });
@@ -81,15 +110,19 @@ describe("ChatPage", () => {
     await user.type(input, "How much did I spend in December?");
     await user.click(screen.getByRole("button", { name: "Send message" }));
 
-    expect(await screen.findByText("You spent 15.98 EUR in December.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("You spent 15.98 EUR in December."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Based on your data")).toBeInTheDocument();
     expect(screen.getByText("Spending summary")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /view transactions/i }),
     ).toBeInTheDocument();
-    expect(postChat).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/chat/stream",
       expect.objectContaining({
-        body: {
+        method: "POST",
+        body: JSON.stringify({
           messages: [
             {
               role: "user",
@@ -98,7 +131,7 @@ describe("ChatPage", () => {
           ],
           provider: "ollama",
           model: "gemma4:12b",
-        },
+        }),
       }),
     );
   });
