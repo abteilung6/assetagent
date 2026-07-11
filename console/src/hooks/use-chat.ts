@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
 import { postChatMutation } from "@/api/@tanstack/react-query.gen";
-import type { ChatMessage, ChatToolCall } from "@/api/types.gen";
+import type { ChatMessage, ChatToolCall, LlmModelSelection } from "@/api/types.gen";
 
 export type ChatUIMessage = {
   id: string;
@@ -18,14 +18,14 @@ function toApiMessages(messages: ChatUIMessage[]): ChatMessage[] {
   }));
 }
 
-export function useChat() {
+export function useChat(selection: LlmModelSelection | null) {
   const [messages, setMessages] = useState<ChatUIMessage[]>([]);
   const mutation = useMutation(postChatMutation());
 
   const send = useCallback(
     async (content: string) => {
       const trimmed = content.trim();
-      if (!trimmed || mutation.isPending) {
+      if (!trimmed || mutation.isPending || !selection) {
         return;
       }
 
@@ -38,7 +38,11 @@ export function useChat() {
       setMessages(nextMessages);
 
       const response = await mutation.mutateAsync({
-        body: { messages: toApiMessages(nextMessages) },
+        body: {
+          messages: toApiMessages(nextMessages),
+          provider: selection.provider,
+          model: selection.model,
+        },
       });
 
       setMessages((current) => [
@@ -51,7 +55,7 @@ export function useChat() {
         },
       ]);
     },
-    [messages, mutation],
+    [messages, mutation, selection],
   );
 
   return {

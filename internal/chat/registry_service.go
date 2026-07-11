@@ -1,0 +1,45 @@
+package chat
+
+import (
+	"context"
+
+	"github.com/abteilung6/assetagent/internal/llm"
+)
+
+type RegistryService struct {
+	registry *llm.Registry
+	tools    ToolRunner
+	cfg      Config
+}
+
+func NewRegistryService(registry *llm.Registry, tools ToolRunner, cfg Config) *RegistryService {
+	return &RegistryService{
+		registry: registry,
+		tools:    tools,
+		cfg:      cfg,
+	}
+}
+
+func (s *RegistryService) Chat(
+	ctx context.Context,
+	provider string,
+	model string,
+	messages []Message,
+) (Result, error) {
+	var providerID llm.ProviderID
+	if provider != "" {
+		var err error
+		providerID, err = llm.ParseProviderID(provider)
+		if err != nil {
+			return Result{}, err
+		}
+	}
+
+	resolved, err := s.registry.Resolve(ctx, providerID, model)
+	if err != nil {
+		return Result{}, err
+	}
+
+	svc := NewService(resolved, s.tools, s.cfg)
+	return svc.Chat(ctx, messages)
+}

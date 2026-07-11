@@ -125,6 +125,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/llm/models:
+    get:
+      operationId: getLLMModels
+      summary: List available LLM models for chat
+      responses:
+        "200":
+          description: Model catalog for the chat composer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LLMModelCatalog"
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     Error:
@@ -242,6 +259,13 @@ components:
           minItems: 1
           items:
             $ref: "#/components/schemas/ChatMessage"
+        provider:
+          type: string
+          enum: [ollama, openrouter]
+          description: Optional LLM provider override
+        model:
+          type: string
+          description: Optional model override for the selected provider
     ChatMessage:
       type: object
       required:
@@ -280,3 +304,43 @@ components:
         result:
           type: object
           additionalProperties: true
+    LLMModelSelection:
+      type: object
+      required:
+        - provider
+        - model
+      properties:
+        provider:
+          type: string
+          enum: [ollama, openrouter]
+        model:
+          type: string
+    LLMModelOption:
+      type: object
+      required:
+        - provider
+        - model
+        - label
+      properties:
+        provider:
+          type: string
+          enum: [ollama, openrouter]
+        model:
+          type: string
+        label:
+          type: string
+        group:
+          type: string
+          description: Optional UI group, e.g. Cloud or Local
+    LLMModelCatalog:
+      type: object
+      required:
+        - default
+        - options
+      properties:
+        default:
+          $ref: "#/components/schemas/LLMModelSelection"
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/LLMModelOption"

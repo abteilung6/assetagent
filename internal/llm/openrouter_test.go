@@ -82,6 +82,62 @@ func TestOpenRouter_Complete_text(t *testing.T) {
 	}
 }
 
+func TestOpenRouter_Complete_toolLoopArgumentsAreStrings(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Messages []struct {
+				Role      string `json:"role"`
+				ToolCalls []struct {
+					Function struct {
+						Name      string          `json:"name"`
+						Arguments json.RawMessage `json:"arguments"`
+					} `json:"function"`
+				} `json:"tool_calls"`
+			} `json:"messages"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+
+		for _, msg := range req.Messages {
+			for _, call := range msg.ToolCalls {
+				if len(call.Function.Arguments) == 0 {
+					continue
+				}
+				if call.Function.Arguments[0] != '"' {
+					t.Fatalf("arguments = %s, want JSON string", call.Function.Arguments)
+				}
+			}
+		}
+
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"15.98 EUR"}}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	client := llm.NewOpenRouter(srv.URL, "test-key", "openai/gpt-4o-mini", "", "")
+	_, err := client.Complete(context.Background(), llm.CompletionRequest{
+		Messages: []llm.Message{
+			{Role: llm.RoleUser, Content: "December spending?"},
+			{
+				Role: llm.RoleAssistant,
+				ToolCalls: []llm.ToolCall{{
+					ID:        "call_1",
+					Name:      "get_cashflow",
+					Arguments: json.RawMessage(`{"from":"2025-12-01","to":"2025-12-31"}`),
+				}},
+			},
+			{
+				Role:       llm.RoleTool,
+				ToolCallID: "call_1",
+				Content:    `{"ok":true,"expenses":"15.98","currency":"EUR"}`,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Complete() error = %v", err)
+	}
+}
+
 func TestOpenRouter_Complete_toolCall(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{

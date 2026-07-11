@@ -10,7 +10,7 @@ import (
 )
 
 type ChatService interface {
-	Chat(ctx context.Context, messages []chat.Message) (chat.Result, error)
+	Chat(ctx context.Context, provider, model string, messages []chat.Message) (chat.Result, error)
 }
 
 func (h *Handler) PostChat(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +38,16 @@ func (h *Handler) PostChat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	result, err := h.chat.Chat(r.Context(), messages)
+	provider := ""
+	if req.Provider != nil {
+		provider = string(*req.Provider)
+	}
+	model := ""
+	if req.Model != nil {
+		model = *req.Model
+	}
+
+	result, err := h.chat.Chat(r.Context(), provider, model, messages)
 	if err != nil {
 		writeChatError(w, err)
 		return

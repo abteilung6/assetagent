@@ -6,6 +6,7 @@ import (
 
 	"github.com/abteilung6/assetagent/internal/api/gen"
 	"github.com/abteilung6/assetagent/internal/domain"
+	"github.com/abteilung6/assetagent/internal/llm"
 	"github.com/abteilung6/assetagent/internal/service"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/shopspring/decimal"
@@ -16,12 +17,13 @@ type ListService interface {
 }
 
 type Handler struct {
-	list ListService
-	chat ChatService
+	list        ListService
+	chat        ChatService
+	llmRegistry *llm.Registry
 }
 
-func New(list ListService, chat ChatService) *Handler {
-	return &Handler{list: list, chat: chat}
+func New(list ListService, chat ChatService, registry *llm.Registry) *Handler {
+	return &Handler{list: list, chat: chat, llmRegistry: registry}
 }
 
 func (h *Handler) GetHealth(w http.ResponseWriter, r *http.Request) {

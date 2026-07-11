@@ -6,6 +6,7 @@ import (
 
 	"github.com/abteilung6/assetagent/internal/api/gen"
 	"github.com/abteilung6/assetagent/internal/chat"
+	"github.com/abteilung6/assetagent/internal/llm"
 	"github.com/abteilung6/assetagent/internal/service"
 )
 
@@ -33,7 +34,11 @@ func writeServiceError(w http.ResponseWriter, err error) {
 func writeChatError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, chat.ErrEmptyMessages),
-		errors.Is(err, chat.ErrInvalidRole):
+		errors.Is(err, chat.ErrInvalidRole),
+		errors.Is(err, llm.ErrProviderDisabled),
+		errors.Is(err, llm.ErrProviderUnknown),
+		errors.Is(err, llm.ErrModelNotAllowed),
+		errors.Is(err, llm.ErrOpenRouterNoKey):
 		writeValidationError(w, err.Error())
 	default:
 		writeInternalError(w, "failed to process chat request")

@@ -161,7 +161,7 @@ func toOpenRouterMessages(messages []Message) []openRouterMessage {
 					Type: "function",
 					Function: openRouterToolCallFunction{
 						Name:      tc.Name,
-						Arguments: normalizeToolArguments(tc.Arguments),
+						Arguments: stringifyToolArguments(tc.Arguments),
 					},
 				}
 			}
@@ -205,17 +205,26 @@ func fromOpenRouterMessage(msg openRouterMessage) CompletionResponse {
 		resp.ToolCalls[i] = ToolCall{
 			ID:        tc.ID,
 			Name:      tc.Function.Name,
-			Arguments: parseToolArguments(tc.Function.Arguments),
+			Arguments: parseToolArguments(json.RawMessage(tc.Function.Arguments)),
 		}
 	}
 	return resp
 }
 
-func normalizeToolArguments(raw json.RawMessage) json.RawMessage {
+func stringifyToolArguments(raw json.RawMessage) string {
 	if len(raw) == 0 {
-		return json.RawMessage(`{}`)
+		return "{}"
 	}
-	return raw
+
+	var asString string
+	if err := json.Unmarshal(raw, &asString); err == nil {
+		if asString == "" {
+			return "{}"
+		}
+		return asString
+	}
+
+	return string(raw)
 }
 
 func parseToolArguments(raw json.RawMessage) json.RawMessage {
@@ -292,6 +301,6 @@ type openRouterToolCall struct {
 }
 
 type openRouterToolCallFunction struct {
-	Name      string          `json:"name"`
-	Arguments json.RawMessage `json:"arguments"`
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
 }

@@ -34,6 +34,60 @@ func (e ChatMessageRole) Valid() bool {
 	}
 }
 
+// Defines values for ChatRequestProvider.
+const (
+	ChatRequestProviderOllama     ChatRequestProvider = "ollama"
+	ChatRequestProviderOpenrouter ChatRequestProvider = "openrouter"
+)
+
+// Valid indicates whether the value is a known member of the ChatRequestProvider enum.
+func (e ChatRequestProvider) Valid() bool {
+	switch e {
+	case ChatRequestProviderOllama:
+		return true
+	case ChatRequestProviderOpenrouter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LLMModelOptionProvider.
+const (
+	LLMModelOptionProviderOllama     LLMModelOptionProvider = "ollama"
+	LLMModelOptionProviderOpenrouter LLMModelOptionProvider = "openrouter"
+)
+
+// Valid indicates whether the value is a known member of the LLMModelOptionProvider enum.
+func (e LLMModelOptionProvider) Valid() bool {
+	switch e {
+	case LLMModelOptionProviderOllama:
+		return true
+	case LLMModelOptionProviderOpenrouter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LLMModelSelectionProvider.
+const (
+	Ollama     LLMModelSelectionProvider = "ollama"
+	Openrouter LLMModelSelectionProvider = "openrouter"
+)
+
+// Valid indicates whether the value is a known member of the LLMModelSelectionProvider enum.
+func (e LLMModelSelectionProvider) Valid() bool {
+	switch e {
+	case Ollama:
+		return true
+	case Openrouter:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetTransactionsParamsSort.
 const (
 	Amount       GetTransactionsParamsSort = "amount"
@@ -85,7 +139,16 @@ type ChatMessageRole string
 // ChatRequest defines model for ChatRequest.
 type ChatRequest struct {
 	Messages []ChatMessage `json:"messages"`
+
+	// Model Optional model override for the selected provider
+	Model *string `json:"model,omitempty"`
+
+	// Provider Optional LLM provider override
+	Provider *ChatRequestProvider `json:"provider,omitempty"`
 }
+
+// ChatRequestProvider Optional LLM provider override
+type ChatRequestProvider string
 
 // ChatResponse defines model for ChatResponse.
 type ChatResponse struct {
@@ -110,6 +173,33 @@ type Error struct {
 type HealthResponse struct {
 	Status string `json:"status"`
 }
+
+// LLMModelCatalog defines model for LLMModelCatalog.
+type LLMModelCatalog struct {
+	Default LLMModelSelection `json:"default"`
+	Options []LLMModelOption  `json:"options"`
+}
+
+// LLMModelOption defines model for LLMModelOption.
+type LLMModelOption struct {
+	// Group Optional UI group, e.g. Cloud or Local
+	Group    *string                `json:"group,omitempty"`
+	Label    string                 `json:"label"`
+	Model    string                 `json:"model"`
+	Provider LLMModelOptionProvider `json:"provider"`
+}
+
+// LLMModelOptionProvider defines model for LLMModelOption.Provider.
+type LLMModelOptionProvider string
+
+// LLMModelSelection defines model for LLMModelSelection.
+type LLMModelSelection struct {
+	Model    string                    `json:"model"`
+	Provider LLMModelSelectionProvider `json:"provider"`
+}
+
+// LLMModelSelectionProvider defines model for LLMModelSelection.Provider.
+type LLMModelSelectionProvider string
 
 // Pagination defines model for Pagination.
 type Pagination struct {
@@ -196,6 +286,9 @@ type ServerInterface interface {
 	// Health check
 	// (GET /api/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// List available LLM models for chat
+	// (GET /api/llm/models)
+	GetLLMModels(w http.ResponseWriter, r *http.Request)
 	// List transactions
 	// (GET /api/transactions)
 	GetTransactions(w http.ResponseWriter, r *http.Request, params GetTransactionsParams)
@@ -214,6 +307,12 @@ func (_ Unimplemented) PostChat(w http.ResponseWriter, r *http.Request) {
 // Health check
 // (GET /api/health)
 func (_ Unimplemented) GetHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List available LLM models for chat
+// (GET /api/llm/models)
+func (_ Unimplemented) GetLLMModels(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -251,6 +350,20 @@ func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetLLMModels operation middleware
+func (siw *ServerInterfaceWrapper) GetLLMModels(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLLMModels(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -541,6 +654,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/health", wrapper.GetHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/llm/models", wrapper.GetLLMModels)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/transactions", wrapper.GetTransactions)

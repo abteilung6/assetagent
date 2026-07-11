@@ -47,6 +47,14 @@ export type TransactionListResponse = {
 
 export type ChatRequest = {
     messages: Array<ChatMessage>;
+    /**
+     * Optional LLM provider override
+     */
+    provider?: 'ollama' | 'openrouter';
+    /**
+     * Optional model override for the selected provider
+     */
+    model?: string;
 };
 
 export type ChatMessage = {
@@ -67,6 +75,26 @@ export type ChatToolCall = {
     result: {
         [key: string]: unknown;
     };
+};
+
+export type LlmModelSelection = {
+    provider: 'ollama' | 'openrouter';
+    model: string;
+};
+
+export type LlmModelOption = {
+    provider: 'ollama' | 'openrouter';
+    model: string;
+    label: string;
+    /**
+     * Optional UI group, e.g. Cloud or Local
+     */
+    group?: string;
+};
+
+export type LlmModelCatalog = {
+    default: LlmModelSelection;
+    options: Array<LlmModelOption>;
 };
 
 export type GetHealthData = {
@@ -177,3 +205,28 @@ export type PostChatResponses = {
 };
 
 export type PostChatResponse = PostChatResponses[keyof PostChatResponses];
+
+export type GetLlmModelsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/llm/models';
+};
+
+export type GetLlmModelsErrors = {
+    /**
+     * Internal error
+     */
+    500: Error;
+};
+
+export type GetLlmModelsError = GetLlmModelsErrors[keyof GetLlmModelsErrors];
+
+export type GetLlmModelsResponses = {
+    /**
+     * Model catalog for the chat composer
+     */
+    200: LlmModelCatalog;
+};
+
+export type GetLlmModelsResponse = GetLlmModelsResponses[keyof GetLlmModelsResponses];

@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { getHealth, getTransactions, type Options, postChat } from '../sdk.gen';
-import type { GetHealthData, GetHealthResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, PostChatData, PostChatError, PostChatResponse } from '../types.gen';
+import { getHealth, getLlmModels, getTransactions, type Options, postChat } from '../sdk.gen';
+import type { GetHealthData, GetHealthResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, PostChatData, PostChatError, PostChatResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -150,3 +150,21 @@ export const postChatMutation = (options?: Partial<Options<PostChatData>>): UseM
     };
     return mutationOptions;
 };
+
+export const getLlmModelsQueryKey = (options?: Options<GetLlmModelsData>) => createQueryKey('getLlmModels', options);
+
+/**
+ * List available LLM models for chat
+ */
+export const getLlmModelsOptions = (options?: Options<GetLlmModelsData>) => queryOptions<GetLlmModelsResponse, GetLlmModelsError, GetLlmModelsResponse, ReturnType<typeof getLlmModelsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getLlmModels({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getLlmModelsQueryKey(options)
+});

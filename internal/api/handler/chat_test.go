@@ -21,7 +21,7 @@ type stubChatService struct {
 	input  []chat.Message
 }
 
-func (s *stubChatService) Chat(ctx context.Context, messages []chat.Message) (chat.Result, error) {
+func (s *stubChatService) Chat(ctx context.Context, provider, model string, messages []chat.Message) (chat.Result, error) {
 	s.input = messages
 	return s.result, s.err
 }
@@ -39,7 +39,7 @@ func TestPostChat_returnsGroundedAnswer(t *testing.T) {
 	}
 
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(&stubListService{}, chatSvc), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(&stubListService{}, chatSvc, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})
@@ -75,7 +75,7 @@ func TestPostChat_rejectsEmptyMessages(t *testing.T) {
 	chatSvc := &stubChatService{}
 
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(&stubListService{}, chatSvc), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(&stubListService{}, chatSvc, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})

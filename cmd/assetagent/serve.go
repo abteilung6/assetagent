@@ -52,19 +52,14 @@ func newServeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			provider, err := llmRegistry.Default(ctx)
-			if err != nil {
-				return err
-			}
-
-			chatSvc := chat.NewService(
-				provider,
+			chatSvc := chat.NewRegistryService(
+				llmRegistry,
 				toolRegistry,
 				chat.DefaultConfig(),
 			)
 
 			router := chi.NewRouter()
-			gen.HandlerWithOptions(handler.New(listSvc, chatSvc), gen.ChiServerOptions{
+			gen.HandlerWithOptions(handler.New(listSvc, chatSvc, llmRegistry), gen.ChiServerOptions{
 				BaseRouter:       router,
 				ErrorHandlerFunc: handler.APIErrorHandler,
 			})

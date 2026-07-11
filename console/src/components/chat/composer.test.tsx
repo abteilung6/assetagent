@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -30,8 +30,21 @@ describe("Composer", () => {
 
 describe("ChatPage", () => {
   beforeEach(() => {
+    localStorage.clear();
     vi.spyOn(sdk, "getHealth").mockResolvedValue(
       mockApiResponse({ status: "ok" }),
+    );
+    vi.spyOn(sdk, "getLlmModels").mockResolvedValue(
+      mockApiResponse({
+        default: { provider: "ollama", model: "gemma4:12b" },
+        options: [
+          {
+            provider: "ollama",
+            model: "gemma4:12b",
+            label: "Gemma 4 12B",
+          },
+        ],
+      }),
     );
   });
 
@@ -62,6 +75,9 @@ describe("ChatPage", () => {
     testRender({ route: "/chat" });
 
     const input = await screen.findByPlaceholderText("Ask about your finances…");
+    await waitFor(() => {
+      expect(input).not.toBeDisabled();
+    });
     await user.type(input, "How much did I spend in December?");
     await user.click(screen.getByRole("button", { name: "Send message" }));
 
@@ -80,6 +96,8 @@ describe("ChatPage", () => {
               content: "How much did I spend in December?",
             },
           ],
+          provider: "ollama",
+          model: "gemma4:12b",
         },
       }),
     );

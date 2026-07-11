@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetHealthData, GetHealthResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, PostChatData, PostChatErrors, PostChatResponses } from './types.gen';
+import type { GetHealthData, GetHealthResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, PostChatData, PostChatErrors, PostChatResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -39,3 +39,8 @@ export const postChat = <ThrowOnError extends boolean = false>(options: Options<
         ...options.headers
     }
 });
+
+/**
+ * List available LLM models for chat
+ */
+export const getLlmModels = <ThrowOnError extends boolean = false>(options?: Options<GetLlmModelsData, ThrowOnError>): RequestResult<GetLlmModelsResponses, GetLlmModelsErrors, ThrowOnError> => (options?.client ?? client).get<GetLlmModelsResponses, GetLlmModelsErrors, ThrowOnError>({ url: '/api/llm/models', ...options });

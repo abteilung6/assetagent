@@ -50,7 +50,7 @@ func TestGetTransactions_returnsPaginatedList(t *testing.T) {
 	}
 
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(list, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(list, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})
@@ -86,7 +86,7 @@ func TestGetTransactions_returnsPaginatedList(t *testing.T) {
 
 func TestGetTransactions_invalidDate_returns400(t *testing.T) {
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(&stubListService{}, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(&stubListService{}, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})
@@ -112,7 +112,7 @@ func TestGetTransactions_mapsFilterParams(t *testing.T) {
 	list := &stubListService{result: domain.ListResult{Total: 0}}
 
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(list, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(list, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})
