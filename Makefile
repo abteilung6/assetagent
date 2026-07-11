@@ -13,7 +13,7 @@ OAPICODEGEN := $(GOPATH_BIN)/oapi-codegen
 OLLAMA_MODEL ?= llama3.2
 OLLAMA_BASE_URL ?= http://localhost:11434
 
-.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate api-install api-generate api-client-generate import serve ollama-pull ollama-logs console-install console-dev console-build console-test console-e2e-deps console-e2e-run console-e2e
+.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate api-install api-generate api-client-generate import serve ollama-pull ollama-logs console-install console-dev console-build console-test console-e2e-deps console-e2e-run console-e2e langfuse-up langfuse-down langfuse-ps langfuse-logs langfuse-health langfuse-reset
 
 build:
 	go build -o $(BINARY) $(CMD)
@@ -106,3 +106,25 @@ console-e2e-run:
 
 console-e2e: build dev-up console-install
 	$(MAKE) console-e2e-run
+
+LANGFUSE_COMPOSE := env -u DATABASE_URL -u DIRECT_URL docker compose -f docker-compose.langfuse.yml --env-file .env.langfuse
+
+langfuse-up:
+	@test -f .env.langfuse || (cp .env.langfuse.example .env.langfuse && echo "Created .env.langfuse from example")
+	$(LANGFUSE_COMPOSE) up -d
+
+langfuse-down:
+	$(LANGFUSE_COMPOSE) down
+
+langfuse-ps:
+	$(LANGFUSE_COMPOSE) ps
+
+langfuse-logs:
+	$(LANGFUSE_COMPOSE) logs -f langfuse-web
+
+langfuse-health:
+	@curl -fsS http://localhost:3000/api/public/health && echo
+
+langfuse-reset:
+	$(LANGFUSE_COMPOSE) down -v
+	@echo "Langfuse volumes removed. Run: make langfuse-up"

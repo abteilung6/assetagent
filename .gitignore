@@ -1,5 +1,6 @@
 bin/
 .env
+.env.langfuse
 *.test
 tmp/
 console/node_modules/
