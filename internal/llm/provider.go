@@ -27,6 +27,7 @@ type Tool struct {
 }
 
 type ToolCall struct {
+	ID        string
 	Name      string
 	Arguments json.RawMessage
 }

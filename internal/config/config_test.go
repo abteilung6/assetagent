@@ -13,6 +13,9 @@ func TestLoad_defaults(t *testing.T) {
 	t.Setenv("LOG_FORMAT", "")
 	t.Setenv("OLLAMA_BASE_URL", "")
 	t.Setenv("OLLAMA_MODEL", "")
+	t.Setenv("LLM_DEFAULT_PROVIDER", "")
+	t.Setenv("LLM_PROVIDERS", "")
+	t.Setenv("OPENROUTER_BASE_URL", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -35,6 +38,15 @@ func TestLoad_defaults(t *testing.T) {
 	}
 	if cfg.LogFormat != "text" {
 		t.Errorf("LogFormat = %q, want text", cfg.LogFormat)
+	}
+	if cfg.LLMDefaultProvider != "ollama" {
+		t.Errorf("LLMDefaultProvider = %q, want ollama", cfg.LLMDefaultProvider)
+	}
+	if cfg.LLMProviders != "ollama" {
+		t.Errorf("LLMProviders = %q, want ollama", cfg.LLMProviders)
+	}
+	if cfg.OpenRouterBaseURL != "https://openrouter.ai/api/v1" {
+		t.Errorf("OpenRouterBaseURL = %q, want https://openrouter.ai/api/v1", cfg.OpenRouterBaseURL)
 	}
 }
 
@@ -101,6 +113,21 @@ func TestLoad_validationErrors(t *testing.T) {
 			env:    map[string]string{"OLLAMA_BASE_URL": "ftp://localhost:11434"},
 			errMsg: "OLLAMA_BASE_URL",
 		},
+		{
+			name:   "invalid llm default provider",
+			env:    map[string]string{"LLM_DEFAULT_PROVIDER": "anthropic"},
+			errMsg: "LLM provider",
+		},
+		{
+			name:   "invalid llm providers list",
+			env:    map[string]string{"LLM_PROVIDERS": "ollama,unknown"},
+			errMsg: "LLM provider",
+		},
+		{
+			name:   "invalid openrouter base url scheme",
+			env:    map[string]string{"OPENROUTER_BASE_URL": "ftp://openrouter.ai"},
+			errMsg: "OPENROUTER_BASE_URL",
+		},
 	}
 
 	for _, tt := range tests {
@@ -111,6 +138,9 @@ func TestLoad_validationErrors(t *testing.T) {
 			t.Setenv("LOG_FORMAT", "")
 			t.Setenv("OLLAMA_BASE_URL", "")
 			t.Setenv("OLLAMA_MODEL", "")
+			t.Setenv("LLM_DEFAULT_PROVIDER", "")
+			t.Setenv("LLM_PROVIDERS", "")
+			t.Setenv("OPENROUTER_BASE_URL", "")
 
 			for k, v := range tt.env {
 				t.Setenv(k, v)

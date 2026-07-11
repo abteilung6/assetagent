@@ -12,7 +12,6 @@ import (
 	"github.com/abteilung6/assetagent/internal/chat/tools"
 	"github.com/abteilung6/assetagent/internal/config"
 	"github.com/abteilung6/assetagent/internal/db"
-	"github.com/abteilung6/assetagent/internal/llm"
 	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/abteilung6/assetagent/internal/service"
 	"github.com/go-chi/chi/v5"
@@ -48,8 +47,18 @@ func newServeCmd() *cobra.Command {
 				Reports: reportsRepo,
 				Lister:  txRepo,
 			})
+
+			llmRegistry, err := newLLMRegistry(cfg)
+			if err != nil {
+				return err
+			}
+			provider, err := llmRegistry.Default(ctx)
+			if err != nil {
+				return err
+			}
+
 			chatSvc := chat.NewService(
-				llm.NewOllama(cfg.OllamaBaseURL, cfg.OllamaModel),
+				provider,
 				toolRegistry,
 				chat.DefaultConfig(),
 			)

@@ -16,6 +16,15 @@ type Config struct {
 	OllamaModel   string
 	LogLevel      slog.Level
 	LogFormat     string
+
+	LLMDefaultProvider       string
+	LLMProviders             string
+	OpenRouterBaseURL        string
+	OpenRouterAPIKey         string
+	OpenRouterDefaultModel   string
+	OpenRouterModelAllowlist string
+	OpenRouterAppURL         string
+	OpenRouterAppName        string
 }
 
 func Load() (Config, error) {
@@ -41,13 +50,38 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	openRouterBaseURL := envOrDefault("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+	if err := validateHTTPBaseURL(openRouterBaseURL, "OPENROUTER_BASE_URL"); err != nil {
+		return Config{}, err
+	}
+
+	llmDefaultProvider := envOrDefault("LLM_DEFAULT_PROVIDER", "ollama")
+	if _, err := parseLLMProvider(llmDefaultProvider); err != nil {
+		return Config{}, err
+	}
+
+	llmProviders := envOrDefault("LLM_PROVIDERS", "ollama")
+	for _, part := range splitCSV(llmProviders) {
+		if _, err := parseLLMProvider(part); err != nil {
+			return Config{}, err
+		}
+	}
+
 	return Config{
-		DatabaseURL:   databaseURL,
-		APIAddr:       envOrDefault("API_ADDR", ":8080"),
-		OllamaBaseURL: ollamaBaseURL,
-		OllamaModel:   envOrDefault("OLLAMA_MODEL", "llama3.2"),
-		LogLevel:      level,
-		LogFormat:     format,
+		DatabaseURL:              databaseURL,
+		APIAddr:                  envOrDefault("API_ADDR", ":8080"),
+		OllamaBaseURL:              ollamaBaseURL,
+		OllamaModel:                envOrDefault("OLLAMA_MODEL", "llama3.2"),
+		LogLevel:                   level,
+		LogFormat:                  format,
+		LLMDefaultProvider:         llmDefaultProvider,
+		LLMProviders:               llmProviders,
+		OpenRouterBaseURL:          openRouterBaseURL,
+		OpenRouterAPIKey:           os.Getenv("OPENROUTER_API_KEY"),
+		OpenRouterDefaultModel:     envOrDefault("OPENROUTER_DEFAULT_MODEL", ""),
+		OpenRouterModelAllowlist:   envOrDefault("OPENROUTER_MODEL_ALLOWLIST", ""),
+		OpenRouterAppURL:           envOrDefault("OPENROUTER_APP_URL", ""),
+		OpenRouterAppName:          envOrDefault("OPENROUTER_APP_NAME", "assetagent"),
 	}, nil
 }
 
@@ -99,4 +133,25 @@ func validateHTTPBaseURL(raw, envName string) error {
 		return fmt.Errorf("%s: host is required", envName)
 	}
 	return nil
+}
+
+func parseLLMProvider(raw string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "ollama", "openrouter":
+		return strings.ToLower(strings.TrimSpace(raw)), nil
+	default:
+		return "", fmt.Errorf("LLM provider must be ollama or openrouter, got %q", raw)
+	}
+}
+
+func splitCSV(raw string) []string {
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }

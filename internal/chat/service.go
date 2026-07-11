@@ -151,9 +151,10 @@ func (s *Service) Chat(ctx context.Context, messages []Message) (Result, error) 
 			})
 
 			conversation = append(conversation, llm.Message{
-				Role:     llm.RoleTool,
-				ToolName: call.Name,
-				Content:  string(result),
+				Role:       llm.RoleTool,
+				ToolCallID: call.ID,
+				ToolName:   call.Name,
+				Content:    string(result),
 			})
 		}
 	}
