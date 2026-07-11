@@ -25,6 +25,12 @@ type Config struct {
 	OpenRouterModelAllowlist string
 	OpenRouterAppURL         string
 	OpenRouterAppName        string
+
+	LangfuseEnabled     bool
+	LangfusePublicKey   string
+	LangfuseSecretKey   string
+	OTLPEndpoint        string
+	LangfuseTraceDetail string
 }
 
 func Load() (Config, error) {
@@ -82,6 +88,11 @@ func Load() (Config, error) {
 		OpenRouterModelAllowlist:   envOrDefault("OPENROUTER_MODEL_ALLOWLIST", ""),
 		OpenRouterAppURL:           envOrDefault("OPENROUTER_APP_URL", ""),
 		OpenRouterAppName:          envOrDefault("OPENROUTER_APP_NAME", "assetagent"),
+		LangfuseEnabled:            parseBoolEnv("LANGFUSE_ENABLED", false),
+		LangfusePublicKey:          os.Getenv("LANGFUSE_PUBLIC_KEY"),
+		LangfuseSecretKey:          os.Getenv("LANGFUSE_SECRET_KEY"),
+		OTLPEndpoint:               envOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:3000/api/public/otel"),
+		LangfuseTraceDetail:        envOrDefault("LANGFUSE_TRACE_DETAIL", "metadata_only"),
 	}, nil
 }
 
@@ -154,4 +165,19 @@ func splitCSV(raw string) []string {
 		}
 	}
 	return out
+}
+
+func parseBoolEnv(key string, fallback bool) bool {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return fallback
+	}
+	switch strings.ToLower(raw) {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return fallback
+	}
 }

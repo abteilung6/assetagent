@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/abteilung6/assetagent/internal/llm"
+	"github.com/abteilung6/assetagent/internal/telemetry"
 )
 
 const defaultMaxTurns = 5
@@ -49,12 +50,14 @@ type ToolRunner interface {
 type Config struct {
 	MaxTurns     int
 	SystemPrompt string
+	TraceDetail  telemetry.TraceDetail
 }
 
 func DefaultConfig() Config {
 	return Config{
 		MaxTurns:     defaultMaxTurns,
 		SystemPrompt: defaultSystemPrompt,
+		TraceDetail:  telemetry.TraceDetailMetadata,
 	}
 }
 
@@ -118,13 +121,17 @@ func (s *Service) Chat(ctx context.Context, messages []Message) (Result, error) 
 	toolCalls := make([]ToolCall, 0)
 
 	for turn := 0; turn < s.cfg.MaxTurns; turn++ {
+		ctx, endLLM := startLLMSpan(ctx, s.llm.Model(), turn)
 		resp, err := s.llm.Complete(ctx, llm.CompletionRequest{
 			Messages: conversation,
 			Tools:    s.tools.Tools(),
 		})
 		if err != nil {
+			telemetry.RecordError(ctx, err)
+			endLLM()
 			return Result{}, err
 		}
+		endLLM()
 
 		if len(resp.ToolCalls) == 0 {
 			return Result{
@@ -139,10 +146,12 @@ func (s *Service) Chat(ctx context.Context, messages []Message) (Result, error) 
 		})
 
 		for _, call := range resp.ToolCalls {
+			ctx, endTool := startToolSpan(ctx, call.Name, call.Arguments, s.cfg.TraceDetail)
 			result, err := s.tools.Execute(ctx, call.Name, call.Arguments)
 			if err != nil {
 				result = encodeToolError(err)
 			}
+			endTool(err, result)
 
 			toolCalls = append(toolCalls, ToolCall{
 				Name:   call.Name,

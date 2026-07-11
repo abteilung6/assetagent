@@ -48,7 +48,10 @@ func (h *Handler) PostChat(w http.ResponseWriter, r *http.Request) {
 		model = *req.Model
 	}
 
-	result, err := h.chat.Chat(r.Context(), provider, model, messages)
+	ctx, endSpan := chat.StartHTTPChatSpan(r.Context(), provider, model, len(messages), false)
+	defer endSpan()
+
+	result, err := h.chat.Chat(ctx, provider, model, messages)
 	if err != nil {
 		writeChatError(w, err)
 		return

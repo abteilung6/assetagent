@@ -4,7 +4,7 @@ export type ChatStreamEvent =
   | { type: "delta"; content: string }
   | { type: "tool_start"; name: string; input: Record<string, unknown> }
   | { type: "tool_result"; name: string; result: Record<string, unknown> }
-  | { type: "done"; answer: string; toolCalls: ChatToolCall[] }
+  | { type: "done"; answer: string; toolCalls: ChatToolCall[]; traceId?: string }
   | { type: "error"; message: string };
 
 export type StreamChatOptions = {
@@ -149,6 +149,8 @@ function dispatchStreamEvent(
         type: "done",
         answer: typeof payload.answer === "string" ? payload.answer : "",
         toolCalls: parseToolCalls(payload.tool_calls),
+        traceId:
+          typeof payload.trace_id === "string" ? payload.trace_id : undefined,
       });
       return;
     case "error":

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 
 	"github.com/abteilung6/assetagent/internal/llm"
+	"github.com/abteilung6/assetagent/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 const (
@@ -32,8 +34,9 @@ type toolResultPayload struct {
 }
 
 type streamDonePayload struct {
-	Answer    string                `json:"answer"`
+	Answer    string                  `json:"answer"`
 	ToolCalls []streamToolCallPayload `json:"tool_calls"`
+	TraceID   string                  `json:"trace_id,omitempty"`
 }
 
 type streamToolCallPayload struct {
@@ -81,6 +84,7 @@ func (s *Service) Stream(ctx context.Context, messages []Message, write StreamWr
 	toolCalls := make([]ToolCall, 0)
 
 	for turn := 0; turn < s.cfg.MaxTurns; turn++ {
+		ctx, endLLM := startLLMSpan(ctx, s.llm.Model(), turn)
 		resp, err := llm.StreamComplete(ctx, s.llm, llm.CompletionRequest{
 			Messages: conversation,
 			Tools:    s.tools.Tools(),
@@ -88,13 +92,17 @@ func (s *Service) Stream(ctx context.Context, messages []Message, write StreamWr
 			return write(StreamEventDelta, deltaPayload{Content: delta})
 		})
 		if err != nil {
+			telemetry.RecordError(ctx, err)
+			endLLM()
 			return writeStreamError(write, err)
 		}
+		endLLM()
 
 		if len(resp.ToolCalls) == 0 {
 			return write(StreamEventDone, streamDonePayload{
 				Answer:    resp.Content,
 				ToolCalls: toStreamToolCalls(toolCalls),
+				TraceID:   traceID(ctx),
 			})
 		}
 
@@ -112,10 +120,12 @@ func (s *Service) Stream(ctx context.Context, messages []Message, write StreamWr
 				return err
 			}
 
+			ctx, endTool := startToolSpan(ctx, call.Name, input, s.cfg.TraceDetail)
 			result, err := s.tools.Execute(ctx, call.Name, call.Arguments)
 			if err != nil {
 				result = encodeToolError(err)
 			}
+			endTool(err, result)
 
 			toolCalls = append(toolCalls, ToolCall{
 				Name:   call.Name,
@@ -170,6 +180,11 @@ func (s *RegistryService) Stream(
 	if err != nil {
 		return writeStreamError(write, err)
 	}
+
+	telemetry.SetAttributes(ctx,
+		attribute.String("chat.provider", string(resolvedProviderID(provider, providerID, s.registry))),
+		attribute.String("chat.model", resolved.Model()),
+	)
 
 	svc := NewService(resolved, s.tools, s.cfg)
 	return svc.Stream(ctx, messages, write)

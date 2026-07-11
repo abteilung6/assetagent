@@ -42,9 +42,12 @@ func (h *Handler) PostChatStream(w http.ResponseWriter, r *http.Request) {
 		model = *req.Model
 	}
 
+	ctx, endSpan := chat.StartHTTPChatSpan(r.Context(), provider, model, len(messages), true)
+	defer endSpan()
+
 	initSSE(w)
 
-	_ = h.chat.StreamChat(r.Context(), provider, model, messages, func(event string, data any) error {
+	_ = h.chat.StreamChat(ctx, provider, model, messages, func(event string, data any) error {
 		return writeSSE(w, event, data)
 	})
 }

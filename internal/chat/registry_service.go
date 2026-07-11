@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/abteilung6/assetagent/internal/llm"
+	"github.com/abteilung6/assetagent/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type RegistryService struct {
@@ -39,6 +41,11 @@ func (s *RegistryService) Chat(
 	if err != nil {
 		return Result{}, err
 	}
+
+	telemetry.SetAttributes(ctx,
+		attribute.String("chat.provider", string(resolvedProviderID(provider, providerID, s.registry))),
+		attribute.String("chat.model", resolved.Model()),
+	)
 
 	svc := NewService(resolved, s.tools, s.cfg)
 	return svc.Chat(ctx, messages)
