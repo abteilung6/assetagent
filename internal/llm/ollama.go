@@ -63,11 +63,13 @@ func (o *Ollama) Ping(ctx context.Context) error {
 }
 
 func (o *Ollama) Complete(ctx context.Context, req CompletionRequest) (CompletionResponse, error) {
+	think := false
 	payload := ollamaChatRequest{
 		Model:    o.model,
 		Messages: toOllamaMessages(req.Messages),
 		Tools:    toOllamaTools(req.Tools),
 		Stream:   false,
+		Think:    &think,
 	}
 
 	body, err := json.Marshal(payload)
@@ -190,6 +192,7 @@ type ollamaChatRequest struct {
 	Messages []ollamaMessage `json:"messages"`
 	Tools    []ollamaTool    `json:"tools,omitempty"`
 	Stream   bool            `json:"stream"`
+	Think    *bool           `json:"think,omitempty"`
 }
 
 type ollamaChatResponse struct {

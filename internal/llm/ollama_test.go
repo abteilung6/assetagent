@@ -54,12 +54,16 @@ func TestOllama_Complete_text(t *testing.T) {
 		var req struct {
 			Model  string `json:"model"`
 			Stream bool   `json:"stream"`
+			Think  *bool  `json:"think"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
 		if req.Model != "llama3.2" || req.Stream {
 			t.Fatalf("request = %+v, want model llama3.2 stream false", req)
+		}
+		if req.Think == nil || *req.Think {
+			t.Fatalf("think = %v, want false", req.Think)
 		}
 
 		_, _ = w.Write([]byte(`{"message":{"role":"assistant","content":"42.00 EUR"}}`))
