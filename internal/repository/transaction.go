@@ -167,6 +167,8 @@ func buildParams(tx domain.Transaction, fingerprint string) sqldb.InsertTransact
 		Currency:                       tx.Currency,
 		Info:                           tx.Info,
 		Fingerprint:                    fingerprint,
+		AccountID:                      pgtype.UUID{},
+		ImportRunID:                    pgtype.UUID{},
 	}
 }
 

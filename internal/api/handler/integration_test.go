@@ -12,6 +12,7 @@ import (
 	"github.com/abteilung6/assetagent/internal/api/gen"
 	"github.com/abteilung6/assetagent/internal/api/handler"
 	"github.com/abteilung6/assetagent/internal/db"
+	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/abteilung6/assetagent/internal/service"
 	"github.com/go-chi/chi/v5"
@@ -29,10 +30,10 @@ func TestIntegration_TransactionsAPI(t *testing.T) {
 	t.Cleanup(pool.Close)
 
 	repo := repository.NewTransaction(pool)
-	importer := service.NewImport(repo)
+	importer := service.NewImport(pool)
 	samplePath := filepath.Join("..", "..", "..", "testdata", "sparkasse", "sample.csv")
 
-	result, err := importer.ImportFile(ctx, samplePath)
+	result, err := importer.ImportFile(ctx, samplePath, domain.ImportOptions{})
 	if err != nil {
 		t.Fatalf("ImportFile: %v", err)
 	}

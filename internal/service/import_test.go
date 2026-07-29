@@ -1,7 +1,6 @@
 package service_test
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
@@ -12,68 +11,6 @@ import (
 	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/abteilung6/assetagent/internal/service"
 )
-
-type fakeTransactionRepo struct {
-	inserted     int
-	duplicates   int
-	err          error
-	batchCalls   int
-	lastBatchLen int
-}
-
-func (f *fakeTransactionRepo) BatchInsert(ctx context.Context, txs []domain.Transaction) (int, int, error) {
-	f.batchCalls++
-	f.lastBatchLen = len(txs)
-	if f.err != nil {
-		return 0, 0, f.err
-	}
-	return f.inserted, f.duplicates, nil
-}
-
-func TestImport_ImportFile(t *testing.T) {
-	path := filepath.Join("..", "..", "testdata", "sparkasse", "minimal.csv")
-
-	repo := &fakeTransactionRepo{inserted: 6, duplicates: 0}
-	importer := service.NewImport(repo)
-
-	result, err := importer.ImportFile(context.Background(), path)
-	if err != nil {
-		t.Fatalf("ImportFile() error = %v", err)
-	}
-	if result.Rows != 6 {
-		t.Fatalf("Rows = %d, want 6", result.Rows)
-	}
-	if result.Inserted != 6 {
-		t.Fatalf("Inserted = %d, want 6", result.Inserted)
-	}
-	if result.Duplicates != 0 {
-		t.Fatalf("Duplicates = %d, want 0", result.Duplicates)
-	}
-	if repo.batchCalls != 1 {
-		t.Fatalf("BatchInsert calls = %d, want 1", repo.batchCalls)
-	}
-}
-
-func TestImport_ImportFile_missingFile(t *testing.T) {
-	importer := service.NewImport(&fakeTransactionRepo{})
-
-	_, err := importer.ImportFile(context.Background(), "missing.csv")
-	if err == nil {
-		t.Fatal("ImportFile() error = nil, want error")
-	}
-}
-
-func TestImport_ImportFile_repoError(t *testing.T) {
-	path := filepath.Join("..", "..", "testdata", "sparkasse", "minimal.csv")
-
-	repo := &fakeTransactionRepo{err: os.ErrInvalid}
-	importer := service.NewImport(repo)
-
-	_, err := importer.ImportFile(context.Background(), path)
-	if err == nil {
-		t.Fatal("ImportFile() error = nil, want error")
-	}
-}
 
 func TestPreviewFile_minimal(t *testing.T) {
 	path := filepath.Join("..", "..", "testdata", "sparkasse", "minimal.csv")
@@ -110,19 +47,6 @@ func TestPreviewFile_minimal(t *testing.T) {
 	}
 	if preview.ParserName != "sparkasse" || preview.ParserVersion == "" {
 		t.Fatalf("parser = %s %s", preview.ParserName, preview.ParserVersion)
-	}
-}
-
-func TestPreviewFile_doesNotInsert(t *testing.T) {
-	path := filepath.Join("..", "..", "testdata", "sparkasse", "minimal.csv")
-	repo := &fakeTransactionRepo{inserted: 6}
-
-	// Preview is a package function and must not touch the repository.
-	if _, err := service.PreviewFile(path); err != nil {
-		t.Fatalf("PreviewFile() error = %v", err)
-	}
-	if repo.batchCalls != 0 {
-		t.Fatalf("BatchInsert calls = %d, want 0", repo.batchCalls)
 	}
 }
 
@@ -168,6 +92,14 @@ func TestPreviewFile_headersOnly(t *testing.T) {
 	}
 	if preview.PeriodFrom != nil || preview.PeriodTo != nil {
 		t.Fatal("expected no period for headers-only file")
+	}
+}
+
+func TestImportFile_requiresPool(t *testing.T) {
+	importer := service.NewImport(nil)
+	_, err := importer.ImportFile(t.Context(), "x.csv", domain.ImportOptions{})
+	if err == nil {
+		t.Fatal("ImportFile() error = nil, want error")
 	}
 }
 

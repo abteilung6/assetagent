@@ -85,9 +85,11 @@ INSERT INTO transactions (
     amount,
     currency,
     info,
-    fingerprint
+    fingerprint,
+    account_id,
+    import_run_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
 )
 RETURNING id
 `
@@ -111,6 +113,8 @@ type InsertTransactionParams struct {
 	Currency                       string          `json:"currency"`
 	Info                           string          `json:"info"`
 	Fingerprint                    string          `json:"fingerprint"`
+	AccountID                      pgtype.UUID     `json:"account_id"`
+	ImportRunID                    pgtype.UUID     `json:"import_run_id"`
 }
 
 func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionParams) (uuid.UUID, error) {
@@ -133,6 +137,8 @@ func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionPa
 		arg.Currency,
 		arg.Info,
 		arg.Fingerprint,
+		arg.AccountID,
+		arg.ImportRunID,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -158,9 +164,11 @@ INSERT INTO transactions (
     amount,
     currency,
     info,
-    fingerprint
+    fingerprint,
+    account_id,
+    import_run_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
 )
 ON CONFLICT (fingerprint) DO NOTHING
 RETURNING id
@@ -185,6 +193,8 @@ type InsertTransactionIfNewParams struct {
 	Currency                       string          `json:"currency"`
 	Info                           string          `json:"info"`
 	Fingerprint                    string          `json:"fingerprint"`
+	AccountID                      pgtype.UUID     `json:"account_id"`
+	ImportRunID                    pgtype.UUID     `json:"import_run_id"`
 }
 
 func (q *Queries) InsertTransactionIfNew(ctx context.Context, arg InsertTransactionIfNewParams) (uuid.UUID, error) {
@@ -207,6 +217,8 @@ func (q *Queries) InsertTransactionIfNew(ctx context.Context, arg InsertTransact
 		arg.Currency,
 		arg.Info,
 		arg.Fingerprint,
+		arg.AccountID,
+		arg.ImportRunID,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -233,7 +245,9 @@ SELECT
     amount,
     currency,
     info,
-    fingerprint
+    fingerprint,
+    account_id,
+    import_run_id
 FROM transactions
 WHERE ($1::date IS NULL OR booking_date >= $1::date)
   AND ($2::date IS NULL OR booking_date <= $2::date)
@@ -312,6 +326,8 @@ func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsPara
 			&i.Currency,
 			&i.Info,
 			&i.Fingerprint,
+			&i.AccountID,
+			&i.ImportRunID,
 		); err != nil {
 			return nil, err
 		}

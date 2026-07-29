@@ -10,6 +10,7 @@ import (
 
 	"github.com/abteilung6/assetagent/internal/chat/tools"
 	"github.com/abteilung6/assetagent/internal/db"
+	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/abteilung6/assetagent/internal/service"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,14 +29,14 @@ func TestIntegration_ImportCashflowEvidence(t *testing.T) {
 	t.Cleanup(pool.Close)
 
 	txRepo := repository.NewTransaction(pool)
-	importer := service.NewImport(txRepo)
+	importer := service.NewImport(pool)
 	registry := tools.NewRegistry(tools.Dependencies{
 		Reports: repository.NewReports(pool),
 		Lister:  txRepo,
 	})
 
 	fixture := filepath.Join("..", "..", "..", "testdata", "sparkasse", "minimal.csv")
-	result, err := importer.ImportFile(ctx, fixture)
+	result, err := importer.ImportFile(ctx, fixture, domain.ImportOptions{})
 	if err != nil {
 		t.Fatalf("ImportFile(%s): %v", fixture, err)
 	}

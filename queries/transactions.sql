@@ -17,9 +17,11 @@ INSERT INTO transactions (
     amount,
     currency,
     info,
-    fingerprint
+    fingerprint,
+    account_id,
+    import_run_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
 )
 RETURNING id;
 
@@ -42,9 +44,11 @@ INSERT INTO transactions (
     amount,
     currency,
     info,
-    fingerprint
+    fingerprint,
+    account_id,
+    import_run_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
 )
 ON CONFLICT (fingerprint) DO NOTHING
 RETURNING id;
@@ -88,7 +92,9 @@ SELECT
     amount,
     currency,
     info,
-    fingerprint
+    fingerprint,
+    account_id,
+    import_run_id
 FROM transactions
 WHERE (sqlc.narg('from_date')::date IS NULL OR booking_date >= sqlc.narg('from_date')::date)
   AND (sqlc.narg('to_date')::date IS NULL OR booking_date <= sqlc.narg('to_date')::date)

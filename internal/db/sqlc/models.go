@@ -10,6 +10,38 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+type Account struct {
+	ID               uuid.UUID          `json:"id"`
+	DisplayName      string             `json:"display_name"`
+	Bank             string             `json:"bank"`
+	Currency         string             `json:"currency"`
+	OrderAccount     pgtype.Text        `json:"order_account"`
+	MaskedIdentifier string             `json:"masked_identifier"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ImportRun struct {
+	ID             uuid.UUID          `json:"id"`
+	AccountID      uuid.UUID          `json:"account_id"`
+	SourceFilename string             `json:"source_filename"`
+	FileHash       string             `json:"file_hash"`
+	ParserName     string             `json:"parser_name"`
+	ParserVersion  string             `json:"parser_version"`
+	Status         string             `json:"status"`
+	PeriodFrom     pgtype.Date        `json:"period_from"`
+	PeriodTo       pgtype.Date        `json:"period_to"`
+	RowTotal       int32              `json:"row_total"`
+	RowValid       int32              `json:"row_valid"`
+	RowInvalid     int32              `json:"row_invalid"`
+	RowInserted    int32              `json:"row_inserted"`
+	RowDuplicate   int32              `json:"row_duplicate"`
+	Warnings       []byte             `json:"warnings"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	CommittedAt    pgtype.Timestamptz `json:"committed_at"`
+	RolledBackAt   pgtype.Timestamptz `json:"rolled_back_at"`
+}
+
 type Transaction struct {
 	ID                             uuid.UUID       `json:"id"`
 	OrderAccount                   string          `json:"order_account"`
@@ -30,4 +62,6 @@ type Transaction struct {
 	Currency                       string          `json:"currency"`
 	Info                           string          `json:"info"`
 	Fingerprint                    string          `json:"fingerprint"`
+	AccountID                      pgtype.UUID     `json:"account_id"`
+	ImportRunID                    pgtype.UUID     `json:"import_run_id"`
 }

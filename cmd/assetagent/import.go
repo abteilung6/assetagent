@@ -10,13 +10,13 @@ import (
 	"github.com/abteilung6/assetagent/internal/config"
 	"github.com/abteilung6/assetagent/internal/db"
 	"github.com/abteilung6/assetagent/internal/domain"
-	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/abteilung6/assetagent/internal/service"
 	"github.com/spf13/cobra"
 )
 
 func newImportCmd() *cobra.Command {
 	var dryRun bool
+	var accountName string
 
 	cmd := &cobra.Command{
 		Use:   "import [file.csv]",
@@ -51,8 +51,10 @@ func newImportCmd() *cobra.Command {
 			}
 			defer pool.Close()
 
-			importer := service.NewImport(repository.NewTransaction(pool))
-			result, err := importer.ImportFile(ctx, path)
+			importer := service.NewImport(pool)
+			result, err := importer.ImportFile(ctx, path, domain.ImportOptions{
+				AccountName: accountName,
+			})
 			if err != nil {
 				return err
 			}
@@ -63,12 +65,15 @@ func newImportCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Parse and validate the CSV without writing to the database")
+	cmd.Flags().StringVar(&accountName, "account-name", "", "Display name for the account (created on first import)")
 	return cmd
 }
 
 func printImportResult(path string, result domain.ImportResult) {
 	fmt.Println("Import complete")
 	fmt.Printf("  File:       %s\n", filepath.Base(path))
+	fmt.Printf("  Account:    %s (%s)\n", result.AccountName, result.AccountID)
+	fmt.Printf("  Import run: %s\n", result.ImportRunID)
 	fmt.Printf("  Rows:       %d\n", result.Rows)
 	fmt.Printf("  Inserted:   %d\n", result.Inserted)
 	fmt.Printf("  Duplicates: %d\n", result.Duplicates)
