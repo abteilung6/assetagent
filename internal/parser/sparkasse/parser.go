@@ -14,6 +14,9 @@ import (
 
 const expectedColumns = 17
 
+// ParserVersion is stored on import previews/runs for reproducibility.
+const ParserVersion = "sparkasse-1"
+
 var expectedHeader = []string{
 	"Auftragskonto",
 	"Buchungstag",
@@ -35,32 +38,71 @@ var expectedHeader = []string{
 }
 
 func Parse(r io.Reader) ([]domain.Transaction, error) {
+	result, err := parseRecords(r, true)
+	if err != nil {
+		return nil, err
+	}
+	return result.Transactions, nil
+}
+
+// ParseLenient returns valid transactions and per-row errors without failing the whole file.
+// Hard failures (empty file, bad header, unreadable CSV) still return an error.
+func ParseLenient(r io.Reader) (ParseResult, error) {
+	return parseRecords(r, false)
+}
+
+type ParseResult struct {
+	Transactions []domain.Transaction
+	SourceLines  []int
+	Invalid      []InvalidRow
+}
+
+type InvalidRow struct {
+	Line    int
+	Field   string
+	Message string
+}
+
+func parseRecords(r io.Reader, strict bool) (ParseResult, error) {
 	reader := csv.NewReader(r)
 	reader.Comma = ';'
 	reader.LazyQuotes = true
 
 	records, err := reader.ReadAll()
 	if err != nil {
-		return nil, fmt.Errorf("read csv: %w", err)
+		return ParseResult{}, fmt.Errorf("read csv: %w", err)
 	}
 	if len(records) == 0 {
-		return nil, fmt.Errorf("csv: empty file")
+		return ParseResult{}, fmt.Errorf("csv: empty file")
 	}
 
 	if err := validateHeader(records[0]); err != nil {
-		return nil, err
+		return ParseResult{}, err
 	}
 
-	transactions := make([]domain.Transaction, 0, len(records)-1)
+	out := ParseResult{
+		Transactions: make([]domain.Transaction, 0, len(records)-1),
+		SourceLines:  make([]int, 0, len(records)-1),
+	}
 	for i, record := range records[1:] {
-		tx, err := parseRecord(record)
+		line := i + 2
+		tx, field, err := parseRecordDetailed(record)
 		if err != nil {
-			return nil, fmt.Errorf("line %d: %w", i+2, err)
+			if strict {
+				return ParseResult{}, fmt.Errorf("line %d: %w", line, err)
+			}
+			out.Invalid = append(out.Invalid, InvalidRow{
+				Line:    line,
+				Field:   field,
+				Message: err.Error(),
+			})
+			continue
 		}
-		transactions = append(transactions, tx)
+		out.Transactions = append(out.Transactions, tx)
+		out.SourceLines = append(out.SourceLines, line)
 	}
 
-	return transactions, nil
+	return out, nil
 }
 
 func validateHeader(header []string) error {
@@ -78,23 +120,28 @@ func validateHeader(header []string) error {
 }
 
 func parseRecord(record []string) (domain.Transaction, error) {
+	tx, _, err := parseRecordDetailed(record)
+	return tx, err
+}
+
+func parseRecordDetailed(record []string) (domain.Transaction, string, error) {
 	if len(record) != expectedColumns {
-		return domain.Transaction{}, fmt.Errorf("expected %d fields, got %d", expectedColumns, len(record))
+		return domain.Transaction{}, "columns", fmt.Errorf("expected %d fields, got %d", expectedColumns, len(record))
 	}
 
 	bookingDate, err := parseGermanDate(record[1])
 	if err != nil {
-		return domain.Transaction{}, fmt.Errorf("booking_date: %w", err)
+		return domain.Transaction{}, "booking_date", fmt.Errorf("booking_date: %w", err)
 	}
 
 	valueDate, err := parseGermanDate(record[2])
 	if err != nil {
-		return domain.Transaction{}, fmt.Errorf("value_date: %w", err)
+		return domain.Transaction{}, "value_date", fmt.Errorf("value_date: %w", err)
 	}
 
 	amount, err := parseAmount(record[14])
 	if err != nil {
-		return domain.Transaction{}, fmt.Errorf("amount: %w", err)
+		return domain.Transaction{}, "amount", fmt.Errorf("amount: %w", err)
 	}
 
 	return domain.Transaction{
@@ -115,7 +162,7 @@ func parseRecord(record []string) (domain.Transaction, error) {
 		Amount:                         amount,
 		Currency:                       strings.TrimSpace(record[15]),
 		Info:                           strings.TrimSpace(record[16]),
-	}, nil
+	}, "", nil
 }
 
 func parseGermanDate(raw string) (time.Time, error) {

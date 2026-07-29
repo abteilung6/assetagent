@@ -98,6 +98,33 @@ func TestParse_invalidRowReportsLineNumber(t *testing.T) {
 	}
 }
 
+func TestParseLenient_collectsInvalidRows(t *testing.T) {
+	csv := minimalHeader() + "\n" +
+		`"DE89370400440532013000";"30.12.25";"30.12.25";"KARTENZAHLUNG";"ok";"";"";"";"";"";"";"Cafe";"DE90100900002868569037";"BEVODEBBXXX";"-11,50";"EUR";"Umsatz gebucht"` + "\n" +
+		`"DE89370400440532013000";"not-a-date";"30.12.25";"KARTENZAHLUNG";"bad";"";"";"";"";"";"";"";"";"";"-1,00";"EUR";"Umsatz gebucht"` + "\n" +
+		`"DE89370400440532013000";"29.12.25";"29.12.25";"LOHN  GEHALT";"salary";"";"";"";"";"";"";"Employer";"DE12500105154832912731";"INGDDEFFXXX";"100,00";"EUR";"Umsatz gebucht"`
+
+	result, err := sparkasse.ParseLenient(strings.NewReader(csv))
+	if err != nil {
+		t.Fatalf("ParseLenient() error = %v", err)
+	}
+	if len(result.Transactions) != 2 {
+		t.Fatalf("len(transactions) = %d, want 2", len(result.Transactions))
+	}
+	if len(result.Invalid) != 1 {
+		t.Fatalf("len(invalid) = %d, want 1", len(result.Invalid))
+	}
+	if result.Invalid[0].Line != 3 {
+		t.Fatalf("invalid line = %d, want 3", result.Invalid[0].Line)
+	}
+	if result.Invalid[0].Field != "booking_date" {
+		t.Fatalf("invalid field = %q, want booking_date", result.Invalid[0].Field)
+	}
+	if len(result.SourceLines) != 2 || result.SourceLines[0] != 2 || result.SourceLines[1] != 4 {
+		t.Fatalf("source lines = %v, want [2 4]", result.SourceLines)
+	}
+}
+
 func TestParse_nullableCounterpartyFields(t *testing.T) {
 	csv := minimalHeader() + "\n" +
 		`"DE89370400440532013000";"30.12.25";"30.12.25";"ENTGELTABSCHLUSS";"fee";"";"";"";"";"";"";"";"";"";"-4,95";"EUR";"Umsatz gebucht"`
