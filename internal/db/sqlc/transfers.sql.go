@@ -13,6 +13,32 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const confirmTransferPair = `-- name: ConfirmTransferPair :one
+UPDATE transfer_pairs
+SET
+    status = 'confirmed',
+    confirmed_at = now()
+WHERE id = $1
+  AND status = 'suggested'
+RETURNING id, tx_out_id, tx_in_id, status, confidence, rationale, confirmed_at, created_at
+`
+
+func (q *Queries) ConfirmTransferPair(ctx context.Context, id uuid.UUID) (TransferPair, error) {
+	row := q.db.QueryRow(ctx, confirmTransferPair, id)
+	var i TransferPair
+	err := row.Scan(
+		&i.ID,
+		&i.TxOutID,
+		&i.TxInID,
+		&i.Status,
+		&i.Confidence,
+		&i.Rationale,
+		&i.ConfirmedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getTransferPair = `-- name: GetTransferPair :one
 SELECT id, tx_out_id, tx_in_id, status, confidence, rationale, confirmed_at, created_at
 FROM transfer_pairs
@@ -197,4 +223,30 @@ func (q *Queries) ListTransferPairs(ctx context.Context) ([]TransferPair, error)
 		return nil, err
 	}
 	return items, nil
+}
+
+const rejectTransferPair = `-- name: RejectTransferPair :one
+UPDATE transfer_pairs
+SET
+    status = 'rejected',
+    confirmed_at = NULL
+WHERE id = $1
+  AND status = 'suggested'
+RETURNING id, tx_out_id, tx_in_id, status, confidence, rationale, confirmed_at, created_at
+`
+
+func (q *Queries) RejectTransferPair(ctx context.Context, id uuid.UUID) (TransferPair, error) {
+	row := q.db.QueryRow(ctx, rejectTransferPair, id)
+	var i TransferPair
+	err := row.Scan(
+		&i.ID,
+		&i.TxOutID,
+		&i.TxInID,
+		&i.Status,
+		&i.Confidence,
+		&i.Rationale,
+		&i.ConfirmedAt,
+		&i.CreatedAt,
+	)
+	return i, err
 }

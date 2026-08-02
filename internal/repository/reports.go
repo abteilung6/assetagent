@@ -37,6 +37,26 @@ func (r *Reports) GetCashflow(
 	}, nil
 }
 
+func (r *Reports) GetCashflowV2(
+	ctx context.Context,
+	from, to time.Time,
+) (domain.CashflowReportV2, error) {
+	row, err := r.queries.GetCashflowV2(ctx, sqldb.GetCashflowV2Params{
+		FromDate: pgtype.Date{Time: from, Valid: true},
+		ToDate:   pgtype.Date{Time: to, Valid: true},
+	})
+	if err != nil {
+		return domain.CashflowReportV2{}, err
+	}
+
+	return domain.CashflowReportV2{
+		Income:            row.Income,
+		Expenses:          row.Expenses,
+		Net:               row.Net,
+		TransfersExcluded: true,
+	}, nil
+}
+
 func (r *Reports) GetTopCounterparties(
 	ctx context.Context,
 	from, to time.Time,

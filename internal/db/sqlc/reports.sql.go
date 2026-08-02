@@ -40,6 +40,40 @@ func (q *Queries) GetCashflow(ctx context.Context, arg GetCashflowParams) (GetCa
 	return i, err
 }
 
+const getCashflowV2 = `-- name: GetCashflowV2 :one
+SELECT
+  COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0)::numeric AS income,
+  COALESCE(SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END), 0)::numeric AS expenses,
+  COALESCE(SUM(amount), 0)::numeric AS net
+FROM transactions t
+WHERE t.booking_date >= $1::date
+  AND t.booking_date <= $2::date
+  AND NOT EXISTS (
+    SELECT 1
+    FROM transfer_pairs p
+    WHERE p.status = 'confirmed'
+      AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
+  )
+`
+
+type GetCashflowV2Params struct {
+	FromDate pgtype.Date `json:"from_date"`
+	ToDate   pgtype.Date `json:"to_date"`
+}
+
+type GetCashflowV2Row struct {
+	Income   decimal.Decimal `json:"income"`
+	Expenses decimal.Decimal `json:"expenses"`
+	Net      decimal.Decimal `json:"net"`
+}
+
+func (q *Queries) GetCashflowV2(ctx context.Context, arg GetCashflowV2Params) (GetCashflowV2Row, error) {
+	row := q.db.QueryRow(ctx, getCashflowV2, arg.FromDate, arg.ToDate)
+	var i GetCashflowV2Row
+	err := row.Scan(&i.Income, &i.Expenses, &i.Net)
+	return i, err
+}
+
 const getTopCounterparties = `-- name: GetTopCounterparties :many
 SELECT
   counterparty,

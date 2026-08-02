@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/abteilung6/assetagent/internal/classify"
@@ -11,6 +12,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+var (
+	ErrTransferPairNotFound     = errors.New("transfer pair not found")
+	ErrTransferPairNotSuggested = errors.New("transfer pair is not suggested")
 )
 
 type Transfers struct {
@@ -80,7 +86,7 @@ func (s *Transfers) Scan(ctx context.Context) (domain.TransferScanResult, error)
 			Rationale:  rationale,
 		})
 		if err != nil {
-			if err == pgx.ErrNoRows {
+			if errors.Is(err, pgx.ErrNoRows) {
 				continue
 			}
 			return domain.TransferScanResult{}, fmt.Errorf("insert pair: %w", err)
@@ -102,6 +108,43 @@ func (s *Transfers) List(ctx context.Context) ([]domain.TransferPair, error) {
 		out[i] = mapTransferPair(row)
 	}
 	return out, nil
+}
+
+func (s *Transfers) Confirm(ctx context.Context, id uuid.UUID) (domain.TransferPair, error) {
+	return s.decide(ctx, id, true)
+}
+
+func (s *Transfers) Reject(ctx context.Context, id uuid.UUID) (domain.TransferPair, error) {
+	return s.decide(ctx, id, false)
+}
+
+func (s *Transfers) decide(ctx context.Context, id uuid.UUID, confirm bool) (domain.TransferPair, error) {
+	q := sqldb.New(s.pool)
+
+	existing, err := q.GetTransferPair(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.TransferPair{}, ErrTransferPairNotFound
+		}
+		return domain.TransferPair{}, err
+	}
+	if existing.Status != domain.TransferStatusSuggested {
+		return domain.TransferPair{}, ErrTransferPairNotSuggested
+	}
+
+	var row sqldb.TransferPair
+	if confirm {
+		row, err = q.ConfirmTransferPair(ctx, id)
+	} else {
+		row, err = q.RejectTransferPair(ctx, id)
+	}
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.TransferPair{}, ErrTransferPairNotSuggested
+		}
+		return domain.TransferPair{}, err
+	}
+	return mapTransferPair(row), nil
 }
 
 func mapTransferPair(row sqldb.TransferPair) domain.TransferPair {

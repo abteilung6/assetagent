@@ -12,6 +12,7 @@ import (
 )
 
 type Querier interface {
+	ConfirmTransferPair(ctx context.Context, id uuid.UUID) (TransferPair, error)
 	CountTransactions(ctx context.Context) (int64, error)
 	CountTransactionsByImportRun(ctx context.Context, importRunID pgtype.UUID) (int64, error)
 	CountTransactionsFiltered(ctx context.Context, arg CountTransactionsFilteredParams) (int64, error)
@@ -21,6 +22,7 @@ type Querier interface {
 	GetAccountByID(ctx context.Context, id uuid.UUID) (Account, error)
 	GetAccountByOrderAccount(ctx context.Context, orderAccount pgtype.Text) (Account, error)
 	GetCashflow(ctx context.Context, arg GetCashflowParams) (GetCashflowRow, error)
+	GetCashflowV2(ctx context.Context, arg GetCashflowV2Params) (GetCashflowV2Row, error)
 	GetCategoryBySlug(ctx context.Context, slug string) (Category, error)
 	GetImportRun(ctx context.Context, id uuid.UUID) (ImportRun, error)
 	GetTopCounterparties(ctx context.Context, arg GetTopCounterpartiesParams) ([]GetTopCounterpartiesRow, error)
@@ -36,6 +38,7 @@ type Querier interface {
 	ListTransferPairs(ctx context.Context) ([]TransferPair, error)
 	MarkImportRunRolledBack(ctx context.Context, id uuid.UUID) (ImportRun, error)
 	Ping(ctx context.Context) (int32, error)
+	RejectTransferPair(ctx context.Context, id uuid.UUID) (TransferPair, error)
 	UpdateImportRunCounts(ctx context.Context, arg UpdateImportRunCountsParams) (ImportRun, error)
 }
 

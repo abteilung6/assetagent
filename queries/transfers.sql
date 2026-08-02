@@ -38,3 +38,21 @@ ORDER BY created_at DESC;
 SELECT *
 FROM transfer_pairs
 WHERE id = $1;
+
+-- name: ConfirmTransferPair :one
+UPDATE transfer_pairs
+SET
+    status = 'confirmed',
+    confirmed_at = now()
+WHERE id = $1
+  AND status = 'suggested'
+RETURNING *;
+
+-- name: RejectTransferPair :one
+UPDATE transfer_pairs
+SET
+    status = 'rejected',
+    confirmed_at = NULL
+WHERE id = $1
+  AND status = 'suggested'
+RETURNING *;

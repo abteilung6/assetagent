@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/abteilung6/assetagent/internal/service"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -66,6 +68,8 @@ func newClassifyTransfersCmd() *cobra.Command {
 	}
 	cmd.AddCommand(newClassifyTransfersScanCmd())
 	cmd.AddCommand(newClassifyTransfersListCmd())
+	cmd.AddCommand(newClassifyTransfersConfirmCmd())
+	cmd.AddCommand(newClassifyTransfersRejectCmd())
 	return cmd
 }
 
@@ -127,4 +131,62 @@ func newClassifyTransfersListCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func newClassifyTransfersConfirmCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "confirm <pair-id>",
+		Short: "Confirm a suggested transfer pair (excludes legs from cashflow v2)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return decideTransferPair(args[0], true)
+		},
+	}
+}
+
+func newClassifyTransfersRejectCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "reject <pair-id>",
+		Short: "Reject a suggested transfer pair",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return decideTransferPair(args[0], false)
+		},
+	}
+}
+
+func decideTransferPair(idArg string, confirm bool) error {
+	id, err := uuid.Parse(idArg)
+	if err != nil {
+		return fmt.Errorf("invalid pair id: %w", err)
+	}
+
+	pool, cleanup, err := openImportDB()
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	svc := service.NewTransfers(pool)
+	var pair domain.TransferPair
+	if confirm {
+		pair, err = svc.Confirm(context.Background(), id)
+	} else {
+		pair, err = svc.Reject(context.Background(), id)
+	}
+	if err != nil {
+		return err
+	}
+
+	action := "rejected"
+	if confirm {
+		action = "confirmed"
+	}
+	fmt.Printf("Transfer pair %s\n", action)
+	fmt.Printf("  ID:         %s\n", pair.ID)
+	fmt.Printf("  Status:     %s\n", pair.Status)
+	fmt.Printf("  Confidence: %s\n", pair.Confidence)
+	fmt.Printf("  Out tx:     %s\n", pair.TxOutID)
+	fmt.Printf("  In tx:      %s\n", pair.TxInID)
+	return nil
 }
