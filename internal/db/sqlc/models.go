@@ -77,6 +77,30 @@ type MerchantAlias struct {
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }
 
+type RecurringSeries struct {
+	ID            uuid.UUID          `json:"id"`
+	Fingerprint   string             `json:"fingerprint"`
+	DisplayName   string             `json:"display_name"`
+	Cadence       string             `json:"cadence"`
+	Kind          string             `json:"kind"`
+	Status        string             `json:"status"`
+	AmountTypical decimal.Decimal    `json:"amount_typical"`
+	AmountLast    decimal.Decimal    `json:"amount_last"`
+	AmountChanged bool               `json:"amount_changed"`
+	NextExpected  pgtype.Date        `json:"next_expected"`
+	Uncertainty   string             `json:"uncertainty"`
+	MemberCount   int32              `json:"member_count"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+type RecurringSeriesMember struct {
+	SeriesID      uuid.UUID       `json:"series_id"`
+	TransactionID uuid.UUID       `json:"transaction_id"`
+	BookingDate   pgtype.Date     `json:"booking_date"`
+	Amount        decimal.Decimal `json:"amount"`
+}
+
 type Transaction struct {
 	ID                             uuid.UUID       `json:"id"`
 	OrderAccount                   string          `json:"order_account"`

@@ -19,6 +19,7 @@ func newClassifyCmd() *cobra.Command {
 	cmd.AddCommand(newClassifyCategoriesCmd())
 	cmd.AddCommand(newClassifyTransfersCmd())
 	cmd.AddCommand(newClassifyMerchantsCmd())
+	cmd.AddCommand(newClassifyRecurringCmd())
 	cmd.AddCommand(newClassifyRunCmd())
 	cmd.AddCommand(newClassifyCorrectCmd())
 	return cmd
@@ -202,6 +203,100 @@ func newClassifyMerchantsCmd() *cobra.Command {
 	cmd.AddCommand(newClassifyMerchantsRebuildCmd())
 	cmd.AddCommand(newClassifyMerchantsListCmd())
 	return cmd
+}
+
+func newClassifyRecurringCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "recurring",
+		Short: "Recurring payment series detection (developer)",
+	}
+	cmd.AddCommand(newClassifyRecurringScanCmd())
+	cmd.AddCommand(newClassifyRecurringListCmd())
+	return cmd
+}
+
+func newClassifyRecurringScanCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "scan",
+		Short: "Detect and store recurring payment series",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			pool, cleanup, err := openImportDB()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			result, err := service.NewRecurring(pool).Scan(context.Background())
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("Recurring scan complete")
+			fmt.Printf("  Transactions considered: %d\n", result.TransactionsConsidered)
+			fmt.Printf("  Already assigned / skip: %d\n", result.SkippedExisting)
+			fmt.Printf("  New series:             %d\n", result.Suggested)
+			for _, series := range result.Series {
+				changed := ""
+				if series.AmountChanged {
+					changed = " amount_changed"
+				}
+				fmt.Printf("  %s  %-8s  %-16s  %s  members=%d  %s%s\n",
+					series.ID,
+					series.Interval,
+					series.Kind,
+					series.Status,
+					series.MemberCount,
+					series.DisplayName,
+					changed,
+				)
+			}
+			return nil
+		},
+	}
+}
+
+func newClassifyRecurringListCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List stored recurring series",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			pool, cleanup, err := openImportDB()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			series, err := service.NewRecurring(pool).List(context.Background())
+			if err != nil {
+				return err
+			}
+			if len(series) == 0 {
+				fmt.Println("No recurring series found (run classify recurring scan)")
+				return nil
+			}
+			fmt.Println("Recurring series")
+			for _, s := range series {
+				changed := ""
+				if s.AmountChanged {
+					changed = " amount_changed"
+				}
+				fmt.Printf("  %s  %-8s  %-10s  %-16s  typical=%s  last=%s  members=%d  %s%s\n",
+					s.ID,
+					s.Interval,
+					s.Status,
+					s.Kind,
+					s.AmountTypical.StringFixed(2),
+					s.AmountLast.StringFixed(2),
+					s.MemberCount,
+					s.DisplayName,
+					changed,
+				)
+			}
+			return nil
+		},
+	}
 }
 
 func newClassifyMerchantsRebuildCmd() *cobra.Command {
