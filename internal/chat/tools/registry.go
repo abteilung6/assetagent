@@ -27,8 +27,9 @@ type TransactionLister interface {
 }
 
 type Dependencies struct {
-	Reports Reports
-	Lister  TransactionLister
+	Reports   Reports
+	Lister    TransactionLister
+	Recurring recurringSeriesSource
 }
 
 type Registry struct {
@@ -44,6 +45,9 @@ func NewRegistry(deps Dependencies) *Registry {
 	r := &Registry{tools: make(map[string]toolEntry)}
 	r.register(cashflowTool(deps.Reports))
 	r.register(cashflowV2Tool(deps.Reports))
+	r.register(recurringCostsTool(deps.Recurring, deps.Reports))
+	r.register(spendingChangesTool(deps.Reports))
+	r.register(anomaliesTool(deps.Recurring, deps.Reports, deps.Lister))
 	r.register(counterpartiesTool(deps.Reports))
 	r.register(searchTool(deps.Lister))
 	return r

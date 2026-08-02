@@ -60,8 +60,9 @@ func newServeCmd() *cobra.Command {
 			listSvc := service.NewList(txRepo)
 			reportsRepo := repository.NewReports(pool)
 			toolRegistry := tools.NewRegistry(tools.Dependencies{
-				Reports: reportsRepo,
-				Lister:  txRepo,
+				Reports:   reportsRepo,
+				Lister:    txRepo,
+				Recurring: service.NewRecurring(pool),
 			})
 
 			llmRegistry, err := newLLMRegistry(cfg)

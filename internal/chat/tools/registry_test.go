@@ -9,6 +9,7 @@ import (
 
 	"github.com/abteilung6/assetagent/internal/chat/tools"
 	"github.com/abteilung6/assetagent/internal/domain"
+	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
 
@@ -60,6 +61,18 @@ func (f *fakeLister) List(ctx context.Context, params domain.ListParams) (domain
 	return f.result, f.err
 }
 
+type fakeRecurring struct {
+	series []domain.RecurringSeries
+}
+
+func (f *fakeRecurring) Scan(ctx context.Context) (domain.RecurringScanResult, error) {
+	return domain.RecurringScanResult{Suggested: len(f.series)}, nil
+}
+
+func (f *fakeRecurring) List(ctx context.Context) ([]domain.RecurringSeries, error) {
+	return f.series, nil
+}
+
 func TestRegistry_tools(t *testing.T) {
 	registry := tools.NewRegistry(tools.Dependencies{
 		Reports: &fakeReports{},
@@ -77,6 +90,9 @@ func TestRegistry_tools(t *testing.T) {
 	for _, want := range []string{
 		"get_cashflow",
 		"get_cashflow_v2",
+		"get_recurring_costs",
+		"get_spending_changes",
+		"get_anomalies",
 		"get_top_counterparties",
 		"search_transactions",
 	} {
@@ -336,5 +352,139 @@ func TestRegistry_invalidCashflowDates(t *testing.T) {
 	}`))
 	if err == nil {
 		t.Fatal("expected error for reversed date range")
+	}
+}
+
+func TestRegistry_executeRecurringCosts(t *testing.T) {
+	id := uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+	registry := tools.NewRegistry(tools.Dependencies{
+		Reports: &fakeReports{
+			cashflowV2: domain.CashflowV2Evidence{
+				AccountsIncluded: []string{"Checking"},
+				DataFreshness:    "2026-03-01",
+				EvidenceIDs:      []string{"tx_x"},
+			},
+		},
+		Lister: &fakeLister{},
+		Recurring: &fakeRecurring{series: []domain.RecurringSeries{{
+			ID:            id,
+			DisplayName:   "Example Landlord",
+			Interval:      domain.RecurringIntervalMonthly,
+			Kind:          domain.RecurringKindFixed,
+			Status:        domain.RecurringStatusActive,
+			AmountTypical: decimal.RequireFromString("1200.00"),
+			AmountLast:    decimal.RequireFromString("1200.00"),
+			MemberCount:   3,
+			Uncertainty:   domain.RecurringUncertaintyLow,
+		}}},
+	})
+
+	raw, err := registry.Execute(context.Background(), "get_recurring_costs", json.RawMessage(`{}`))
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	var result struct {
+		Count        int    `json:"count"`
+		MonthlyTotal string `json:"monthly_total"`
+		EvidenceIDs  []string `json:"evidence_ids"`
+	}
+	if err := json.Unmarshal(raw, &result); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if result.Count != 1 {
+		t.Fatalf("count = %d", result.Count)
+	}
+	if result.MonthlyTotal != "1200" && result.MonthlyTotal != "1200.00" {
+		t.Fatalf("monthly_total = %q", result.MonthlyTotal)
+	}
+	if len(result.EvidenceIDs) != 1 || result.EvidenceIDs[0] != "series_"+id.String() {
+		t.Fatalf("evidence = %v", result.EvidenceIDs)
+	}
+}
+
+func TestRegistry_executeSpendingChanges(t *testing.T) {
+	reports := &fakeReports{
+		cashflowV2: domain.CashflowV2Evidence{
+			Expenses:         decimal.RequireFromString("100.00"),
+			AccountsIncluded: []string{"Checking"},
+			DataFreshness:    "2026-03-31",
+			EvidenceIDs:      []string{"tx_1"},
+		},
+		counterparties: []domain.CounterpartySpend{{
+			Counterparty: "REWE",
+			TotalSpent:   decimal.RequireFromString("40.00"),
+		}},
+	}
+	registry := tools.NewRegistry(tools.Dependencies{Reports: reports, Lister: &fakeLister{}})
+
+	raw, err := registry.Execute(context.Background(), "get_spending_changes", json.RawMessage(`{
+		"from": "2026-03-01",
+		"to": "2026-03-31"
+	}`))
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	var result struct {
+		CurrentExpenses  string `json:"current_expenses"`
+		PreviousExpenses string `json:"previous_expenses"`
+		ComparePeriod    struct {
+			From string `json:"from"`
+			To   string `json:"to"`
+		} `json:"compare_period"`
+		TransfersExcluded bool `json:"transfers_excluded"`
+	}
+	if err := json.Unmarshal(raw, &result); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if result.ComparePeriod.From != "2026-01-29" || result.ComparePeriod.To != "2026-02-28" {
+		t.Fatalf("compare_period = %+v", result.ComparePeriod)
+	}
+	if !result.TransfersExcluded {
+		t.Fatal("expected transfers_excluded")
+	}
+}
+
+func TestRegistry_executeAnomalies(t *testing.T) {
+	id := uuid.MustParse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+	registry := tools.NewRegistry(tools.Dependencies{
+		Reports: &fakeReports{
+			cashflowV2: domain.CashflowV2Evidence{
+				Expenses:         decimal.RequireFromString("500.00"),
+				AccountsIncluded: []string{"Checking"},
+				DataFreshness:    "2026-03-31",
+			},
+		},
+		Lister: &fakeLister{},
+		Recurring: &fakeRecurring{series: []domain.RecurringSeries{{
+			ID:            id,
+			DisplayName:   "Example Insurance Ag",
+			Interval:      domain.RecurringIntervalMonthly,
+			Kind:          domain.RecurringKindVariableRegular,
+			Status:        domain.RecurringStatusUncertain,
+			AmountTypical: decimal.RequireFromString("89.00"),
+			AmountLast:    decimal.RequireFromString("99.00"),
+			AmountChanged: true,
+			MemberCount:   3,
+		}}},
+	})
+
+	raw, err := registry.Execute(context.Background(), "get_anomalies", json.RawMessage(`{
+		"from": "2026-03-01",
+		"to": "2026-03-31"
+	}`))
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	var result struct {
+		Count    int `json:"count"`
+		Findings []struct {
+			Type string `json:"type"`
+		} `json:"findings"`
+	}
+	if err := json.Unmarshal(raw, &result); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if result.Count < 2 {
+		t.Fatalf("count = %d, want at least amount_change + uncertain", result.Count)
 	}
 }
