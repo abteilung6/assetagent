@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -92,6 +93,35 @@ func TestIntegration_TransactionsAPI(t *testing.T) {
 	t.Run("malformed date", func(t *testing.T) {
 		rec := serve(router, "/api/transactions?from=not-a-date")
 		assertValidationFailed(t, rec)
+	})
+
+	t.Run("preview does not write transactions", func(t *testing.T) {
+		before, err := repo.Count(ctx)
+		if err != nil {
+			t.Fatalf("Count before: %v", err)
+		}
+
+		minimalPath := filepath.Join("..", "..", "..", "testdata", "sparkasse", "minimal.csv")
+		data, err := os.ReadFile(minimalPath)
+		if err != nil {
+			t.Fatalf("read minimal: %v", err)
+		}
+		body, contentType := multipartFile(t, "minimal.csv", data)
+		req := httptest.NewRequest(http.MethodPost, "/api/imports/preview", body)
+		req.Header.Set("Content-Type", contentType)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("preview status = %d body=%s", rec.Code, rec.Body.String())
+		}
+
+		after, err := repo.Count(ctx)
+		if err != nil {
+			t.Fatalf("Count after: %v", err)
+		}
+		if after != before {
+			t.Fatalf("transaction count changed: before=%d after=%d", before, after)
+		}
 	})
 }
 

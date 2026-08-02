@@ -172,6 +172,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/imports/preview:
+    post:
+      operationId: postImportsPreview
+      summary: Preview a Sparkasse CSV import without writing transactions
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Sparkasse CSV export
+      responses:
+        "200":
+          description: Import preview with stats, samples, and validation errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportPreviewResponse"
+        "400":
+          description: Invalid request or unreadable CSV
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     Error:
@@ -374,3 +404,96 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/LLMModelOption"
+    ImportPreviewPeriod:
+      type: object
+      required:
+        - from
+        - to
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+    ImportPreviewSampleRow:
+      type: object
+      required:
+        - line
+        - booking_date
+        - counterparty
+        - purpose
+        - amount
+        - currency
+      properties:
+        line:
+          type: integer
+        booking_date:
+          type: string
+          format: date
+        counterparty:
+          type: string
+        purpose:
+          type: string
+        amount:
+          type: string
+        currency:
+          type: string
+    ImportPreviewInvalidRow:
+      type: object
+      required:
+        - line
+        - message
+      properties:
+        line:
+          type: integer
+        field:
+          type: string
+        message:
+          type: string
+    ImportPreviewResponse:
+      type: object
+      required:
+        - file_hash
+        - source_filename
+        - parser_name
+        - parser_version
+        - suggested_account
+        - row_total
+        - row_valid
+        - row_invalid
+        - sample_rows
+        - invalid_rows
+        - warnings
+      properties:
+        file_hash:
+          type: string
+        source_filename:
+          type: string
+        parser_name:
+          type: string
+        parser_version:
+          type: string
+        period:
+          $ref: "#/components/schemas/ImportPreviewPeriod"
+          nullable: true
+        suggested_account:
+          type: string
+        row_total:
+          type: integer
+        row_valid:
+          type: integer
+        row_invalid:
+          type: integer
+        sample_rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportPreviewSampleRow"
+        invalid_rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportPreviewInvalidRow"
+        warnings:
+          type: array
+          items:
+            type: string

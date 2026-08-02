@@ -97,6 +97,41 @@ export type LlmModelCatalog = {
     options: Array<LlmModelOption>;
 };
 
+export type ImportPreviewPeriod = {
+    from: string;
+    to: string;
+};
+
+export type ImportPreviewSampleRow = {
+    line: number;
+    booking_date: string;
+    counterparty: string;
+    purpose: string;
+    amount: string;
+    currency: string;
+};
+
+export type ImportPreviewInvalidRow = {
+    line: number;
+    field?: string;
+    message: string;
+};
+
+export type ImportPreviewResponse = {
+    file_hash: string;
+    source_filename: string;
+    parser_name: string;
+    parser_version: string;
+    period?: ImportPreviewPeriod;
+    suggested_account: string;
+    row_total: number;
+    row_valid: number;
+    row_invalid: number;
+    sample_rows: Array<ImportPreviewSampleRow>;
+    invalid_rows: Array<ImportPreviewInvalidRow>;
+    warnings: Array<string>;
+};
+
 export type GetHealthData = {
     body?: never;
     path?: never;
@@ -206,6 +241,36 @@ export type PostChatResponses = {
 
 export type PostChatResponse = PostChatResponses[keyof PostChatResponses];
 
+export type PostChatStreamData = {
+    body: ChatRequest;
+    path?: never;
+    query?: never;
+    url: '/api/chat/stream';
+};
+
+export type PostChatStreamErrors = {
+    /**
+     * Invalid request
+     */
+    400: Error;
+    /**
+     * Internal error
+     */
+    500: Error;
+};
+
+export type PostChatStreamError = PostChatStreamErrors[keyof PostChatStreamErrors];
+
+export type PostChatStreamResponses = {
+    /**
+     * SSE stream. Events: delta, tool_start, tool_result, done, error.
+     *
+     */
+    200: string;
+};
+
+export type PostChatStreamResponse = PostChatStreamResponses[keyof PostChatStreamResponses];
+
 export type GetLlmModelsData = {
     body?: never;
     path?: never;
@@ -230,3 +295,33 @@ export type GetLlmModelsResponses = {
 };
 
 export type GetLlmModelsResponse = GetLlmModelsResponses[keyof GetLlmModelsResponses];
+
+export type PostImportsPreviewData = {
+    body: {
+        /**
+         * Sparkasse CSV export
+         */
+        file: Blob | File;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/imports/preview';
+};
+
+export type PostImportsPreviewErrors = {
+    /**
+     * Invalid request or unreadable CSV
+     */
+    400: Error;
+};
+
+export type PostImportsPreviewError = PostImportsPreviewErrors[keyof PostImportsPreviewErrors];
+
+export type PostImportsPreviewResponses = {
+    /**
+     * Import preview with stats, samples, and validation errors
+     */
+    200: ImportPreviewResponse;
+};
+
+export type PostImportsPreviewResponse = PostImportsPreviewResponses[keyof PostImportsPreviewResponses];

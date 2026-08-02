@@ -174,6 +174,45 @@ type HealthResponse struct {
 	Status string `json:"status"`
 }
 
+// ImportPreviewInvalidRow defines model for ImportPreviewInvalidRow.
+type ImportPreviewInvalidRow struct {
+	Field   *string `json:"field,omitempty"`
+	Line    int     `json:"line"`
+	Message string  `json:"message"`
+}
+
+// ImportPreviewPeriod defines model for ImportPreviewPeriod.
+type ImportPreviewPeriod struct {
+	From openapi_types.Date `json:"from"`
+	To   openapi_types.Date `json:"to"`
+}
+
+// ImportPreviewResponse defines model for ImportPreviewResponse.
+type ImportPreviewResponse struct {
+	FileHash         string                    `json:"file_hash"`
+	InvalidRows      []ImportPreviewInvalidRow `json:"invalid_rows"`
+	ParserName       string                    `json:"parser_name"`
+	ParserVersion    string                    `json:"parser_version"`
+	Period           *ImportPreviewPeriod      `json:"period,omitempty"`
+	RowInvalid       int                       `json:"row_invalid"`
+	RowTotal         int                       `json:"row_total"`
+	RowValid         int                       `json:"row_valid"`
+	SampleRows       []ImportPreviewSampleRow  `json:"sample_rows"`
+	SourceFilename   string                    `json:"source_filename"`
+	SuggestedAccount string                    `json:"suggested_account"`
+	Warnings         []string                  `json:"warnings"`
+}
+
+// ImportPreviewSampleRow defines model for ImportPreviewSampleRow.
+type ImportPreviewSampleRow struct {
+	Amount       string             `json:"amount"`
+	BookingDate  openapi_types.Date `json:"booking_date"`
+	Counterparty string             `json:"counterparty"`
+	Currency     string             `json:"currency"`
+	Line         int                `json:"line"`
+	Purpose      string             `json:"purpose"`
+}
+
 // LLMModelCatalog defines model for LLMModelCatalog.
 type LLMModelCatalog struct {
 	Default LLMModelSelection `json:"default"`
@@ -236,6 +275,12 @@ type TransactionListResponse struct {
 	Pagination Pagination    `json:"pagination"`
 }
 
+// PostImportsPreviewMultipartBody defines parameters for PostImportsPreview.
+type PostImportsPreviewMultipartBody struct {
+	// File Sparkasse CSV export
+	File openapi_types.File `json:"file"`
+}
+
 // GetTransactionsParams defines parameters for GetTransactions.
 type GetTransactionsParams struct {
 	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
@@ -281,6 +326,9 @@ type PostChatJSONRequestBody = ChatRequest
 // PostChatStreamJSONRequestBody defines body for PostChatStream for application/json ContentType.
 type PostChatStreamJSONRequestBody = ChatRequest
 
+// PostImportsPreviewMultipartRequestBody defines body for PostImportsPreview for multipart/form-data ContentType.
+type PostImportsPreviewMultipartRequestBody PostImportsPreviewMultipartBody
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Send a chat message and receive a grounded finance answer
@@ -292,6 +340,9 @@ type ServerInterface interface {
 	// Health check
 	// (GET /api/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// Preview a Sparkasse CSV import without writing transactions
+	// (POST /api/imports/preview)
+	PostImportsPreview(w http.ResponseWriter, r *http.Request)
 	// List available LLM models for chat
 	// (GET /api/llm/models)
 	GetLLMModels(w http.ResponseWriter, r *http.Request)
@@ -319,6 +370,12 @@ func (_ Unimplemented) PostChatStream(w http.ResponseWriter, r *http.Request) {
 // Health check
 // (GET /api/health)
 func (_ Unimplemented) GetHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview a Sparkasse CSV import without writing transactions
+// (POST /api/imports/preview)
+func (_ Unimplemented) PostImportsPreview(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -376,6 +433,20 @@ func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostImportsPreview operation middleware
+func (siw *ServerInterfaceWrapper) PostImportsPreview(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostImportsPreview(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -683,6 +754,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/health", wrapper.GetHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/imports/preview", wrapper.PostImportsPreview)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/llm/models", wrapper.GetLLMModels)
