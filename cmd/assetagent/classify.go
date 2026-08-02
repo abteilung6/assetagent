@@ -18,6 +18,7 @@ func newClassifyCmd() *cobra.Command {
 	}
 	cmd.AddCommand(newClassifyCategoriesCmd())
 	cmd.AddCommand(newClassifyTransfersCmd())
+	cmd.AddCommand(newClassifyMerchantsCmd())
 	return cmd
 }
 
@@ -189,4 +190,70 @@ func decideTransferPair(idArg string, confirm bool) error {
 	fmt.Printf("  Out tx:     %s\n", pair.TxOutID)
 	fmt.Printf("  In tx:      %s\n", pair.TxInID)
 	return nil
+}
+
+func newClassifyMerchantsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "merchants",
+		Short: "Merchant normalization (developer)",
+	}
+	cmd.AddCommand(newClassifyMerchantsRebuildCmd())
+	cmd.AddCommand(newClassifyMerchantsListCmd())
+	return cmd
+}
+
+func newClassifyMerchantsRebuildCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "rebuild",
+		Short: "Build merchants and aliases from transaction counterparties",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			pool, cleanup, err := openImportDB()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			result, err := service.NewMerchants(pool).Rebuild(context.Background())
+			if err != nil {
+				return err
+			}
+			fmt.Println("Merchant rebuild complete")
+			fmt.Printf("  Labels considered: %d\n", result.LabelsConsidered)
+			fmt.Printf("  Merchants created: %d\n", result.MerchantsCreated)
+			fmt.Printf("  Aliases created:   %d\n", result.AliasesCreated)
+			fmt.Printf("  Aliases existing:  %d\n", result.AliasesExisting)
+			fmt.Printf("  Skipped empty:     %d\n", result.SkippedEmpty)
+			return nil
+		},
+	}
+}
+
+func newClassifyMerchantsListCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List normalized merchants",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			pool, cleanup, err := openImportDB()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			merchants, err := service.NewMerchants(pool).List(context.Background())
+			if err != nil {
+				return err
+			}
+			if len(merchants) == 0 {
+				fmt.Println("No merchants found (run classify merchants rebuild)")
+				return nil
+			}
+			fmt.Println("Merchants")
+			for _, m := range merchants {
+				fmt.Printf("  %-28s  aliases=%d  %s\n", m.DisplayName, m.AliasCount, m.ID)
+			}
+			return nil
+		},
+	}
 }

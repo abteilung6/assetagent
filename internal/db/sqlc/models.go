@@ -52,6 +52,21 @@ type ImportRun struct {
 	RolledBackAt   pgtype.Timestamptz `json:"rolled_back_at"`
 }
 
+type Merchant struct {
+	ID                uuid.UUID          `json:"id"`
+	DisplayName       string             `json:"display_name"`
+	DefaultCategoryID pgtype.UUID        `json:"default_category_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+}
+
+type MerchantAlias struct {
+	ID         uuid.UUID          `json:"id"`
+	MerchantID uuid.UUID          `json:"merchant_id"`
+	MatchType  string             `json:"match_type"`
+	Pattern    string             `json:"pattern"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
+
 type Transaction struct {
 	ID                             uuid.UUID       `json:"id"`
 	OrderAccount                   string          `json:"order_account"`
