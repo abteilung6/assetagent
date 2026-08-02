@@ -21,6 +21,7 @@ func main() {
 	root.AddCommand(newMigrateCmd())
 	root.AddCommand(newDoctorCmd())
 	root.AddCommand(newImportCmd())
+	root.AddCommand(newClassifyCmd())
 	root.AddCommand(newServeCmd())
 	root.RunE = func(cmd *cobra.Command, args []string) error {
 		showVersion, _ := cmd.Flags().GetBool("version")

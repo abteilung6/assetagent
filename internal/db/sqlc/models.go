@@ -21,6 +21,16 @@ type Account struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Category struct {
+	ID          uuid.UUID          `json:"id"`
+	Slug        string             `json:"slug"`
+	DisplayName string             `json:"display_name"`
+	Kind        string             `json:"kind"`
+	ParentID    pgtype.UUID        `json:"parent_id"`
+	IsSystem    bool               `json:"is_system"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
 type ImportRun struct {
 	ID             uuid.UUID          `json:"id"`
 	AccountID      uuid.UUID          `json:"account_id"`
