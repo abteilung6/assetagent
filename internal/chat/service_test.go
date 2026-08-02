@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/abteilung6/assetagent/internal/chat"
@@ -207,5 +208,19 @@ func TestService_Chat_maxTurnsExceeded(t *testing.T) {
 	}})
 	if !errors.Is(err, chat.ErrMaxTurnsExceeded) {
 		t.Fatalf("error = %v, want ErrMaxTurnsExceeded", err)
+	}
+}
+
+func TestDefaultConfig_prefersTrustedMoneyTools(t *testing.T) {
+	prompt := chat.DefaultConfig().SystemPrompt
+	for _, want := range []string{
+		"get_cashflow_v2",
+		"get_recurring_costs",
+		"get_spending_changes",
+		"get_anomalies",
+	} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("system prompt missing %q", want)
+		}
 	}
 }

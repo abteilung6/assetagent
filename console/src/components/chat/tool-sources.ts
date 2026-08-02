@@ -6,6 +6,10 @@ import {
 
 export const TOOL_NAMES = {
   cashflow: "get_cashflow",
+  cashflowV2: "get_cashflow_v2",
+  recurring: "get_recurring_costs",
+  spendingChanges: "get_spending_changes",
+  anomalies: "get_anomalies",
   counterparties: "get_top_counterparties",
   search: "search_transactions",
 } as const;
@@ -72,7 +76,14 @@ export function humanizeToolError(message: string): string {
 export function toolDisplayName(name: string): string {
   switch (name) {
     case TOOL_NAMES.cashflow:
+    case TOOL_NAMES.cashflowV2:
       return "Spending summary";
+    case TOOL_NAMES.recurring:
+      return "Recurring costs";
+    case TOOL_NAMES.spendingChanges:
+      return "Spending changes";
+    case TOOL_NAMES.anomalies:
+      return "Anomalies";
     case TOOL_NAMES.counterparties:
       return "Top counterparties";
     case TOOL_NAMES.search:

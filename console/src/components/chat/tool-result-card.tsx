@@ -1,4 +1,4 @@
-import { Search, TrendingDown, Users } from "lucide-react";
+import { AlertTriangle, RefreshCw, Search, TrendingDown, TrendingUp, Users } from "lucide-react";
 import type React from "react";
 
 import type { ChatToolCall } from "@/api/types.gen";
@@ -96,7 +96,14 @@ function ToolIcon({
 
   switch (name) {
     case TOOL_NAMES.cashflow:
+    case TOOL_NAMES.cashflowV2:
       return <TrendingDown className={className} aria-hidden />;
+    case TOOL_NAMES.recurring:
+      return <RefreshCw className={className} aria-hidden />;
+    case TOOL_NAMES.spendingChanges:
+      return <TrendingUp className={className} aria-hidden />;
+    case TOOL_NAMES.anomalies:
+      return <AlertTriangle className={className} aria-hidden />;
     case TOOL_NAMES.counterparties:
       return <Users className={className} aria-hidden />;
     case TOOL_NAMES.search:
@@ -119,7 +126,14 @@ function renderBody(toolCall: ChatToolCall, hasError: boolean) {
 
   switch (name) {
     case TOOL_NAMES.cashflow:
+    case TOOL_NAMES.cashflowV2:
       return <CashflowBody result={result} />;
+    case TOOL_NAMES.recurring:
+      return <RecurringBody result={result} />;
+    case TOOL_NAMES.spendingChanges:
+      return <SpendingChangesBody result={result} />;
+    case TOOL_NAMES.anomalies:
+      return <AnomaliesBody result={result} />;
     case TOOL_NAMES.counterparties:
       return <CounterpartiesBody toolCall={toolCall} />;
     case TOOL_NAMES.search:
@@ -131,6 +145,82 @@ function renderBody(toolCall: ChatToolCall, hasError: boolean) {
         </p>
       );
   }
+}
+
+function RecurringBody({ result }: { result: Record<string, unknown> }) {
+  const monthly = typeof result.monthly_total === "string" ? result.monthly_total : undefined;
+  const currency = typeof result.currency === "string" ? result.currency : "EUR";
+  const rows = Array.isArray(result.series) ? result.series : [];
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-muted-foreground">
+        About {formatMoney(monthly, currency)} / month across {rows.length} series
+      </p>
+      <ul className="space-y-1.5 border-t border-border/60 pt-2">
+        {rows.slice(0, 5).map((row, index) => {
+          const record = row as Record<string, unknown>;
+          const name =
+            typeof record.display_name === "string" ? record.display_name : "Series";
+          const amount =
+            typeof record.monthly_amount === "string"
+              ? record.monthly_amount
+              : undefined;
+          return (
+            <li
+              key={`${name}-${index}`}
+              className="flex items-baseline justify-between gap-3 text-xs"
+            >
+              <span className="min-w-0 truncate text-foreground">{name}</span>
+              <span className="shrink-0 tabular-nums text-muted-foreground">
+                {formatMoney(amount, currency)}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function SpendingChangesBody({ result }: { result: Record<string, unknown> }) {
+  const currency = typeof result.currency === "string" ? result.currency : "EUR";
+  const current =
+    typeof result.current_expenses === "string" ? result.current_expenses : undefined;
+  const previous =
+    typeof result.previous_expenses === "string" ? result.previous_expenses : undefined;
+  const delta =
+    typeof result.expenses_delta === "string" ? result.expenses_delta : undefined;
+
+  return (
+    <dl className="grid grid-cols-3 gap-2 text-center">
+      <Metric label="Previous" value={formatMoney(previous, currency)} />
+      <Metric label="Current" value={formatMoney(current, currency)} emphasis />
+      <Metric label="Delta" value={formatMoney(delta, currency)} />
+    </dl>
+  );
+}
+
+function AnomaliesBody({ result }: { result: Record<string, unknown> }) {
+  const findings = Array.isArray(result.findings) ? result.findings : [];
+  if (findings.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">No anomalies in this period.</p>
+    );
+  }
+  return (
+    <ul className="space-y-1.5">
+      {findings.slice(0, 5).map((row, index) => {
+        const record = row as Record<string, unknown>;
+        const title = typeof record.title === "string" ? record.title : "Finding";
+        return (
+          <li key={`${title}-${index}`} className="text-sm text-foreground">
+            {title}
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 function CashflowBody({ result }: { result: Record<string, unknown> }) {

@@ -23,8 +23,12 @@ const defaultSystemPrompt = `You are a personal finance assistant for the user's
 Use the available tools before answering. Only state numbers that come from tool results.
 Do not provide investment advice.
 
-Tool selection:
-- get_cashflow(from, to): total income, expenses, and net for any date range (day, month, or full calendar year). Only from and to — never pass limit.
+Tool selection (prefer trusted / transfer-aware tools):
+- get_cashflow_v2(from, to): household income, expenses, and net with confirmed internal transfers excluded, plus an evidence contract. Prefer this for totals and "how much did I spend/earn" questions.
+- get_recurring_costs(from?, to?): regular bills and subscriptions (rent, insurance, Netflix). Prefer for monthly cost questions.
+- get_spending_changes(from, to): compare the given period to the equal-length window immediately before it.
+- get_anomalies(from, to): notable amount steps, uncertain recurring series, and large one-off expenses.
+- get_cashflow(from, to): legacy raw totals (includes internal transfers). Use only if the user explicitly wants unadjusted bank sums.
 - get_top_counterparties(from, to, limit?): who the user spent the most with in a range.
 - search_transactions(q, from?, to?, limit?): find specific transactions matching text. Requires q. Max limit 50. Not for period spending totals.
 
@@ -40,7 +44,8 @@ When a tool returns {"error":...}, correct the arguments and retry before asking
 Result interpretation:
 - Only results containing "error" indicate failure.
 - Successful results include "ok":true. Empty lists, zero expenses, or total=0 are valid — they mean no matching spending in that period.
-- When ok is true, answer from the data. Do not say the tool failed and do not ask the user to reconfirm dates.`
+- When ok is true, answer from the data. Do not say the tool failed and do not ask the user to reconfirm dates.
+- When evidence_ids are present, you may mention that figures exclude confirmed transfers or come from detected recurring series — do not invent ids.`
 
 type ToolRunner interface {
 	Tools() []llm.Tool
