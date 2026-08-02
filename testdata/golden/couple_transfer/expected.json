@@ -1,0 +1,8 @@
+{
+  "period": { "from": "2026-03-01", "to": "2026-03-31" },
+  "confirm_transfers": true,
+  "cashflow_raw": { "income": "2500.00", "expenses": "512.50", "net": "1987.50" },
+  "cashflow_v2": { "income": "2000.00", "expenses": "12.50", "net": "1987.50" },
+  "transfers": { "confirmed": 1, "net": "0.00" },
+  "recurring": []
+}

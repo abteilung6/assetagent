@@ -13,13 +13,16 @@ OAPICODEGEN := $(GOPATH_BIN)/oapi-codegen
 OLLAMA_MODEL ?= llama3.2
 OLLAMA_BASE_URL ?= http://localhost:11434
 
-.PHONY: build test clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate api-install api-generate api-client-generate import serve ollama-pull ollama-logs console-install console-dev console-build console-test console-e2e-deps console-e2e-run console-e2e langfuse-up langfuse-down langfuse-ps langfuse-logs langfuse-health langfuse-reset
+.PHONY: build test golden clean dev-up dev-down dev-ps dev-logs migrate-up migrate-down migrate-status goose-install sqlc-install sqlc-generate api-install api-generate api-client-generate import serve ollama-pull ollama-logs console-install console-dev console-build console-test console-e2e-deps console-e2e-run console-e2e langfuse-up langfuse-down langfuse-ps langfuse-logs langfuse-health langfuse-reset
 
 build:
 	go build -o $(BINARY) $(CMD)
 
 test:
 	go test ./... -count=1
+
+golden:
+	go test ./internal/evals/... -count=1 -timeout 20m
 
 clean:
 	rm -rf bin/

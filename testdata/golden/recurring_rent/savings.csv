@@ -1,0 +1,2 @@
+"Auftragskonto";"Buchungstag";"Valutadatum";"Buchungstext";"Verwendungszweck";"Glaeubiger ID";"Mandatsreferenz";"Kundenreferenz (End-to-End)";"Sammlerreferenz";"Lastschrift Ursprungsbetrag";"Auslagenersatz Ruecklastschrift";"Beguenstigter/Zahlungspflichtiger";"Kontonummer/IBAN";"BIC (SWIFT-Code)";"Betrag";"Waehrung";"Info"
+"DE30000000000000000002";"20.12.25";"20.12.25";"UMBUCHUNG";"from checking";"";"";"GOLD-R-XFER-IN";"";"";"";"Own Checking";"DE30000000000000000001";"COBADEFFXXX";"200,00";"EUR";"Umsatz gebucht"

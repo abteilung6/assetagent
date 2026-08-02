@@ -1,0 +1,11 @@
+{
+  "period": { "from": "2025-10-01", "to": "2025-12-31" },
+  "confirm_transfers": true,
+  "cashflow_raw": { "income": "3700.00", "expenses": "3847.97", "net": "-147.97" },
+  "cashflow_v2": { "income": "3500.00", "expenses": "3647.97", "net": "-147.97" },
+  "transfers": { "confirmed": 1, "net": "0.00" },
+  "recurring": [
+    { "display_name_contains": "Landlord", "interval": "monthly", "amount_typical": "1200.00", "member_count": 3 },
+    { "display_name_contains": "Netflix", "interval": "monthly", "amount_typical": "15.99", "member_count": 3 }
+  ]
+}

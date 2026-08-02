@@ -1,0 +1,4 @@
+"Auftragskonto";"Buchungstag";"Valutadatum";"Buchungstext";"Verwendungszweck";"Glaeubiger ID";"Mandatsreferenz";"Kundenreferenz (End-to-End)";"Sammlerreferenz";"Lastschrift Ursprungsbetrag";"Auslagenersatz Ruecklastschrift";"Beguenstigter/Zahlungspflichtiger";"Kontonummer/IBAN";"BIC (SWIFT-Code)";"Betrag";"Waehrung";"Info"
+"DE20000000000000000001";"10.03.26";"10.03.26";"LOHN  GEHALT";"Employer Salary";"";"";"GOLD-C-SAL-001";"";"";"";"Example Employer GmbH";"DE12500105154832912731";"INGDDEFFXXX";"2000,00";"EUR";"Umsatz gebucht"
+"DE20000000000000000001";"10.03.26";"10.03.26";"KARTENZAHLUNG";"Groceries";"";"";"GOLD-C-FOOD-001";"";"";"";"EDEKA";"DE90100900002868569037";"BEVODEBBXXX";"-12,50";"EUR";"Umsatz gebucht"
+"DE20000000000000000001";"10.03.26";"10.03.26";"UMBUCHUNG";"to savings";"";"";"GOLD-C-XFER-OUT";"";"";"";"Own Savings";"DE20000000000000000002";"COBADEFFXXX";"-500,00";"EUR";"Umsatz gebucht"

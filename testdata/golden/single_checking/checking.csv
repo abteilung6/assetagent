@@ -1,0 +1,4 @@
+"Auftragskonto";"Buchungstag";"Valutadatum";"Buchungstext";"Verwendungszweck";"Glaeubiger ID";"Mandatsreferenz";"Kundenreferenz (End-to-End)";"Sammlerreferenz";"Lastschrift Ursprungsbetrag";"Auslagenersatz Ruecklastschrift";"Beguenstigter/Zahlungspflichtiger";"Kontonummer/IBAN";"BIC (SWIFT-Code)";"Betrag";"Waehrung";"Info"
+"DE10000000000000000001";"15.03.26";"15.03.26";"LOHN  GEHALT";"Employer Salary";"";"";"GOLD-S-SAL-001";"";"";"";"Example Employer GmbH";"DE12500105154832912731";"INGDDEFFXXX";"3000,00";"EUR";"Umsatz gebucht"
+"DE10000000000000000001";"01.03.26";"01.03.26";"UEBERWEISUNG";"Rent payment";"";"";"GOLD-S-RENT-001";"";"";"";"Example Landlord";"DE89370400440532013000";"COBADEFFXXX";"-1200,00";"EUR";"Umsatz gebucht"
+"DE10000000000000000001";"10.03.26";"10.03.26";"KARTENZAHLUNG";"Groceries";"";"";"GOLD-S-FOOD-001";"";"";"";"REWE MARKT GmbH";"DE90100900002868569037";"BEVODEBBXXX";"-50,00";"EUR";"Umsatz gebucht"
