@@ -29,6 +29,34 @@ INSERT INTO transfer_pairs (
 ON CONFLICT (tx_out_id, tx_in_id) DO NOTHING
 RETURNING *;
 
+-- name: ListSuggestedTransferCandidates :many
+SELECT
+    p.id,
+    p.status,
+    p.confidence,
+    p.created_at,
+    out_tx.id AS tx_out_id,
+    out_tx.amount AS out_amount,
+    out_tx.booking_date AS out_booking_date,
+    out_tx.booking_text AS out_booking_text,
+    out_tx.purpose AS out_purpose,
+    out_tx.counterparty AS out_counterparty,
+    COALESCE(out_acc.display_name, '') AS out_account_name,
+    in_tx.id AS tx_in_id,
+    in_tx.amount AS in_amount,
+    in_tx.booking_date AS in_booking_date,
+    in_tx.booking_text AS in_booking_text,
+    in_tx.purpose AS in_purpose,
+    in_tx.counterparty AS in_counterparty,
+    COALESCE(in_acc.display_name, '') AS in_account_name
+FROM transfer_pairs p
+JOIN transactions out_tx ON out_tx.id = p.tx_out_id
+JOIN transactions in_tx ON in_tx.id = p.tx_in_id
+LEFT JOIN accounts out_acc ON out_acc.id = out_tx.account_id
+LEFT JOIN accounts in_acc ON in_acc.id = in_tx.account_id
+WHERE p.status = 'suggested'
+ORDER BY p.created_at DESC;
+
 -- name: ListTransferPairs :many
 SELECT *
 FROM transfer_pairs

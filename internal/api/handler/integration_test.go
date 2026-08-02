@@ -386,7 +386,7 @@ func writeTempCSV(t *testing.T, name, contents string) string {
 
 func newTestRouter(repo *repository.Transaction, importer *service.Import) chi.Router {
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(service.NewList(repo), nil, nil, importer), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(service.NewList(repo), nil, nil, importer, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})

@@ -320,6 +320,77 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/transfers/candidates:
+    get:
+      operationId: getTransferCandidates
+      summary: List suggested internal transfer pairs awaiting review
+      responses:
+        "200":
+          description: Suggested transfer candidates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferCandidateListResponse"
+  /api/transfers/{id}/confirm:
+    post:
+      operationId: postTransferConfirm
+      summary: Confirm a suggested transfer pair (exclude legs from household cashflow)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Transfer pair confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferPair"
+        "404":
+          description: Transfer pair not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Transfer pair is not in suggested status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/transfers/{id}/reject:
+    post:
+      operationId: postTransferReject
+      summary: Reject a suggested transfer pair
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Transfer pair rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferPair"
+        "404":
+          description: Transfer pair not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Transfer pair is not in suggested status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     Error:
@@ -706,3 +777,101 @@ components:
           format: int64
         source_filename:
           type: string
+    TransferLeg:
+      type: object
+      required:
+        - transaction_id
+        - account_name
+        - booking_date
+        - amount
+        - booking_text
+        - purpose
+        - counterparty
+      properties:
+        transaction_id:
+          type: string
+          format: uuid
+        account_name:
+          type: string
+        booking_date:
+          type: string
+          format: date
+        amount:
+          type: string
+        booking_text:
+          type: string
+        purpose:
+          type: string
+        counterparty:
+          type: string
+    TransferCandidate:
+      type: object
+      required:
+        - id
+        - status
+        - confidence
+        - amount
+        - out
+        - in
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [suggested, confirmed, rejected]
+        confidence:
+          type: string
+          enum: [exact, probable]
+        amount:
+          type: string
+          description: Absolute transfer amount in EUR
+        out:
+          $ref: "#/components/schemas/TransferLeg"
+        in:
+          $ref: "#/components/schemas/TransferLeg"
+        created_at:
+          type: string
+          format: date-time
+    TransferCandidateListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransferCandidate"
+    TransferPair:
+      type: object
+      required:
+        - id
+        - tx_out_id
+        - tx_in_id
+        - status
+        - confidence
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        tx_out_id:
+          type: string
+          format: uuid
+        tx_in_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [suggested, confirmed, rejected]
+        confidence:
+          type: string
+          enum: [exact, probable]
+        created_at:
+          type: string
+          format: date-time
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true

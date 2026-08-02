@@ -21,7 +21,7 @@ func (noopList) ListTransactions(context.Context, domain.ListParams) (domain.Lis
 
 func TestGetHealth(t *testing.T) {
 	router := chi.NewRouter()
-	gen.HandlerFromMux(handler.New(noopList{}, nil, nil, nil), router)
+	gen.HandlerFromMux(handler.New(noopList{}, nil, nil, nil, nil), router)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
 	rec := httptest.NewRecorder()

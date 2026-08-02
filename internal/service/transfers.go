@@ -110,6 +110,42 @@ func (s *Transfers) List(ctx context.Context) ([]domain.TransferPair, error) {
 	return out, nil
 }
 
+func (s *Transfers) ListCandidates(ctx context.Context) ([]domain.TransferCandidate, error) {
+	rows, err := sqldb.New(s.pool).ListSuggestedTransferCandidates(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domain.TransferCandidate, len(rows))
+	for i, row := range rows {
+		out[i] = domain.TransferCandidate{
+			ID:         row.ID,
+			Status:     row.Status,
+			Confidence: row.Confidence,
+			Amount:     row.OutAmount.Abs(),
+			CreatedAt:  row.CreatedAt.Time,
+			Out: domain.TransferLegView{
+				TransactionID: row.TxOutID,
+				AccountName:   row.OutAccountName,
+				BookingDate:   row.OutBookingDate.Time,
+				Amount:        row.OutAmount,
+				BookingText:   row.OutBookingText,
+				Purpose:       row.OutPurpose,
+				Counterparty:  row.OutCounterparty,
+			},
+			In: domain.TransferLegView{
+				TransactionID: row.TxInID,
+				AccountName:   row.InAccountName,
+				BookingDate:   row.InBookingDate.Time,
+				Amount:        row.InAmount,
+				BookingText:   row.InBookingText,
+				Purpose:       row.InPurpose,
+				Counterparty:  row.InCounterparty,
+			},
+		}
+	}
+	return out, nil
+}
+
 func (s *Transfers) Confirm(ctx context.Context, id uuid.UUID) (domain.TransferPair, error) {
 	return s.decide(ctx, id, true)
 }

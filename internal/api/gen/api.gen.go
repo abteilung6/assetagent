@@ -110,6 +110,84 @@ func (e LLMModelSelectionProvider) Valid() bool {
 	}
 }
 
+// Defines values for TransferCandidateConfidence.
+const (
+	TransferCandidateConfidenceExact    TransferCandidateConfidence = "exact"
+	TransferCandidateConfidenceProbable TransferCandidateConfidence = "probable"
+)
+
+// Valid indicates whether the value is a known member of the TransferCandidateConfidence enum.
+func (e TransferCandidateConfidence) Valid() bool {
+	switch e {
+	case TransferCandidateConfidenceExact:
+		return true
+	case TransferCandidateConfidenceProbable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TransferCandidateStatus.
+const (
+	TransferCandidateStatusConfirmed TransferCandidateStatus = "confirmed"
+	TransferCandidateStatusRejected  TransferCandidateStatus = "rejected"
+	TransferCandidateStatusSuggested TransferCandidateStatus = "suggested"
+)
+
+// Valid indicates whether the value is a known member of the TransferCandidateStatus enum.
+func (e TransferCandidateStatus) Valid() bool {
+	switch e {
+	case TransferCandidateStatusConfirmed:
+		return true
+	case TransferCandidateStatusRejected:
+		return true
+	case TransferCandidateStatusSuggested:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TransferPairConfidence.
+const (
+	TransferPairConfidenceExact    TransferPairConfidence = "exact"
+	TransferPairConfidenceProbable TransferPairConfidence = "probable"
+)
+
+// Valid indicates whether the value is a known member of the TransferPairConfidence enum.
+func (e TransferPairConfidence) Valid() bool {
+	switch e {
+	case TransferPairConfidenceExact:
+		return true
+	case TransferPairConfidenceProbable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TransferPairStatus.
+const (
+	TransferPairStatusConfirmed TransferPairStatus = "confirmed"
+	TransferPairStatusRejected  TransferPairStatus = "rejected"
+	TransferPairStatusSuggested TransferPairStatus = "suggested"
+)
+
+// Valid indicates whether the value is a known member of the TransferPairStatus enum.
+func (e TransferPairStatus) Valid() bool {
+	switch e {
+	case TransferPairStatusConfirmed:
+		return true
+	case TransferPairStatusRejected:
+		return true
+	case TransferPairStatusSuggested:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetTransactionsParamsSort.
 const (
 	Amount       GetTransactionsParamsSort = "amount"
@@ -337,6 +415,57 @@ type TransactionListResponse struct {
 	Pagination Pagination    `json:"pagination"`
 }
 
+// TransferCandidate defines model for TransferCandidate.
+type TransferCandidate struct {
+	// Amount Absolute transfer amount in EUR
+	Amount     string                      `json:"amount"`
+	Confidence TransferCandidateConfidence `json:"confidence"`
+	CreatedAt  time.Time                   `json:"created_at"`
+	Id         openapi_types.UUID          `json:"id"`
+	In         TransferLeg                 `json:"in"`
+	Out        TransferLeg                 `json:"out"`
+	Status     TransferCandidateStatus     `json:"status"`
+}
+
+// TransferCandidateConfidence defines model for TransferCandidate.Confidence.
+type TransferCandidateConfidence string
+
+// TransferCandidateStatus defines model for TransferCandidate.Status.
+type TransferCandidateStatus string
+
+// TransferCandidateListResponse defines model for TransferCandidateListResponse.
+type TransferCandidateListResponse struct {
+	Data []TransferCandidate `json:"data"`
+}
+
+// TransferLeg defines model for TransferLeg.
+type TransferLeg struct {
+	AccountName   string             `json:"account_name"`
+	Amount        string             `json:"amount"`
+	BookingDate   openapi_types.Date `json:"booking_date"`
+	BookingText   string             `json:"booking_text"`
+	Counterparty  string             `json:"counterparty"`
+	Purpose       string             `json:"purpose"`
+	TransactionId openapi_types.UUID `json:"transaction_id"`
+}
+
+// TransferPair defines model for TransferPair.
+type TransferPair struct {
+	Confidence  TransferPairConfidence `json:"confidence"`
+	ConfirmedAt *time.Time             `json:"confirmed_at,omitempty"`
+	CreatedAt   time.Time              `json:"created_at"`
+	Id          openapi_types.UUID     `json:"id"`
+	Status      TransferPairStatus     `json:"status"`
+	TxInId      openapi_types.UUID     `json:"tx_in_id"`
+	TxOutId     openapi_types.UUID     `json:"tx_out_id"`
+}
+
+// TransferPairConfidence defines model for TransferPair.Confidence.
+type TransferPairConfidence string
+
+// TransferPairStatus defines model for TransferPair.Status.
+type TransferPairStatus string
+
 // GetImportsParams defines parameters for GetImports.
 type GetImportsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
@@ -446,6 +575,15 @@ type ServerInterface interface {
 	// List transactions
 	// (GET /api/transactions)
 	GetTransactions(w http.ResponseWriter, r *http.Request, params GetTransactionsParams)
+	// List suggested internal transfer pairs awaiting review
+	// (GET /api/transfers/candidates)
+	GetTransferCandidates(w http.ResponseWriter, r *http.Request)
+	// Confirm a suggested transfer pair (exclude legs from household cashflow)
+	// (POST /api/transfers/{id}/confirm)
+	PostTransferConfirm(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Reject a suggested transfer pair
+	// (POST /api/transfers/{id}/reject)
+	PostTransferReject(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -509,6 +647,24 @@ func (_ Unimplemented) GetLLMModels(w http.ResponseWriter, r *http.Request) {
 // List transactions
 // (GET /api/transactions)
 func (_ Unimplemented) GetTransactions(w http.ResponseWriter, r *http.Request, params GetTransactionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List suggested internal transfer pairs awaiting review
+// (GET /api/transfers/candidates)
+func (_ Unimplemented) GetTransferCandidates(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm a suggested transfer pair (exclude legs from household cashflow)
+// (POST /api/transfers/{id}/confirm)
+func (_ Unimplemented) PostTransferConfirm(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Reject a suggested transfer pair
+// (POST /api/transfers/{id}/reject)
+func (_ Unimplemented) PostTransferReject(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -853,6 +1009,72 @@ func (siw *ServerInterfaceWrapper) GetTransactions(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetTransferCandidates operation middleware
+func (siw *ServerInterfaceWrapper) GetTransferCandidates(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTransferCandidates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostTransferConfirm operation middleware
+func (siw *ServerInterfaceWrapper) PostTransferConfirm(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostTransferConfirm(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostTransferReject operation middleware
+func (siw *ServerInterfaceWrapper) PostTransferReject(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostTransferReject(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -995,6 +1217,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/transactions", wrapper.GetTransactions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/transfers/candidates", wrapper.GetTransferCandidates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/transfers/{id}/confirm", wrapper.PostTransferConfirm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/transfers/{id}/reject", wrapper.PostTransferReject)
 	})
 
 	return r

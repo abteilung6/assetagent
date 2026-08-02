@@ -9,6 +9,7 @@ import {
 import { AppLayout } from "@/app/layout";
 import ChatPage from "@/pages/chat/page";
 import ImportsPage from "@/pages/imports/page";
+import ReviewPage from "@/pages/review/page";
 import TransactionsPage from "@/pages/transactions/page";
 import { parseTransactionSearchParams } from "@/pages/transactions/search-params";
 
@@ -42,6 +43,15 @@ const importsRoute = createRoute({
   },
 });
 
+const reviewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/review",
+  component: ReviewPage,
+  staticData: {
+    title: "Needs review",
+  },
+});
+
 const transactionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/transactions",
@@ -53,13 +63,14 @@ const transactionsRoute = createRoute({
     parseTransactionSearchParams(search as Record<string, unknown>),
 });
 
-export { chatRoute, importsRoute, transactionsRoute };
+export { chatRoute, importsRoute, reviewRoute, transactionsRoute };
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
   chatRoute,
-  importsRoute,
   transactionsRoute,
+  importsRoute,
+  reviewRoute,
 ]);
 
 export function createAppRouter(history?: RouterHistory) {

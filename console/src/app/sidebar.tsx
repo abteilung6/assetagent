@@ -1,6 +1,7 @@
 import type React from "react";
 import { Link } from "@tanstack/react-router";
 import {
+  InboxIcon,
   MessageSquareIcon,
   Table2Icon,
   UploadIcon,
@@ -13,13 +14,18 @@ import {
   SidebarGroup,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { useTransferCandidates } from "@/hooks/use-transfer-candidates";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
 
 export const AppSidebar: React.FC = () => {
+  const candidatesQuery = useTransferCandidates();
+  const pendingCount = candidatesQuery.data?.data.length ?? 0;
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -70,6 +76,18 @@ export const AppSidebar: React.FC = () => {
                 <UploadIcon />
                 <span>Import</span>
               </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={<Link to="/review" />}
+                tooltip="Needs review"
+              >
+                <InboxIcon />
+                <span>Needs review</span>
+              </SidebarMenuButton>
+              {pendingCount > 0 ? (
+                <SidebarMenuBadge>{pendingCount}</SidebarMenuBadge>
+              ) : null}
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>

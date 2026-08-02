@@ -29,10 +29,23 @@ type Handler struct {
 	chat        ChatService
 	llmRegistry *llm.Registry
 	importer    ImportService
+	transfers   TransferService
 }
 
-func New(list ListService, chat ChatService, registry *llm.Registry, importer ImportService) *Handler {
-	return &Handler{list: list, chat: chat, llmRegistry: registry, importer: importer}
+func New(
+	list ListService,
+	chat ChatService,
+	registry *llm.Registry,
+	importer ImportService,
+	transfers TransferService,
+) *Handler {
+	return &Handler{
+		list:        list,
+		chat:        chat,
+		llmRegistry: registry,
+		importer:    importer,
+		transfers:   transfers,
+	}
 }
 
 func (h *Handler) GetHealth(w http.ResponseWriter, r *http.Request) {

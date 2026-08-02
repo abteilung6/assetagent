@@ -105,6 +105,95 @@ func (q *Queries) InsertTransferPair(ctx context.Context, arg InsertTransferPair
 	return i, err
 }
 
+const listSuggestedTransferCandidates = `-- name: ListSuggestedTransferCandidates :many
+SELECT
+    p.id,
+    p.status,
+    p.confidence,
+    p.created_at,
+    out_tx.id AS tx_out_id,
+    out_tx.amount AS out_amount,
+    out_tx.booking_date AS out_booking_date,
+    out_tx.booking_text AS out_booking_text,
+    out_tx.purpose AS out_purpose,
+    out_tx.counterparty AS out_counterparty,
+    COALESCE(out_acc.display_name, '') AS out_account_name,
+    in_tx.id AS tx_in_id,
+    in_tx.amount AS in_amount,
+    in_tx.booking_date AS in_booking_date,
+    in_tx.booking_text AS in_booking_text,
+    in_tx.purpose AS in_purpose,
+    in_tx.counterparty AS in_counterparty,
+    COALESCE(in_acc.display_name, '') AS in_account_name
+FROM transfer_pairs p
+JOIN transactions out_tx ON out_tx.id = p.tx_out_id
+JOIN transactions in_tx ON in_tx.id = p.tx_in_id
+LEFT JOIN accounts out_acc ON out_acc.id = out_tx.account_id
+LEFT JOIN accounts in_acc ON in_acc.id = in_tx.account_id
+WHERE p.status = 'suggested'
+ORDER BY p.created_at DESC
+`
+
+type ListSuggestedTransferCandidatesRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Status          string             `json:"status"`
+	Confidence      string             `json:"confidence"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	TxOutID         uuid.UUID          `json:"tx_out_id"`
+	OutAmount       decimal.Decimal    `json:"out_amount"`
+	OutBookingDate  pgtype.Date        `json:"out_booking_date"`
+	OutBookingText  string             `json:"out_booking_text"`
+	OutPurpose      string             `json:"out_purpose"`
+	OutCounterparty string             `json:"out_counterparty"`
+	OutAccountName  string             `json:"out_account_name"`
+	TxInID          uuid.UUID          `json:"tx_in_id"`
+	InAmount        decimal.Decimal    `json:"in_amount"`
+	InBookingDate   pgtype.Date        `json:"in_booking_date"`
+	InBookingText   string             `json:"in_booking_text"`
+	InPurpose       string             `json:"in_purpose"`
+	InCounterparty  string             `json:"in_counterparty"`
+	InAccountName   string             `json:"in_account_name"`
+}
+
+func (q *Queries) ListSuggestedTransferCandidates(ctx context.Context) ([]ListSuggestedTransferCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, listSuggestedTransferCandidates)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSuggestedTransferCandidatesRow{}
+	for rows.Next() {
+		var i ListSuggestedTransferCandidatesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Status,
+			&i.Confidence,
+			&i.CreatedAt,
+			&i.TxOutID,
+			&i.OutAmount,
+			&i.OutBookingDate,
+			&i.OutBookingText,
+			&i.OutPurpose,
+			&i.OutCounterparty,
+			&i.OutAccountName,
+			&i.TxInID,
+			&i.InAmount,
+			&i.InBookingDate,
+			&i.InBookingText,
+			&i.InPurpose,
+			&i.InCounterparty,
+			&i.InAccountName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTransactionsForTransferScan = `-- name: ListTransactionsForTransferScan :many
 SELECT
     id,

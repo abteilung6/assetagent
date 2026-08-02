@@ -45,3 +45,25 @@ type TransferScanResult struct {
 	SkippedExisting      int
 	Pairs                []TransferPair
 }
+
+// TransferLegView is one side of a transfer pair for review UI.
+type TransferLegView struct {
+	TransactionID uuid.UUID
+	AccountName   string
+	BookingDate   time.Time
+	Amount        decimal.Decimal
+	BookingText   string
+	Purpose       string
+	Counterparty  string
+}
+
+// TransferCandidate is a suggested pair with enough context for console review.
+type TransferCandidate struct {
+	ID         uuid.UUID
+	Status     string
+	Confidence string
+	Amount     decimal.Decimal
+	Out        TransferLegView
+	In         TransferLegView
+	CreatedAt  time.Time
+}

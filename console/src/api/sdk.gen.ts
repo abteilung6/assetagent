@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type ServerSentEventsResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetHealthData, GetHealthResponses, GetImportData, GetImportErrors, GetImportResponses, GetImportsData, GetImportsErrors, GetImportsResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostImportRollbackData, PostImportRollbackErrors, PostImportRollbackResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses } from './types.gen';
+import type { GetHealthData, GetHealthResponses, GetImportData, GetImportErrors, GetImportResponses, GetImportsData, GetImportsErrors, GetImportsResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, GetTransferCandidatesData, GetTransferCandidatesResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostImportRollbackData, PostImportRollbackErrors, PostImportRollbackResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses, PostTransferConfirmData, PostTransferConfirmErrors, PostTransferConfirmResponses, PostTransferRejectData, PostTransferRejectErrors, PostTransferRejectResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -97,3 +97,18 @@ export const getImport = <ThrowOnError extends boolean = false>(options: Options
  * Roll back a committed import run and delete its transactions
  */
 export const postImportRollback = <ThrowOnError extends boolean = false>(options: Options<PostImportRollbackData, ThrowOnError>): RequestResult<PostImportRollbackResponses, PostImportRollbackErrors, ThrowOnError> => (options.client ?? client).post<PostImportRollbackResponses, PostImportRollbackErrors, ThrowOnError>({ url: '/api/imports/{id}/rollback', ...options });
+
+/**
+ * List suggested internal transfer pairs awaiting review
+ */
+export const getTransferCandidates = <ThrowOnError extends boolean = false>(options?: Options<GetTransferCandidatesData, ThrowOnError>): RequestResult<GetTransferCandidatesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetTransferCandidatesResponses, unknown, ThrowOnError>({ url: '/api/transfers/candidates', ...options });
+
+/**
+ * Confirm a suggested transfer pair (exclude legs from household cashflow)
+ */
+export const postTransferConfirm = <ThrowOnError extends boolean = false>(options: Options<PostTransferConfirmData, ThrowOnError>): RequestResult<PostTransferConfirmResponses, PostTransferConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostTransferConfirmResponses, PostTransferConfirmErrors, ThrowOnError>({ url: '/api/transfers/{id}/confirm', ...options });
+
+/**
+ * Reject a suggested transfer pair
+ */
+export const postTransferReject = <ThrowOnError extends boolean = false>(options: Options<PostTransferRejectData, ThrowOnError>): RequestResult<PostTransferRejectResponses, PostTransferRejectErrors, ThrowOnError> => (options.client ?? client).post<PostTransferRejectResponses, PostTransferRejectErrors, ThrowOnError>({ url: '/api/transfers/{id}/reject', ...options });

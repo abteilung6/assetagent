@@ -32,6 +32,7 @@ type Querier interface {
 	InsertTransferPair(ctx context.Context, arg InsertTransferPairParams) (TransferPair, error)
 	ListCategories(ctx context.Context) ([]Category, error)
 	ListImportRuns(ctx context.Context, limit int32) ([]ImportRun, error)
+	ListSuggestedTransferCandidates(ctx context.Context) ([]ListSuggestedTransferCandidatesRow, error)
 	ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]Transaction, error)
 	ListTransactionsForTransferScan(ctx context.Context) ([]ListTransactionsForTransferScanRow, error)
 	ListTransferPairLegs(ctx context.Context) ([]ListTransferPairLegsRow, error)

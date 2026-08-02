@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { getHealth, getImport, getImports, getLlmModels, getTransactions, type Options, postChat, postImportRollback, postImports, postImportsPreview } from '../sdk.gen';
-import type { GetHealthData, GetHealthResponse, GetImportData, GetImportError, GetImportResponse, GetImportsData, GetImportsError, GetImportsResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, PostChatData, PostChatError, PostChatResponse, PostImportRollbackData, PostImportRollbackError, PostImportRollbackResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse } from '../types.gen';
+import { getHealth, getImport, getImports, getLlmModels, getTransactions, getTransferCandidates, type Options, postChat, postImportRollback, postImports, postImportsPreview, postTransferConfirm, postTransferReject } from '../sdk.gen';
+import type { GetHealthData, GetHealthResponse, GetImportData, GetImportError, GetImportResponse, GetImportsData, GetImportsError, GetImportsResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, GetTransferCandidatesData, GetTransferCandidatesResponse, PostChatData, PostChatError, PostChatResponse, PostImportRollbackData, PostImportRollbackError, PostImportRollbackResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse, PostTransferConfirmData, PostTransferConfirmError, PostTransferConfirmResponse, PostTransferRejectData, PostTransferRejectError, PostTransferRejectResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -246,6 +246,58 @@ export const postImportRollbackMutation = (options?: Partial<Options<PostImportR
     const mutationOptions: UseMutationOptions<PostImportRollbackResponse, PostImportRollbackError, Options<PostImportRollbackData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await postImportRollback({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getTransferCandidatesQueryKey = (options?: Options<GetTransferCandidatesData>) => createQueryKey('getTransferCandidates', options);
+
+/**
+ * List suggested internal transfer pairs awaiting review
+ */
+export const getTransferCandidatesOptions = (options?: Options<GetTransferCandidatesData>) => queryOptions<GetTransferCandidatesResponse, DefaultError, GetTransferCandidatesResponse, ReturnType<typeof getTransferCandidatesQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getTransferCandidates({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getTransferCandidatesQueryKey(options)
+});
+
+/**
+ * Confirm a suggested transfer pair (exclude legs from household cashflow)
+ */
+export const postTransferConfirmMutation = (options?: Partial<Options<PostTransferConfirmData>>): UseMutationOptions<PostTransferConfirmResponse, PostTransferConfirmError, Options<PostTransferConfirmData>> => {
+    const mutationOptions: UseMutationOptions<PostTransferConfirmResponse, PostTransferConfirmError, Options<PostTransferConfirmData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postTransferConfirm({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Reject a suggested transfer pair
+ */
+export const postTransferRejectMutation = (options?: Partial<Options<PostTransferRejectData>>): UseMutationOptions<PostTransferRejectResponse, PostTransferRejectError, Options<PostTransferRejectData>> => {
+    const mutationOptions: UseMutationOptions<PostTransferRejectResponse, PostTransferRejectError, Options<PostTransferRejectData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postTransferReject({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

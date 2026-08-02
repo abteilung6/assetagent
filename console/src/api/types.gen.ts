@@ -165,6 +165,43 @@ export type ImportRollbackResponse = {
     source_filename: string;
 };
 
+export type TransferLeg = {
+    transaction_id: string;
+    account_name: string;
+    booking_date: string;
+    amount: string;
+    booking_text: string;
+    purpose: string;
+    counterparty: string;
+};
+
+export type TransferCandidate = {
+    id: string;
+    status: 'suggested' | 'confirmed' | 'rejected';
+    confidence: 'exact' | 'probable';
+    /**
+     * Absolute transfer amount in EUR
+     */
+    amount: string;
+    out: TransferLeg;
+    in: TransferLeg;
+    created_at: string;
+};
+
+export type TransferCandidateListResponse = {
+    data: Array<TransferCandidate>;
+};
+
+export type TransferPair = {
+    id: string;
+    tx_out_id: string;
+    tx_in_id: string;
+    status: 'suggested' | 'confirmed' | 'rejected';
+    confidence: 'exact' | 'probable';
+    created_at: string;
+    confirmed_at?: string | null;
+};
+
 export type GetHealthData = {
     body?: never;
     path?: never;
@@ -485,3 +522,81 @@ export type PostImportRollbackResponses = {
 };
 
 export type PostImportRollbackResponse = PostImportRollbackResponses[keyof PostImportRollbackResponses];
+
+export type GetTransferCandidatesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/transfers/candidates';
+};
+
+export type GetTransferCandidatesResponses = {
+    /**
+     * Suggested transfer candidates
+     */
+    200: TransferCandidateListResponse;
+};
+
+export type GetTransferCandidatesResponse = GetTransferCandidatesResponses[keyof GetTransferCandidatesResponses];
+
+export type PostTransferConfirmData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/transfers/{id}/confirm';
+};
+
+export type PostTransferConfirmErrors = {
+    /**
+     * Transfer pair not found
+     */
+    404: Error;
+    /**
+     * Transfer pair is not in suggested status
+     */
+    409: Error;
+};
+
+export type PostTransferConfirmError = PostTransferConfirmErrors[keyof PostTransferConfirmErrors];
+
+export type PostTransferConfirmResponses = {
+    /**
+     * Transfer pair confirmed
+     */
+    200: TransferPair;
+};
+
+export type PostTransferConfirmResponse = PostTransferConfirmResponses[keyof PostTransferConfirmResponses];
+
+export type PostTransferRejectData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/transfers/{id}/reject';
+};
+
+export type PostTransferRejectErrors = {
+    /**
+     * Transfer pair not found
+     */
+    404: Error;
+    /**
+     * Transfer pair is not in suggested status
+     */
+    409: Error;
+};
+
+export type PostTransferRejectError = PostTransferRejectErrors[keyof PostTransferRejectErrors];
+
+export type PostTransferRejectResponses = {
+    /**
+     * Transfer pair rejected
+     */
+    200: TransferPair;
+};
+
+export type PostTransferRejectResponse = PostTransferRejectResponses[keyof PostTransferRejectResponses];
