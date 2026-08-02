@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as sdk from "@/api/sdk.gen";
-import { sampleImportPreview } from "@/test/fixtures";
+import { sampleImportPreview, sampleImportRun } from "@/test/fixtures";
 import { mockApiResponse } from "@/test/mocks";
 import { testRender } from "@/test/render";
 
@@ -11,6 +11,9 @@ describe("ImportsPage", () => {
   beforeEach(() => {
     vi.spyOn(sdk, "getHealth").mockResolvedValue(
       mockApiResponse({ status: "ok" }),
+    );
+    vi.spyOn(sdk, "getImports").mockResolvedValue(
+      mockApiResponse({ data: [] }),
     );
   });
 
@@ -28,6 +31,8 @@ describe("ImportsPage", () => {
       screen.getByText(/Drop a Sparkasse CSV here/i),
     ).toBeInTheDocument();
     expect(screen.getByText(/confirm to save/i)).toBeInTheDocument();
+    expect(await screen.findByText("Recent imports")).toBeInTheDocument();
+    expect(screen.getByText("No imports yet.")).toBeInTheDocument();
   });
 
   it("previews a selected CSV via the API", async () => {
@@ -196,5 +201,48 @@ describe("ImportsPage", () => {
       "preview_hash does not match uploaded file",
     );
     expect(screen.getByText("Sample rows")).toBeInTheDocument();
+  });
+
+  it("lists recent imports and undoes with confirm", async () => {
+    const user = userEvent.setup();
+    const run = sampleImportRun();
+    vi.mocked(sdk.getImports).mockResolvedValue(
+      mockApiResponse({ data: [run] }),
+    );
+    const rollbackSpy = vi.spyOn(sdk, "postImportRollback").mockResolvedValue(
+      mockApiResponse({
+        import_run_id: run.id,
+        deleted: 6,
+        source_filename: run.source_filename,
+      }),
+    );
+
+    testRender({ route: "/imports" });
+
+    expect(await screen.findByText("minimal.csv")).toBeInTheDocument();
+    expect(screen.getByText(/Committed/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    expect(
+      screen.getByText(/Undo this import\? This deletes/i),
+    ).toBeInTheDocument();
+
+    vi.mocked(sdk.getImports).mockResolvedValue(
+      mockApiResponse({
+        data: [
+          {
+            ...run,
+            status: "rolled_back",
+            rolled_back_at: run.created_at,
+          },
+        ],
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Undo import" }));
+    await waitFor(() => {
+      expect(rollbackSpy).toHaveBeenCalled();
+    });
+    expect(await screen.findByText("Undone")).toBeInTheDocument();
   });
 });

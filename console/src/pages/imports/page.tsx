@@ -1,8 +1,10 @@
 import type React from "react";
 import { useCallback, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { CommitResult } from "@/components/import-preview/commit-result";
 import { FileDropzone } from "@/components/import-preview/file-dropzone";
+import { ImportHistory } from "@/components/import-preview/import-history";
 import { PreviewPanel } from "@/components/import-preview/preview-panel";
 import {
   commitErrorMessage,
@@ -14,8 +16,10 @@ import {
   useImportPreview,
   type ImportPreviewResponse,
 } from "@/hooks/use-import-preview";
+import { invalidateImportRuns } from "@/hooks/use-import-runs";
 
 const ImportsPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null);
@@ -80,10 +84,13 @@ const ImportsPage: React.FC = () => {
         },
       });
       setResult(nextResult);
+      await invalidateImportRuns(queryClient);
     } catch (err) {
       setCommitError(commitErrorMessage(err));
     }
-  }, [accountName, commitMutation, file, preview]);
+  }, [accountName, commitMutation, file, preview, queryClient]);
+
+  const showHistory = !preview || Boolean(result);
 
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-6 overflow-y-auto">
@@ -147,6 +154,8 @@ const ImportsPage: React.FC = () => {
           ) : null}
         </div>
       )}
+
+      {showHistory ? <ImportHistory /> : null}
 
       <input
         ref={fileInputRef}

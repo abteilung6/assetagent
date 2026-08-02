@@ -1,4 +1,22 @@
-import type { ImportPreviewResponse, Transaction, TransactionListResponse } from "@/api/types.gen";
+import type { ImportPreviewResponse, ImportRun, Transaction, TransactionListResponse } from "@/api/types.gen";
+
+export function sampleImportRun(
+  overrides: Partial<ImportRun> = {},
+): ImportRun {
+  return {
+    id: "33333333-3333-3333-3333-333333333333",
+    account_id: "22222222-2222-2222-2222-222222222222",
+    source_filename: "minimal.csv",
+    status: "committed",
+    row_total: 6,
+    row_valid: 6,
+    row_inserted: 6,
+    row_duplicate: 0,
+    created_at: "2026-08-02T12:00:00.000Z",
+    committed_at: "2026-08-02T12:00:00.000Z",
+    ...overrides,
+  };
+}
 
 export function sampleImportPreview(
   overrides: Partial<ImportPreviewResponse> = {},

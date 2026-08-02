@@ -14,6 +14,9 @@ describe("AppLayout", () => {
     vi.spyOn(sdk, "getTransactions").mockResolvedValue(
       mockApiResponse(sampleTransactionList()),
     );
+    vi.spyOn(sdk, "getImports").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
     vi.spyOn(sdk, "postChat").mockResolvedValue(
       mockApiResponse({ answer: "Hello", tool_calls: [] }),
     );
