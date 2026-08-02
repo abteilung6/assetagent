@@ -46,6 +46,17 @@ describe("AppLayout", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders import page at /imports", async () => {
+    testRender({ route: "/imports" });
+
+    expect(
+      await screen.findByRole("heading", { name: "Import" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Drop a Sparkasse CSV here/i),
+    ).toBeInTheDocument();
+  });
+
   it("redirects / to /chat", async () => {
     testRender({ route: "/" });
 

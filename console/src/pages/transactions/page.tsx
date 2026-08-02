@@ -8,6 +8,7 @@ import { TransactionFilters } from "@/components/transaction-filters/filters";
 import { TransactionPagination } from "@/components/transaction-table/pagination";
 import { TransactionTable } from "@/components/transaction-table/transaction-table";
 import { TransactionTableSkeleton } from "@/components/transaction-table/transaction-table-skeleton";
+import { Button } from "@/components/ui/button";
 import { useTransactions } from "@/hooks/use-transactions";
 import { transactionsRoute } from "@/router";
 
@@ -59,6 +60,13 @@ const TransactionsPage: React.FC = () => {
     }
   }, []);
 
+  const isGloballyEmpty =
+    !isPending &&
+    !isError &&
+    data !== undefined &&
+    data.pagination.total === 0 &&
+    search.offset === 0;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
       <TransactionFilters params={search} onApply={setSearchParams} />
@@ -69,6 +77,24 @@ const TransactionsPage: React.FC = () => {
         </div>
       ) : isError ? (
         <p className="text-destructive">Failed to load transactions.</p>
+      ) : isGloballyEmpty ? (
+        <div className="flex flex-1 flex-col items-start justify-center gap-3 py-16">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">No transactions yet</p>
+            <p className="max-w-md text-sm text-muted-foreground">
+              Import a Sparkasse CSV to populate your ledger. You can preview
+              the file before anything is saved.
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={() => {
+              void navigate({ to: "/imports" });
+            }}
+          >
+            Import a statement
+          </Button>
+        </div>
       ) : (
         <div className="flex min-w-0 flex-col gap-4">
           {data.data.length === 0 ? (

@@ -1,6 +1,11 @@
 import type React from "react";
 import { Link } from "@tanstack/react-router";
-import { MessageSquareIcon, Table2Icon, WalletIcon } from "lucide-react";
+import {
+  MessageSquareIcon,
+  Table2Icon,
+  UploadIcon,
+  WalletIcon,
+} from "lucide-react";
 
 import {
   Sidebar,
@@ -55,6 +60,15 @@ export const AppSidebar: React.FC = () => {
               >
                 <Table2Icon />
                 <span>Transactions</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={<Link to="/imports" />}
+                tooltip="Import"
+              >
+                <UploadIcon />
+                <span>Import</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

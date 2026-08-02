@@ -8,6 +8,7 @@ import {
 
 import { AppLayout } from "@/app/layout";
 import ChatPage from "@/pages/chat/page";
+import ImportsPage from "@/pages/imports/page";
 import TransactionsPage from "@/pages/transactions/page";
 import { parseTransactionSearchParams } from "@/pages/transactions/search-params";
 
@@ -32,6 +33,15 @@ const chatRoute = createRoute({
   },
 });
 
+const importsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/imports",
+  component: ImportsPage,
+  staticData: {
+    title: "Import",
+  },
+});
+
 const transactionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/transactions",
@@ -43,11 +53,12 @@ const transactionsRoute = createRoute({
     parseTransactionSearchParams(search as Record<string, unknown>),
 });
 
-export { chatRoute, transactionsRoute };
+export { chatRoute, importsRoute, transactionsRoute };
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
   chatRoute,
+  importsRoute,
   transactionsRoute,
 ]);
 
