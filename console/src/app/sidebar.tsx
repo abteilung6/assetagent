@@ -20,15 +20,18 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { useClassificationQueue } from "@/hooks/use-classification-queue";
+import { useUncertainRecurring } from "@/hooks/use-recurring-uncertain";
 import { useTransferCandidates } from "@/hooks/use-transfer-candidates";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
 
 export const AppSidebar: React.FC = () => {
   const candidatesQuery = useTransferCandidates();
   const classificationQuery = useClassificationQueue();
+  const recurringQuery = useUncertainRecurring();
   const pendingCount =
     (candidatesQuery.data?.data.length ?? 0) +
-    (classificationQuery.data?.data.length ?? 0);
+    (classificationQuery.data?.data.length ?? 0) +
+    (recurringQuery.data?.data.length ?? 0);
 
   return (
     <Sidebar collapsible="icon">

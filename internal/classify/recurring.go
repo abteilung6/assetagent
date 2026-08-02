@@ -147,7 +147,7 @@ func buildRecurringSeries(
 	lastDate := dateOnly(chain[len(chain)-1].BookingDate)
 	next := lastDate.AddDate(0, 0, spec.TargetDays)
 	uncertainty := chainUncertainty(chain, spec)
-	status := seriesStatus(lastDate, next, spec, uncertainty, now)
+	status := seriesStatus(lastDate, spec, now)
 
 	signLabel := "expense"
 	if sign > 0 {
@@ -227,22 +227,15 @@ func chainUncertainty(chain []domain.RecurringScanTx, spec recurringIntervalSpec
 
 func seriesStatus(
 	lastDate time.Time,
-	next time.Time,
 	spec recurringIntervalSpec,
-	uncertainty string,
 	now time.Time,
 ) string {
 	grace := spec.TargetDays + spec.Tolerance
 	if lastDate.Before(now.AddDate(0, 0, -2*grace)) {
 		return domain.RecurringStatusEnded
 	}
-	if uncertainty == domain.RecurringUncertaintyHigh {
-		return domain.RecurringStatusUncertain
-	}
-	if next.Before(now.AddDate(0, 0, -grace)) {
-		return domain.RecurringStatusUncertain
-	}
-	return domain.RecurringStatusActive
+	// Fresh detections always need a human look — confirm promotes to active.
+	return domain.RecurringStatusUncertain
 }
 
 func amountChanged(typical, last decimal.Decimal) bool {

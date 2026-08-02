@@ -37,4 +37,7 @@ beforeEach(() => {
   vi.spyOn(sdk, "getCategories").mockResolvedValue(
     mockApiResponse({ data: [] }),
   );
+  vi.spyOn(sdk, "getUncertainRecurring").mockResolvedValue(
+    mockApiResponse({ data: [] }),
+  );
 });

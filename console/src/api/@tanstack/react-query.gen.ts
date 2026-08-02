@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { getCategories, getClassificationQueue, getHealth, getImport, getImports, getLlmModels, getTransactions, getTransferCandidates, type Options, postChat, postClassificationCorrect, postImportRollback, postImports, postImportsPreview, postTransferConfirm, postTransferReject } from '../sdk.gen';
-import type { GetCategoriesData, GetCategoriesResponse, GetClassificationQueueData, GetClassificationQueueResponse, GetHealthData, GetHealthResponse, GetImportData, GetImportError, GetImportResponse, GetImportsData, GetImportsError, GetImportsResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, GetTransferCandidatesData, GetTransferCandidatesResponse, PostChatData, PostChatError, PostChatResponse, PostClassificationCorrectData, PostClassificationCorrectError, PostClassificationCorrectResponse, PostImportRollbackData, PostImportRollbackError, PostImportRollbackResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse, PostTransferConfirmData, PostTransferConfirmError, PostTransferConfirmResponse, PostTransferRejectData, PostTransferRejectError, PostTransferRejectResponse } from '../types.gen';
+import { getCategories, getClassificationQueue, getHealth, getImport, getImports, getLlmModels, getTransactions, getTransferCandidates, getUncertainRecurring, type Options, postChat, postClassificationCorrect, postImportRollback, postImports, postImportsPreview, postRecurringConfirm, postRecurringReject, postTransferConfirm, postTransferReject } from '../sdk.gen';
+import type { GetCategoriesData, GetCategoriesResponse, GetClassificationQueueData, GetClassificationQueueResponse, GetHealthData, GetHealthResponse, GetImportData, GetImportError, GetImportResponse, GetImportsData, GetImportsError, GetImportsResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, GetTransferCandidatesData, GetTransferCandidatesResponse, GetUncertainRecurringData, GetUncertainRecurringResponse, PostChatData, PostChatError, PostChatResponse, PostClassificationCorrectData, PostClassificationCorrectError, PostClassificationCorrectResponse, PostImportRollbackData, PostImportRollbackError, PostImportRollbackResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse, PostRecurringConfirmData, PostRecurringConfirmError, PostRecurringConfirmResponse, PostRecurringRejectData, PostRecurringRejectError, PostRecurringRejectResponse, PostTransferConfirmData, PostTransferConfirmError, PostTransferConfirmResponse, PostTransferRejectData, PostTransferRejectError, PostTransferRejectResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -298,6 +298,58 @@ export const postTransferRejectMutation = (options?: Partial<Options<PostTransfe
     const mutationOptions: UseMutationOptions<PostTransferRejectResponse, PostTransferRejectError, Options<PostTransferRejectData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await postTransferReject({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getUncertainRecurringQueryKey = (options?: Options<GetUncertainRecurringData>) => createQueryKey('getUncertainRecurring', options);
+
+/**
+ * List uncertain recurring series awaiting review
+ */
+export const getUncertainRecurringOptions = (options?: Options<GetUncertainRecurringData>) => queryOptions<GetUncertainRecurringResponse, DefaultError, GetUncertainRecurringResponse, ReturnType<typeof getUncertainRecurringQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getUncertainRecurring({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getUncertainRecurringQueryKey(options)
+});
+
+/**
+ * Confirm an uncertain recurring series
+ */
+export const postRecurringConfirmMutation = (options?: Partial<Options<PostRecurringConfirmData>>): UseMutationOptions<PostRecurringConfirmResponse, PostRecurringConfirmError, Options<PostRecurringConfirmData>> => {
+    const mutationOptions: UseMutationOptions<PostRecurringConfirmResponse, PostRecurringConfirmError, Options<PostRecurringConfirmData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postRecurringConfirm({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Dismiss an uncertain recurring series
+ */
+export const postRecurringRejectMutation = (options?: Partial<Options<PostRecurringRejectData>>): UseMutationOptions<PostRecurringRejectResponse, PostRecurringRejectError, Options<PostRecurringRejectData>> => {
+    const mutationOptions: UseMutationOptions<PostRecurringRejectResponse, PostRecurringRejectError, Options<PostRecurringRejectData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postRecurringReject({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

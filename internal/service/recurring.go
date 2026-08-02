@@ -140,6 +140,60 @@ func (s *Recurring) List(ctx context.Context) ([]domain.RecurringSeries, error) 
 	return out, nil
 }
 
+func (s *Recurring) ListUncertain(ctx context.Context) ([]domain.RecurringSeries, error) {
+	// Keep the inbox populated after imports without a separate scan step.
+	if _, err := s.Scan(ctx); err != nil {
+		return nil, fmt.Errorf("scan before queue: %w", err)
+	}
+	rows, err := sqldb.New(s.pool).ListUncertainRecurringSeries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domain.RecurringSeries, len(rows))
+	for i, row := range rows {
+		out[i] = mapRecurringSeries(row)
+	}
+	return out, nil
+}
+
+func (s *Recurring) Confirm(ctx context.Context, id uuid.UUID) (domain.RecurringSeries, error) {
+	row, err := sqldb.New(s.pool).ConfirmRecurringSeries(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.RecurringSeries{}, s.decideLookupError(ctx, id)
+		}
+		return domain.RecurringSeries{}, err
+	}
+	return mapRecurringSeries(row), nil
+}
+
+func (s *Recurring) Reject(ctx context.Context, id uuid.UUID) (domain.RecurringSeries, error) {
+	row, err := sqldb.New(s.pool).RejectRecurringSeries(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.RecurringSeries{}, s.decideLookupError(ctx, id)
+		}
+		return domain.RecurringSeries{}, err
+	}
+	return mapRecurringSeries(row), nil
+}
+
+func (s *Recurring) decideLookupError(ctx context.Context, id uuid.UUID) error {
+	_, err := sqldb.New(s.pool).GetRecurringSeries(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrRecurringSeriesNotFound
+	}
+	if err != nil {
+		return err
+	}
+	return ErrRecurringSeriesNotUncertain
+}
+
+var (
+	ErrRecurringSeriesNotFound     = errors.New("recurring series not found")
+	ErrRecurringSeriesNotUncertain = errors.New("recurring series is not uncertain")
+)
+
 func mapRecurringSeries(row sqldb.RecurringSeries) domain.RecurringSeries {
 	out := domain.RecurringSeries{
 		ID:            row.ID,

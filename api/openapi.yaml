@@ -391,6 +391,77 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/recurring/uncertain:
+    get:
+      operationId: getUncertainRecurring
+      summary: List uncertain recurring series awaiting review
+      responses:
+        "200":
+          description: Uncertain recurring series
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecurringSeriesListResponse"
+  /api/recurring/{id}/confirm:
+    post:
+      operationId: postRecurringConfirm
+      summary: Confirm an uncertain recurring series
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Recurring series confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecurringSeries"
+        "404":
+          description: Recurring series not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Recurring series is not uncertain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/recurring/{id}/reject:
+    post:
+      operationId: postRecurringReject
+      summary: Dismiss an uncertain recurring series
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Recurring series dismissed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecurringSeries"
+        "404":
+          description: Recurring series not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Recurring series is not uncertain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/categories:
     get:
       operationId: getCategories
@@ -1042,3 +1113,59 @@ components:
           type: string
           format: uuid
           nullable: true
+    RecurringSeries:
+      type: object
+      required:
+        - id
+        - display_name
+        - interval
+        - kind
+        - status
+        - amount_typical
+        - amount_last
+        - amount_changed
+        - uncertainty
+        - member_count
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        interval:
+          type: string
+          enum: [monthly, quarterly, yearly]
+        kind:
+          type: string
+          enum: [fixed, variable_regular, income]
+        status:
+          type: string
+          enum: [active, uncertain, ended]
+        amount_typical:
+          type: string
+        amount_last:
+          type: string
+        amount_changed:
+          type: boolean
+        next_expected:
+          type: string
+          format: date
+          nullable: true
+        uncertainty:
+          type: string
+          enum: [low, medium, high]
+        member_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    RecurringSeriesListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecurringSeries"

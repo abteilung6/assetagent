@@ -81,7 +81,7 @@ func newServeCmd() *cobra.Command {
 			transfers := service.NewTransfers(pool)
 			classify := service.NewClassify(pool)
 			categories := repository.NewCategories(pool)
-			gen.HandlerWithOptions(handler.New(listSvc, chatSvc, llmRegistry, importer, transfers, classify, categories), gen.ChiServerOptions{
+			gen.HandlerWithOptions(handler.New(listSvc, chatSvc, llmRegistry, importer, transfers, classify, categories, service.NewRecurring(pool)), gen.ChiServerOptions{
 				BaseRouter:       router,
 				ErrorHandlerFunc: handler.APIErrorHandler,
 			})

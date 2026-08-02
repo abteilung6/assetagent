@@ -76,6 +76,9 @@ describe("Needs review inbox", () => {
     vi.spyOn(sdk, "getCategories").mockResolvedValue(
       mockApiResponse({ data: [] }),
     );
+    vi.spyOn(sdk, "getUncertainRecurring").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
 
     testRender({ route: "/review" });
 
@@ -94,6 +97,9 @@ describe("Needs review inbox", () => {
     );
     vi.spyOn(sdk, "getClassificationQueue").mockResolvedValue(
       mockApiResponse({ data: [sampleQueueItem] }),
+    );
+    vi.spyOn(sdk, "getUncertainRecurring").mockResolvedValue(
+      mockApiResponse({ data: [] }),
     );
 
     testRender({ route: "/chat" });
@@ -130,6 +136,9 @@ describe("Needs review inbox", () => {
       .mockResolvedValueOnce(mockApiResponse({ data: [sampleCandidate] }))
       .mockResolvedValue(mockApiResponse({ data: [] }));
     vi.spyOn(sdk, "getClassificationQueue").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
+    vi.spyOn(sdk, "getUncertainRecurring").mockResolvedValue(
       mockApiResponse({ data: [] }),
     );
     vi.spyOn(sdk, "postTransferConfirm").mockResolvedValue(
@@ -175,6 +184,9 @@ describe("Needs review inbox", () => {
     vi.spyOn(sdk, "getCategories").mockResolvedValue(
       mockApiResponse({ data: [sampleCategory] }),
     );
+    vi.spyOn(sdk, "getUncertainRecurring").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
     vi.spyOn(sdk, "postClassificationCorrect").mockResolvedValue(
       mockApiResponse({
         transaction_id: sampleQueueItem.transaction_id,
@@ -200,6 +212,60 @@ describe("Needs review inbox", () => {
 
     await waitFor(() => {
       expect(sdk.postClassificationCorrect).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(getSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
+    expect(await screen.findByText(/Inbox clear/i)).toBeInTheDocument();
+  });
+
+  it("confirms a recurring series and clears it from the queue", async () => {
+    const user = userEvent.setup();
+    const sampleSeries = {
+      id: "55555555-5555-5555-5555-555555555555",
+      display_name: "Example Landlord",
+      interval: "monthly" as const,
+      kind: "fixed" as const,
+      status: "uncertain" as const,
+      amount_typical: "1200.00",
+      amount_last: "1200.00",
+      amount_changed: false,
+      next_expected: "2026-04-01",
+      uncertainty: "low" as const,
+      member_count: 3,
+      created_at: "2026-03-01T00:00:00Z",
+    };
+    vi.spyOn(sdk, "getTransferCandidates").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
+    vi.spyOn(sdk, "getClassificationQueue").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
+    vi.spyOn(sdk, "getCategories").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
+    const getSpy = vi
+      .spyOn(sdk, "getUncertainRecurring")
+      .mockResolvedValueOnce(mockApiResponse({ data: [sampleSeries] }))
+      .mockResolvedValue(mockApiResponse({ data: [] }));
+    vi.spyOn(sdk, "postRecurringConfirm").mockResolvedValue(
+      mockApiResponse({
+        ...sampleSeries,
+        status: "active" as const,
+      }),
+    );
+
+    testRender({ route: "/review" });
+
+    expect(await screen.findByText("Recurring payments")).toBeInTheDocument();
+    expect(screen.getByText("Example Landlord")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Confirm recurring" }),
+    );
+
+    await waitFor(() => {
+      expect(sdk.postRecurringConfirm).toHaveBeenCalled();
     });
     await waitFor(() => {
       expect(getSpy.mock.calls.length).toBeGreaterThanOrEqual(2);

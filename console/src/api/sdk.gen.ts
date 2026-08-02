@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type ServerSentEventsResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetCategoriesData, GetCategoriesResponses, GetClassificationQueueData, GetClassificationQueueResponses, GetHealthData, GetHealthResponses, GetImportData, GetImportErrors, GetImportResponses, GetImportsData, GetImportsErrors, GetImportsResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, GetTransferCandidatesData, GetTransferCandidatesResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostClassificationCorrectData, PostClassificationCorrectErrors, PostClassificationCorrectResponses, PostImportRollbackData, PostImportRollbackErrors, PostImportRollbackResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses, PostTransferConfirmData, PostTransferConfirmErrors, PostTransferConfirmResponses, PostTransferRejectData, PostTransferRejectErrors, PostTransferRejectResponses } from './types.gen';
+import type { GetCategoriesData, GetCategoriesResponses, GetClassificationQueueData, GetClassificationQueueResponses, GetHealthData, GetHealthResponses, GetImportData, GetImportErrors, GetImportResponses, GetImportsData, GetImportsErrors, GetImportsResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, GetTransferCandidatesData, GetTransferCandidatesResponses, GetUncertainRecurringData, GetUncertainRecurringResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostClassificationCorrectData, PostClassificationCorrectErrors, PostClassificationCorrectResponses, PostImportRollbackData, PostImportRollbackErrors, PostImportRollbackResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses, PostRecurringConfirmData, PostRecurringConfirmErrors, PostRecurringConfirmResponses, PostRecurringRejectData, PostRecurringRejectErrors, PostRecurringRejectResponses, PostTransferConfirmData, PostTransferConfirmErrors, PostTransferConfirmResponses, PostTransferRejectData, PostTransferRejectErrors, PostTransferRejectResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -112,6 +112,21 @@ export const postTransferConfirm = <ThrowOnError extends boolean = false>(option
  * Reject a suggested transfer pair
  */
 export const postTransferReject = <ThrowOnError extends boolean = false>(options: Options<PostTransferRejectData, ThrowOnError>): RequestResult<PostTransferRejectResponses, PostTransferRejectErrors, ThrowOnError> => (options.client ?? client).post<PostTransferRejectResponses, PostTransferRejectErrors, ThrowOnError>({ url: '/api/transfers/{id}/reject', ...options });
+
+/**
+ * List uncertain recurring series awaiting review
+ */
+export const getUncertainRecurring = <ThrowOnError extends boolean = false>(options?: Options<GetUncertainRecurringData, ThrowOnError>): RequestResult<GetUncertainRecurringResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetUncertainRecurringResponses, unknown, ThrowOnError>({ url: '/api/recurring/uncertain', ...options });
+
+/**
+ * Confirm an uncertain recurring series
+ */
+export const postRecurringConfirm = <ThrowOnError extends boolean = false>(options: Options<PostRecurringConfirmData, ThrowOnError>): RequestResult<PostRecurringConfirmResponses, PostRecurringConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostRecurringConfirmResponses, PostRecurringConfirmErrors, ThrowOnError>({ url: '/api/recurring/{id}/confirm', ...options });
+
+/**
+ * Dismiss an uncertain recurring series
+ */
+export const postRecurringReject = <ThrowOnError extends boolean = false>(options: Options<PostRecurringRejectData, ThrowOnError>): RequestResult<PostRecurringRejectResponses, PostRecurringRejectErrors, ThrowOnError> => (options.client ?? client).post<PostRecurringRejectResponses, PostRecurringRejectErrors, ThrowOnError>({ url: '/api/recurring/{id}/reject', ...options });
 
 /**
  * List system (and user) categories

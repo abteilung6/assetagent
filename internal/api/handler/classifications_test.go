@@ -97,7 +97,7 @@ func TestGetCategories_ok(t *testing.T) {
 
 func newClassifyTestRouter(classify handler.ClassifyService, categories handler.CategoryService) chi.Router {
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(nil, nil, nil, nil, nil, classify, categories), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(nil, nil, nil, nil, nil, classify, categories, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})

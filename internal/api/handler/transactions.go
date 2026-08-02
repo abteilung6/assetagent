@@ -32,6 +32,7 @@ type Handler struct {
 	transfers   TransferService
 	classify    ClassifyService
 	categories  CategoryService
+	recurring   RecurringService
 }
 
 func New(
@@ -42,6 +43,7 @@ func New(
 	transfers TransferService,
 	classify ClassifyService,
 	categories CategoryService,
+	recurring RecurringService,
 ) *Handler {
 	return &Handler{
 		list:        list,
@@ -51,6 +53,7 @@ func New(
 		transfers:   transfers,
 		classify:    classify,
 		categories:  categories,
+		recurring:   recurring,
 	}
 }
 

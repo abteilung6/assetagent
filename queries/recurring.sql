@@ -50,7 +50,31 @@ SELECT *
 FROM recurring_series
 ORDER BY display_name ASC, created_at DESC;
 
--- name: ListRecurringSeriesMembers :many
-SELECT series_id, transaction_id, booking_date, amount
-FROM recurring_series_members
-ORDER BY booking_date ASC;
+-- name: ListUncertainRecurringSeries :many
+SELECT *
+FROM recurring_series
+WHERE status = 'uncertain'
+ORDER BY amount_typical DESC, display_name ASC;
+
+-- name: GetRecurringSeries :one
+SELECT *
+FROM recurring_series
+WHERE id = $1;
+
+-- name: ConfirmRecurringSeries :one
+UPDATE recurring_series
+SET
+    status = 'active',
+    updated_at = now()
+WHERE id = $1
+  AND status = 'uncertain'
+RETURNING *;
+
+-- name: RejectRecurringSeries :one
+UPDATE recurring_series
+SET
+    status = 'ended',
+    updated_at = now()
+WHERE id = $1
+  AND status = 'uncertain'
+RETURNING *;

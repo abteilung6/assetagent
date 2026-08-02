@@ -245,6 +245,25 @@ export type ClassificationCorrectResponse = {
     merchant_id?: string | null;
 };
 
+export type RecurringSeries = {
+    id: string;
+    display_name: string;
+    interval: 'monthly' | 'quarterly' | 'yearly';
+    kind: 'fixed' | 'variable_regular' | 'income';
+    status: 'active' | 'uncertain' | 'ended';
+    amount_typical: string;
+    amount_last: string;
+    amount_changed: boolean;
+    next_expected?: string | null;
+    uncertainty: 'low' | 'medium' | 'high';
+    member_count: number;
+    created_at: string;
+};
+
+export type RecurringSeriesListResponse = {
+    data: Array<RecurringSeries>;
+};
+
 export type GetHealthData = {
     body?: never;
     path?: never;
@@ -643,6 +662,84 @@ export type PostTransferRejectResponses = {
 };
 
 export type PostTransferRejectResponse = PostTransferRejectResponses[keyof PostTransferRejectResponses];
+
+export type GetUncertainRecurringData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/recurring/uncertain';
+};
+
+export type GetUncertainRecurringResponses = {
+    /**
+     * Uncertain recurring series
+     */
+    200: RecurringSeriesListResponse;
+};
+
+export type GetUncertainRecurringResponse = GetUncertainRecurringResponses[keyof GetUncertainRecurringResponses];
+
+export type PostRecurringConfirmData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/recurring/{id}/confirm';
+};
+
+export type PostRecurringConfirmErrors = {
+    /**
+     * Recurring series not found
+     */
+    404: Error;
+    /**
+     * Recurring series is not uncertain
+     */
+    409: Error;
+};
+
+export type PostRecurringConfirmError = PostRecurringConfirmErrors[keyof PostRecurringConfirmErrors];
+
+export type PostRecurringConfirmResponses = {
+    /**
+     * Recurring series confirmed
+     */
+    200: RecurringSeries;
+};
+
+export type PostRecurringConfirmResponse = PostRecurringConfirmResponses[keyof PostRecurringConfirmResponses];
+
+export type PostRecurringRejectData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/recurring/{id}/reject';
+};
+
+export type PostRecurringRejectErrors = {
+    /**
+     * Recurring series not found
+     */
+    404: Error;
+    /**
+     * Recurring series is not uncertain
+     */
+    409: Error;
+};
+
+export type PostRecurringRejectError = PostRecurringRejectErrors[keyof PostRecurringRejectErrors];
+
+export type PostRecurringRejectResponses = {
+    /**
+     * Recurring series dismissed
+     */
+    200: RecurringSeries;
+};
+
+export type PostRecurringRejectResponse = PostRecurringRejectResponses[keyof PostRecurringRejectResponses];
 
 export type GetCategoriesData = {
     body?: never;

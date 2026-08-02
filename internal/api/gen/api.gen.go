@@ -110,6 +110,90 @@ func (e LLMModelSelectionProvider) Valid() bool {
 	}
 }
 
+// Defines values for RecurringSeriesInterval.
+const (
+	Monthly   RecurringSeriesInterval = "monthly"
+	Quarterly RecurringSeriesInterval = "quarterly"
+	Yearly    RecurringSeriesInterval = "yearly"
+)
+
+// Valid indicates whether the value is a known member of the RecurringSeriesInterval enum.
+func (e RecurringSeriesInterval) Valid() bool {
+	switch e {
+	case Monthly:
+		return true
+	case Quarterly:
+		return true
+	case Yearly:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecurringSeriesKind.
+const (
+	Fixed           RecurringSeriesKind = "fixed"
+	Income          RecurringSeriesKind = "income"
+	VariableRegular RecurringSeriesKind = "variable_regular"
+)
+
+// Valid indicates whether the value is a known member of the RecurringSeriesKind enum.
+func (e RecurringSeriesKind) Valid() bool {
+	switch e {
+	case Fixed:
+		return true
+	case Income:
+		return true
+	case VariableRegular:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecurringSeriesStatus.
+const (
+	Active    RecurringSeriesStatus = "active"
+	Ended     RecurringSeriesStatus = "ended"
+	Uncertain RecurringSeriesStatus = "uncertain"
+)
+
+// Valid indicates whether the value is a known member of the RecurringSeriesStatus enum.
+func (e RecurringSeriesStatus) Valid() bool {
+	switch e {
+	case Active:
+		return true
+	case Ended:
+		return true
+	case Uncertain:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecurringSeriesUncertainty.
+const (
+	High   RecurringSeriesUncertainty = "high"
+	Low    RecurringSeriesUncertainty = "low"
+	Medium RecurringSeriesUncertainty = "medium"
+)
+
+// Valid indicates whether the value is a known member of the RecurringSeriesUncertainty enum.
+func (e RecurringSeriesUncertainty) Valid() bool {
+	switch e {
+	case High:
+		return true
+	case Low:
+		return true
+	case Medium:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TransferCandidateConfidence.
 const (
 	TransferCandidateConfidenceExact    TransferCandidateConfidence = "exact"
@@ -436,6 +520,39 @@ type Pagination struct {
 	Total  int64 `json:"total"`
 }
 
+// RecurringSeries defines model for RecurringSeries.
+type RecurringSeries struct {
+	AmountChanged bool                       `json:"amount_changed"`
+	AmountLast    string                     `json:"amount_last"`
+	AmountTypical string                     `json:"amount_typical"`
+	CreatedAt     time.Time                  `json:"created_at"`
+	DisplayName   string                     `json:"display_name"`
+	Id            openapi_types.UUID         `json:"id"`
+	Interval      RecurringSeriesInterval    `json:"interval"`
+	Kind          RecurringSeriesKind        `json:"kind"`
+	MemberCount   int                        `json:"member_count"`
+	NextExpected  *openapi_types.Date        `json:"next_expected,omitempty"`
+	Status        RecurringSeriesStatus      `json:"status"`
+	Uncertainty   RecurringSeriesUncertainty `json:"uncertainty"`
+}
+
+// RecurringSeriesInterval defines model for RecurringSeries.Interval.
+type RecurringSeriesInterval string
+
+// RecurringSeriesKind defines model for RecurringSeries.Kind.
+type RecurringSeriesKind string
+
+// RecurringSeriesStatus defines model for RecurringSeries.Status.
+type RecurringSeriesStatus string
+
+// RecurringSeriesUncertainty defines model for RecurringSeries.Uncertainty.
+type RecurringSeriesUncertainty string
+
+// RecurringSeriesListResponse defines model for RecurringSeriesListResponse.
+type RecurringSeriesListResponse struct {
+	Data []RecurringSeries `json:"data"`
+}
+
 // Transaction defines model for Transaction.
 type Transaction struct {
 	Amount                         string             `json:"amount"`
@@ -633,6 +750,15 @@ type ServerInterface interface {
 	// List available LLM models for chat
 	// (GET /api/llm/models)
 	GetLLMModels(w http.ResponseWriter, r *http.Request)
+	// List uncertain recurring series awaiting review
+	// (GET /api/recurring/uncertain)
+	GetUncertainRecurring(w http.ResponseWriter, r *http.Request)
+	// Confirm an uncertain recurring series
+	// (POST /api/recurring/{id}/confirm)
+	PostRecurringConfirm(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Dismiss an uncertain recurring series
+	// (POST /api/recurring/{id}/reject)
+	PostRecurringReject(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List transactions
 	// (GET /api/transactions)
 	GetTransactions(w http.ResponseWriter, r *http.Request, params GetTransactionsParams)
@@ -720,6 +846,24 @@ func (_ Unimplemented) PostImportRollback(w http.ResponseWriter, r *http.Request
 // List available LLM models for chat
 // (GET /api/llm/models)
 func (_ Unimplemented) GetLLMModels(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List uncertain recurring series awaiting review
+// (GET /api/recurring/uncertain)
+func (_ Unimplemented) GetUncertainRecurring(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm an uncertain recurring series
+// (POST /api/recurring/{id}/confirm)
+func (_ Unimplemented) PostRecurringConfirm(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Dismiss an uncertain recurring series
+// (POST /api/recurring/{id}/reject)
+func (_ Unimplemented) PostRecurringReject(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -970,6 +1114,72 @@ func (siw *ServerInterfaceWrapper) GetLLMModels(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetLLMModels(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetUncertainRecurring operation middleware
+func (siw *ServerInterfaceWrapper) GetUncertainRecurring(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUncertainRecurring(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostRecurringConfirm operation middleware
+func (siw *ServerInterfaceWrapper) PostRecurringConfirm(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostRecurringConfirm(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostRecurringReject operation middleware
+func (siw *ServerInterfaceWrapper) PostRecurringReject(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostRecurringReject(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1356,6 +1566,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/llm/models", wrapper.GetLLMModels)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/recurring/uncertain", wrapper.GetUncertainRecurring)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/recurring/{id}/confirm", wrapper.PostRecurringConfirm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/recurring/{id}/reject", wrapper.PostRecurringReject)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/transactions", wrapper.GetTransactions)

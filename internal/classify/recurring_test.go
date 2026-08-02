@@ -36,8 +36,8 @@ func TestDetectRecurringSeries_monthlyRent(t *testing.T) {
 	if s.AmountChanged {
 		t.Fatal("expected no amount change")
 	}
-	if s.Status != domain.RecurringStatusActive {
-		t.Fatalf("status = %q", s.Status)
+	if s.Status != domain.RecurringStatusUncertain {
+		t.Fatalf("status = %q, want uncertain (pending review)", s.Status)
 	}
 }
 

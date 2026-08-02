@@ -13,6 +13,66 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const confirmRecurringSeries = `-- name: ConfirmRecurringSeries :one
+UPDATE recurring_series
+SET
+    status = 'active',
+    updated_at = now()
+WHERE id = $1
+  AND status = 'uncertain'
+RETURNING id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at
+`
+
+func (q *Queries) ConfirmRecurringSeries(ctx context.Context, id uuid.UUID) (RecurringSeries, error) {
+	row := q.db.QueryRow(ctx, confirmRecurringSeries, id)
+	var i RecurringSeries
+	err := row.Scan(
+		&i.ID,
+		&i.Fingerprint,
+		&i.DisplayName,
+		&i.Cadence,
+		&i.Kind,
+		&i.Status,
+		&i.AmountTypical,
+		&i.AmountLast,
+		&i.AmountChanged,
+		&i.NextExpected,
+		&i.Uncertainty,
+		&i.MemberCount,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getRecurringSeries = `-- name: GetRecurringSeries :one
+SELECT id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at
+FROM recurring_series
+WHERE id = $1
+`
+
+func (q *Queries) GetRecurringSeries(ctx context.Context, id uuid.UUID) (RecurringSeries, error) {
+	row := q.db.QueryRow(ctx, getRecurringSeries, id)
+	var i RecurringSeries
+	err := row.Scan(
+		&i.ID,
+		&i.Fingerprint,
+		&i.DisplayName,
+		&i.Cadence,
+		&i.Kind,
+		&i.Status,
+		&i.AmountTypical,
+		&i.AmountLast,
+		&i.AmountChanged,
+		&i.NextExpected,
+		&i.Uncertainty,
+		&i.MemberCount,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const insertRecurringSeries = `-- name: InsertRecurringSeries :one
 INSERT INTO recurring_series (
     fingerprint,
@@ -176,37 +236,6 @@ func (q *Queries) ListRecurringSeries(ctx context.Context) ([]RecurringSeries, e
 	return items, nil
 }
 
-const listRecurringSeriesMembers = `-- name: ListRecurringSeriesMembers :many
-SELECT series_id, transaction_id, booking_date, amount
-FROM recurring_series_members
-ORDER BY booking_date ASC
-`
-
-func (q *Queries) ListRecurringSeriesMembers(ctx context.Context) ([]RecurringSeriesMember, error) {
-	rows, err := q.db.Query(ctx, listRecurringSeriesMembers)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []RecurringSeriesMember{}
-	for rows.Next() {
-		var i RecurringSeriesMember
-		if err := rows.Scan(
-			&i.SeriesID,
-			&i.TransactionID,
-			&i.BookingDate,
-			&i.Amount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listTransactionsForRecurringScan = `-- name: ListTransactionsForRecurringScan :many
 SELECT
     id,
@@ -257,4 +286,78 @@ func (q *Queries) ListTransactionsForRecurringScan(ctx context.Context) ([]ListT
 		return nil, err
 	}
 	return items, nil
+}
+
+const listUncertainRecurringSeries = `-- name: ListUncertainRecurringSeries :many
+SELECT id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at
+FROM recurring_series
+WHERE status = 'uncertain'
+ORDER BY amount_typical DESC, display_name ASC
+`
+
+func (q *Queries) ListUncertainRecurringSeries(ctx context.Context) ([]RecurringSeries, error) {
+	rows, err := q.db.Query(ctx, listUncertainRecurringSeries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []RecurringSeries{}
+	for rows.Next() {
+		var i RecurringSeries
+		if err := rows.Scan(
+			&i.ID,
+			&i.Fingerprint,
+			&i.DisplayName,
+			&i.Cadence,
+			&i.Kind,
+			&i.Status,
+			&i.AmountTypical,
+			&i.AmountLast,
+			&i.AmountChanged,
+			&i.NextExpected,
+			&i.Uncertainty,
+			&i.MemberCount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const rejectRecurringSeries = `-- name: RejectRecurringSeries :one
+UPDATE recurring_series
+SET
+    status = 'ended',
+    updated_at = now()
+WHERE id = $1
+  AND status = 'uncertain'
+RETURNING id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at
+`
+
+func (q *Queries) RejectRecurringSeries(ctx context.Context, id uuid.UUID) (RecurringSeries, error) {
+	row := q.db.QueryRow(ctx, rejectRecurringSeries, id)
+	var i RecurringSeries
+	err := row.Scan(
+		&i.ID,
+		&i.Fingerprint,
+		&i.DisplayName,
+		&i.Cadence,
+		&i.Kind,
+		&i.Status,
+		&i.AmountTypical,
+		&i.AmountLast,
+		&i.AmountChanged,
+		&i.NextExpected,
+		&i.Uncertainty,
+		&i.MemberCount,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

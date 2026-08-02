@@ -11,6 +11,13 @@ import {
   type ClassificationQueueItem,
 } from "@/hooks/use-classification-queue";
 import {
+  recurringActionErrorMessage,
+  useRecurringConfirm,
+  useRecurringReject,
+  useUncertainRecurring,
+  type RecurringSeries,
+} from "@/hooks/use-recurring-uncertain";
+import {
   transferActionErrorMessage,
   useTransferCandidates,
   useTransferConfirm,
@@ -23,28 +30,43 @@ const ReviewPage: React.FC = () => {
   const candidatesQuery = useTransferCandidates();
   const queueQuery = useClassificationQueue();
   const categoriesQuery = useCategories();
+  const recurringQuery = useUncertainRecurring();
   const confirmMutation = useTransferConfirm();
   const rejectMutation = useTransferReject();
   const correctMutation = useClassificationCorrect();
+  const recurringConfirmMutation = useRecurringConfirm();
+  const recurringRejectMutation = useRecurringReject();
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingTransferID, setPendingTransferID] = useState<string | null>(
     null,
   );
   const [pendingTxID, setPendingTxID] = useState<string | null>(null);
+  const [pendingRecurringID, setPendingRecurringID] = useState<string | null>(
+    null,
+  );
 
   const candidates = candidatesQuery.data?.data ?? [];
   const queue = queueQuery.data?.data ?? [];
   const categories = categoriesQuery.data?.data ?? [];
+  const recurring = recurringQuery.data?.data ?? [];
   const transferBusy =
     confirmMutation.isPending || rejectMutation.isPending;
   const classifyBusy = correctMutation.isPending;
+  const recurringBusy =
+    recurringConfirmMutation.isPending || recurringRejectMutation.isPending;
+  const anyBusy = transferBusy || classifyBusy || recurringBusy;
   const loading =
     candidatesQuery.isLoading ||
     queueQuery.isLoading ||
-    categoriesQuery.isLoading;
+    categoriesQuery.isLoading ||
+    recurringQuery.isLoading;
   const loadError =
-    candidatesQuery.isError || queueQuery.isError || categoriesQuery.isError;
-  const inboxEmpty = candidates.length === 0 && queue.length === 0;
+    candidatesQuery.isError ||
+    queueQuery.isError ||
+    categoriesQuery.isError ||
+    recurringQuery.isError;
+  const inboxEmpty =
+    candidates.length === 0 && queue.length === 0 && recurring.length === 0;
 
   const onConfirm = async (id: string) => {
     setActionError(null);
@@ -92,6 +114,30 @@ const ReviewPage: React.FC = () => {
     }
   };
 
+  const onRecurringConfirm = async (id: string) => {
+    setActionError(null);
+    setPendingRecurringID(id);
+    try {
+      await recurringConfirmMutation.mutateAsync({ path: { id } });
+    } catch (err) {
+      setActionError(recurringActionErrorMessage(err));
+    } finally {
+      setPendingRecurringID(null);
+    }
+  };
+
+  const onRecurringReject = async (id: string) => {
+    setActionError(null);
+    setPendingRecurringID(id);
+    try {
+      await recurringRejectMutation.mutateAsync({ path: { id } });
+    } catch (err) {
+      setActionError(recurringActionErrorMessage(err));
+    } finally {
+      setPendingRecurringID(null);
+    }
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 overflow-y-auto pb-8">
       {loadError ? (
@@ -136,7 +182,7 @@ const ReviewPage: React.FC = () => {
                     busy={
                       transferBusy && pendingTransferID === candidate.id
                     }
-                    disabled={transferBusy || classifyBusy}
+                    disabled={anyBusy}
                     onConfirm={() => onConfirm(candidate.id)}
                     onReject={() => onReject(candidate.id)}
                   />
@@ -163,8 +209,36 @@ const ReviewPage: React.FC = () => {
                     item={item}
                     categories={categories}
                     busy={classifyBusy && pendingTxID === item.transaction_id}
-                    disabled={transferBusy || classifyBusy}
+                    disabled={anyBusy}
                     onCorrect={onCorrect}
+                  />
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {recurring.length > 0 ? (
+            <section className="flex flex-col gap-4">
+              <header className="space-y-1">
+                <h2 className="text-base font-semibold tracking-tight">
+                  Recurring payments
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Confirm regular bills and income so chat can track what
+                  repeats.
+                </p>
+              </header>
+              <ul className="flex flex-col gap-3">
+                {recurring.map((series) => (
+                  <RecurringSeriesRow
+                    key={series.id}
+                    series={series}
+                    busy={
+                      recurringBusy && pendingRecurringID === series.id
+                    }
+                    disabled={anyBusy}
+                    onConfirm={() => onRecurringConfirm(series.id)}
+                    onReject={() => onRecurringReject(series.id)}
                   />
                 ))}
               </ul>
@@ -345,6 +419,74 @@ const ClassificationQueueRow: React.FC<ClassificationQueueRowProps> = ({
             </span>
           </label>
         ) : null}
+      </div>
+    </li>
+  );
+};
+
+type RecurringSeriesRowProps = {
+  series: RecurringSeries;
+  busy: boolean;
+  disabled: boolean;
+  onConfirm: () => void;
+  onReject: () => void;
+};
+
+const RecurringSeriesRow: React.FC<RecurringSeriesRowProps> = ({
+  series,
+  busy,
+  disabled,
+  onConfirm,
+  onReject,
+}) => {
+  const cadence =
+    series.interval === "monthly"
+      ? "Monthly"
+      : series.interval === "quarterly"
+        ? "Quarterly"
+        : "Yearly";
+  const signedAmount =
+    series.kind === "income"
+      ? series.amount_typical
+      : `-${series.amount_typical}`;
+
+  return (
+    <li className="rounded-xl border bg-card px-4 py-4 shadow-xs">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1.5">
+          <p className="truncate text-sm font-medium text-foreground">
+            {series.display_name}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {cadence}
+            {" · "}
+            {series.member_count} payments
+            {series.amount_changed ? " · Amount changed recently" : null}
+            {series.next_expected
+              ? ` · Next around ${formatDate(series.next_expected)}`
+              : null}
+          </p>
+        </div>
+        <Amount value={signedAmount} />
+      </div>
+      <div className="mt-4 flex flex-wrap justify-end gap-2 border-t pt-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={disabled}
+          onClick={onReject}
+        >
+          Not recurring
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          disabled={disabled}
+          onClick={onConfirm}
+        >
+          {busy ? "Saving…" : "Confirm recurring"}
+        </Button>
       </div>
     </li>
   );
