@@ -202,6 +202,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/imports:
+    post:
+      operationId: postImports
+      summary: Commit a Sparkasse CSV import
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Sparkasse CSV export
+                account_name:
+                  type: string
+                  description: Display name for a new or matched account
+                account_id:
+                  type: string
+                  format: uuid
+                  description: Existing account to attach the import run to
+                preview_hash:
+                  type: string
+                  description: Optional SHA-256 from preview; must match the uploaded file
+      responses:
+        "201":
+          description: Import committed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportCommitResponse"
+        "400":
+          description: Invalid request, unreadable CSV, or preview hash mismatch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     Error:
@@ -497,3 +537,27 @@ components:
           type: array
           items:
             type: string
+    ImportCommitResponse:
+      type: object
+      required:
+        - import_run_id
+        - account_id
+        - account_name
+        - rows
+        - inserted
+        - duplicates
+      properties:
+        import_run_id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        account_name:
+          type: string
+        rows:
+          type: integer
+        inserted:
+          type: integer
+        duplicates:
+          type: integer

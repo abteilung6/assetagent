@@ -55,6 +55,8 @@ type ImportInvalidRow struct {
 
 type ImportOptions struct {
 	AccountName string
+	AccountID   uuid.UUID
+	PreviewHash string
 }
 
 type ImportRunSummary struct {

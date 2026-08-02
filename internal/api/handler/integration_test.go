@@ -17,6 +17,7 @@ import (
 	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/abteilung6/assetagent/internal/service"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
@@ -42,7 +43,7 @@ func TestIntegration_TransactionsAPI(t *testing.T) {
 		t.Fatalf("inserted = %d, want 21", result.Inserted)
 	}
 
-	router := newTestRouter(repo)
+	router := newTestRouter(repo, importer)
 
 	t.Run("paginated list", func(t *testing.T) {
 		rec := serve(router, "/api/transactions?limit=5")
@@ -125,9 +126,113 @@ func TestIntegration_TransactionsAPI(t *testing.T) {
 	})
 }
 
-func newTestRouter(repo *repository.Transaction) chi.Router {
+func TestIntegration_ImportsCommitAPI(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx := context.Background()
+	pool := setupPostgres(t, ctx)
+	t.Cleanup(pool.Close)
+
+	repo := repository.NewTransaction(pool)
+	importer := service.NewImport(pool)
+	router := newTestRouter(repo, importer)
+
+	minimalPath := filepath.Join("..", "..", "..", "testdata", "sparkasse", "minimal.csv")
+	data, err := os.ReadFile(minimalPath)
+	if err != nil {
+		t.Fatalf("read minimal: %v", err)
+	}
+	preview, err := service.PreviewBytes(data, "minimal.csv")
+	if err != nil {
+		t.Fatalf("PreviewBytes: %v", err)
+	}
+
+	t.Run("commit imports transactions", func(t *testing.T) {
+		before, err := repo.Count(ctx)
+		if err != nil {
+			t.Fatalf("Count before: %v", err)
+		}
+
+		body, contentType := multipartImport(t, "minimal.csv", data, map[string]string{
+			"account_name": "HTTP Sparkasse",
+			"preview_hash": preview.FileHash,
+		})
+		req := httptest.NewRequest(http.MethodPost, "/api/imports", body)
+		req.Header.Set("Content-Type", contentType)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("commit status = %d body=%s", rec.Code, rec.Body.String())
+		}
+
+		var resp gen.ImportCommitResponse
+		if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if resp.Inserted != 6 || resp.Duplicates != 0 || resp.Rows != 6 {
+			t.Fatalf("commit counts = %+v", resp)
+		}
+		if resp.AccountName != "HTTP Sparkasse" {
+			t.Fatalf("account_name = %q", resp.AccountName)
+		}
+		if resp.ImportRunId == uuid.Nil {
+			t.Fatal("expected import_run_id")
+		}
+
+		after, err := repo.Count(ctx)
+		if err != nil {
+			t.Fatalf("Count after: %v", err)
+		}
+		if after != before+6 {
+			t.Fatalf("transaction count = %d, want %d", after, before+6)
+		}
+
+		runs, err := importer.ListRuns(ctx, 10)
+		if err != nil {
+			t.Fatalf("ListRuns: %v", err)
+		}
+		if len(runs) == 0 || runs[0].ID != resp.ImportRunId || runs[0].Status != domain.ImportRunStatusCommitted {
+			t.Fatalf("import runs = %+v", runs)
+		}
+	})
+
+	t.Run("recommit reports duplicates", func(t *testing.T) {
+		body, contentType := multipartImport(t, "minimal.csv", data, map[string]string{
+			"account_name": "HTTP Sparkasse",
+		})
+		req := httptest.NewRequest(http.MethodPost, "/api/imports", body)
+		req.Header.Set("Content-Type", contentType)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("recommit status = %d body=%s", rec.Code, rec.Body.String())
+		}
+		var again gen.ImportCommitResponse
+		if err := json.NewDecoder(rec.Body).Decode(&again); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if again.Inserted != 0 || again.Duplicates != 6 {
+			t.Fatalf("recommit counts = %+v", again)
+		}
+	})
+
+	t.Run("preview_hash mismatch", func(t *testing.T) {
+		body, contentType := multipartImport(t, "minimal.csv", data, map[string]string{
+			"preview_hash": "deadbeef",
+		})
+		req := httptest.NewRequest(http.MethodPost, "/api/imports", body)
+		req.Header.Set("Content-Type", contentType)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		assertValidationFailed(t, rec)
+	})
+}
+
+func newTestRouter(repo *repository.Transaction, importer *service.Import) chi.Router {
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(service.NewList(repo), nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(service.NewList(repo), nil, nil, importer), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})

@@ -132,6 +132,15 @@ export type ImportPreviewResponse = {
     warnings: Array<string>;
 };
 
+export type ImportCommitResponse = {
+    import_run_id: string;
+    account_id: string;
+    account_name: string;
+    rows: number;
+    inserted: number;
+    duplicates: number;
+};
+
 export type GetHealthData = {
     body?: never;
     path?: never;
@@ -325,3 +334,45 @@ export type PostImportsPreviewResponses = {
 };
 
 export type PostImportsPreviewResponse = PostImportsPreviewResponses[keyof PostImportsPreviewResponses];
+
+export type PostImportsData = {
+    body: {
+        /**
+         * Sparkasse CSV export
+         */
+        file: Blob | File;
+        /**
+         * Display name for a new or matched account
+         */
+        account_name?: string;
+        /**
+         * Existing account to attach the import run to
+         */
+        account_id?: string;
+        /**
+         * Optional SHA-256 from preview; must match the uploaded file
+         */
+        preview_hash?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/imports';
+};
+
+export type PostImportsErrors = {
+    /**
+     * Invalid request, unreadable CSV, or preview hash mismatch
+     */
+    400: Error;
+};
+
+export type PostImportsError = PostImportsErrors[keyof PostImportsErrors];
+
+export type PostImportsResponses = {
+    /**
+     * Import committed
+     */
+    201: ImportCommitResponse;
+};
+
+export type PostImportsResponse = PostImportsResponses[keyof PostImportsResponses];

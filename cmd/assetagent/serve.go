@@ -77,7 +77,8 @@ func newServeCmd() *cobra.Command {
 			)
 
 			router := chi.NewRouter()
-			gen.HandlerWithOptions(handler.New(listSvc, chatSvc, llmRegistry), gen.ChiServerOptions{
+			importer := service.NewImport(pool)
+			gen.HandlerWithOptions(handler.New(listSvc, chatSvc, llmRegistry, importer), gen.ChiServerOptions{
 				BaseRouter:       router,
 				ErrorHandlerFunc: handler.APIErrorHandler,
 			})

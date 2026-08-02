@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { getHealth, getLlmModels, getTransactions, type Options, postChat, postImportsPreview } from '../sdk.gen';
-import type { GetHealthData, GetHealthResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, PostChatData, PostChatError, PostChatResponse, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse } from '../types.gen';
+import { getHealth, getLlmModels, getTransactions, type Options, postChat, postImports, postImportsPreview } from '../sdk.gen';
+import type { GetHealthData, GetHealthResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, PostChatData, PostChatError, PostChatResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -176,6 +176,23 @@ export const postImportsPreviewMutation = (options?: Partial<Options<PostImports
     const mutationOptions: UseMutationOptions<PostImportsPreviewResponse, PostImportsPreviewError, Options<PostImportsPreviewData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await postImportsPreview({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Commit a Sparkasse CSV import
+ */
+export const postImportsMutation = (options?: Partial<Options<PostImportsData>>): UseMutationOptions<PostImportsResponse, PostImportsError, Options<PostImportsData>> => {
+    const mutationOptions: UseMutationOptions<PostImportsResponse, PostImportsError, Options<PostImportsData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postImports({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

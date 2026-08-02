@@ -25,7 +25,7 @@ func TestGetLLMModels_returnsCatalog(t *testing.T) {
 	}
 
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(&stubListService{}, nil, registry), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(&stubListService{}, nil, registry, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})

@@ -174,6 +174,16 @@ type HealthResponse struct {
 	Status string `json:"status"`
 }
 
+// ImportCommitResponse defines model for ImportCommitResponse.
+type ImportCommitResponse struct {
+	AccountId   openapi_types.UUID `json:"account_id"`
+	AccountName string             `json:"account_name"`
+	Duplicates  int                `json:"duplicates"`
+	ImportRunId openapi_types.UUID `json:"import_run_id"`
+	Inserted    int                `json:"inserted"`
+	Rows        int                `json:"rows"`
+}
+
 // ImportPreviewInvalidRow defines model for ImportPreviewInvalidRow.
 type ImportPreviewInvalidRow struct {
 	Field   *string `json:"field,omitempty"`
@@ -275,6 +285,21 @@ type TransactionListResponse struct {
 	Pagination Pagination    `json:"pagination"`
 }
 
+// PostImportsMultipartBody defines parameters for PostImports.
+type PostImportsMultipartBody struct {
+	// AccountId Existing account to attach the import run to
+	AccountId *openapi_types.UUID `json:"account_id,omitempty"`
+
+	// AccountName Display name for a new or matched account
+	AccountName *string `json:"account_name,omitempty"`
+
+	// File Sparkasse CSV export
+	File openapi_types.File `json:"file"`
+
+	// PreviewHash Optional SHA-256 from preview; must match the uploaded file
+	PreviewHash *string `json:"preview_hash,omitempty"`
+}
+
 // PostImportsPreviewMultipartBody defines parameters for PostImportsPreview.
 type PostImportsPreviewMultipartBody struct {
 	// File Sparkasse CSV export
@@ -326,6 +351,9 @@ type PostChatJSONRequestBody = ChatRequest
 // PostChatStreamJSONRequestBody defines body for PostChatStream for application/json ContentType.
 type PostChatStreamJSONRequestBody = ChatRequest
 
+// PostImportsMultipartRequestBody defines body for PostImports for multipart/form-data ContentType.
+type PostImportsMultipartRequestBody PostImportsMultipartBody
+
 // PostImportsPreviewMultipartRequestBody defines body for PostImportsPreview for multipart/form-data ContentType.
 type PostImportsPreviewMultipartRequestBody PostImportsPreviewMultipartBody
 
@@ -340,6 +368,9 @@ type ServerInterface interface {
 	// Health check
 	// (GET /api/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// Commit a Sparkasse CSV import
+	// (POST /api/imports)
+	PostImports(w http.ResponseWriter, r *http.Request)
 	// Preview a Sparkasse CSV import without writing transactions
 	// (POST /api/imports/preview)
 	PostImportsPreview(w http.ResponseWriter, r *http.Request)
@@ -370,6 +401,12 @@ func (_ Unimplemented) PostChatStream(w http.ResponseWriter, r *http.Request) {
 // Health check
 // (GET /api/health)
 func (_ Unimplemented) GetHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Commit a Sparkasse CSV import
+// (POST /api/imports)
+func (_ Unimplemented) PostImports(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -433,6 +470,20 @@ func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostImports operation middleware
+func (siw *ServerInterfaceWrapper) PostImports(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostImports(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -754,6 +805,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/health", wrapper.GetHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/imports", wrapper.PostImports)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/imports/preview", wrapper.PostImportsPreview)

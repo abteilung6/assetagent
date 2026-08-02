@@ -84,13 +84,29 @@ func PreviewBytes(data []byte, sourceFilename string) (domain.ImportPreview, err
 }
 
 func (s *Import) ImportFile(ctx context.Context, path string, opts domain.ImportOptions) (domain.ImportResult, error) {
-	if s == nil || s.pool == nil {
-		return domain.ImportResult{}, fmt.Errorf("import service is not configured")
-	}
-
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return domain.ImportResult{}, fmt.Errorf("open file: %w", err)
+	}
+
+	return s.ImportBytes(ctx, data, filepath.Base(path), opts)
+}
+
+// ImportBytes parses CSV bytes and commits an import run with fingerprint dedupe.
+func (s *Import) ImportBytes(ctx context.Context, data []byte, sourceFilename string, opts domain.ImportOptions) (domain.ImportResult, error) {
+	if len(bytes.TrimSpace(data)) == 0 {
+		return domain.ImportResult{}, fmt.Errorf("csv: empty file")
+	}
+
+	if opts.PreviewHash != "" {
+		actual := hashBytes(data)
+		if !strings.EqualFold(strings.TrimSpace(opts.PreviewHash), actual) {
+			return domain.ImportResult{}, ErrPreviewHashMismatch
+		}
+	}
+
+	if s == nil || s.pool == nil {
+		return domain.ImportResult{}, fmt.Errorf("import service is not configured")
 	}
 
 	transactions, err := sparkasse.Parse(csvReader(data))
@@ -98,7 +114,7 @@ func (s *Import) ImportFile(ctx context.Context, path string, opts domain.Import
 		return domain.ImportResult{}, fmt.Errorf("parse csv: %w", err)
 	}
 
-	return s.commitTransactions(ctx, data, filepath.Base(path), transactions, opts)
+	return s.commitTransactions(ctx, data, sourceFilename, transactions, opts)
 }
 
 func (s *Import) commitTransactions(
@@ -126,9 +142,20 @@ func (s *Import) commitTransactions(
 
 	q := sqldb.New(tx)
 
-	account, err := ensureAccount(ctx, q, orderAccount, displayName)
-	if err != nil {
-		return domain.ImportResult{}, err
+	var account sqldb.Account
+	if opts.AccountID != uuid.Nil {
+		account, err = q.GetAccountByID(ctx, opts.AccountID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return domain.ImportResult{}, ErrAccountNotFound
+			}
+			return domain.ImportResult{}, fmt.Errorf("get account: %w", err)
+		}
+	} else {
+		account, err = ensureAccount(ctx, q, orderAccount, displayName)
+		if err != nil {
+			return domain.ImportResult{}, err
+		}
 	}
 
 	from, to, _ := periodBounds(transactions)

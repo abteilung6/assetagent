@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type ServerSentEventsResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetHealthData, GetHealthResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses } from './types.gen';
+import type { GetHealthData, GetHealthResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -63,6 +63,19 @@ export const getLlmModels = <ThrowOnError extends boolean = false>(options?: Opt
 export const postImportsPreview = <ThrowOnError extends boolean = false>(options: Options<PostImportsPreviewData, ThrowOnError>): RequestResult<PostImportsPreviewResponses, PostImportsPreviewErrors, ThrowOnError> => (options.client ?? client).post<PostImportsPreviewResponses, PostImportsPreviewErrors, ThrowOnError>({
     ...formDataBodySerializer,
     url: '/api/imports/preview',
+    ...options,
+    headers: {
+        'Content-Type': null,
+        ...options.headers
+    }
+});
+
+/**
+ * Commit a Sparkasse CSV import
+ */
+export const postImports = <ThrowOnError extends boolean = false>(options: Options<PostImportsData, ThrowOnError>): RequestResult<PostImportsResponses, PostImportsErrors, ThrowOnError> => (options.client ?? client).post<PostImportsResponses, PostImportsErrors, ThrowOnError>({
+    ...formDataBodySerializer,
+    url: '/api/imports',
     ...options,
     headers: {
         'Content-Type': null,

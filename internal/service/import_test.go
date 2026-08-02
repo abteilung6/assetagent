@@ -3,6 +3,7 @@ package service_test
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -95,11 +96,29 @@ func TestPreviewFile_headersOnly(t *testing.T) {
 	}
 }
 
-func TestImportFile_requiresPool(t *testing.T) {
+func TestImportBytes_requiresPool(t *testing.T) {
 	importer := service.NewImport(nil)
-	_, err := importer.ImportFile(t.Context(), "x.csv", domain.ImportOptions{})
+	_, err := importer.ImportBytes(t.Context(), []byte("not empty"), "x.csv", domain.ImportOptions{})
 	if err == nil {
-		t.Fatal("ImportFile() error = nil, want error")
+		t.Fatal("ImportBytes() error = nil, want error")
+	}
+}
+
+func TestImportBytes_previewHashMismatch(t *testing.T) {
+	importer := service.NewImport(nil)
+	_, err := importer.ImportBytes(t.Context(), []byte("not empty"), "x.csv", domain.ImportOptions{
+		PreviewHash: "deadbeef",
+	})
+	if !errors.Is(err, service.ErrPreviewHashMismatch) {
+		t.Fatalf("ImportBytes() error = %v, want ErrPreviewHashMismatch", err)
+	}
+}
+
+func TestImportBytes_emptyFile(t *testing.T) {
+	importer := service.NewImport(nil)
+	_, err := importer.ImportBytes(t.Context(), []byte("  "), "empty.csv", domain.ImportOptions{})
+	if err == nil {
+		t.Fatal("ImportBytes() error = nil, want error")
 	}
 }
 

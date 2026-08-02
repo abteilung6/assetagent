@@ -16,14 +16,19 @@ type ListService interface {
 	ListTransactions(ctx context.Context, params domain.ListParams) (domain.ListResult, error)
 }
 
+type ImportService interface {
+	ImportBytes(ctx context.Context, data []byte, filename string, opts domain.ImportOptions) (domain.ImportResult, error)
+}
+
 type Handler struct {
 	list        ListService
 	chat        ChatService
 	llmRegistry *llm.Registry
+	importer    ImportService
 }
 
-func New(list ListService, chat ChatService, registry *llm.Registry) *Handler {
-	return &Handler{list: list, chat: chat, llmRegistry: registry}
+func New(list ListService, chat ChatService, registry *llm.Registry, importer ImportService) *Handler {
+	return &Handler{list: list, chat: chat, llmRegistry: registry, importer: importer}
 }
 
 func (h *Handler) GetHealth(w http.ResponseWriter, r *http.Request) {
