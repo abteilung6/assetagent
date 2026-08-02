@@ -17,6 +17,7 @@ type Querier interface {
 	CountTransactionsFiltered(ctx context.Context, arg CountTransactionsFilteredParams) (int64, error)
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error)
 	CreateImportRun(ctx context.Context, arg CreateImportRunParams) (ImportRun, error)
+	DeleteTransactionsByImportRun(ctx context.Context, importRunID pgtype.UUID) (int64, error)
 	GetAccountByID(ctx context.Context, id uuid.UUID) (Account, error)
 	GetAccountByOrderAccount(ctx context.Context, orderAccount pgtype.Text) (Account, error)
 	GetCashflow(ctx context.Context, arg GetCashflowParams) (GetCashflowRow, error)
@@ -24,7 +25,9 @@ type Querier interface {
 	GetTopCounterparties(ctx context.Context, arg GetTopCounterpartiesParams) ([]GetTopCounterpartiesRow, error)
 	InsertTransaction(ctx context.Context, arg InsertTransactionParams) (uuid.UUID, error)
 	InsertTransactionIfNew(ctx context.Context, arg InsertTransactionIfNewParams) (uuid.UUID, error)
+	ListImportRuns(ctx context.Context, limit int32) ([]ImportRun, error)
 	ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]Transaction, error)
+	MarkImportRunRolledBack(ctx context.Context, id uuid.UUID) (ImportRun, error)
 	Ping(ctx context.Context) (int32, error)
 	UpdateImportRunCounts(ctx context.Context, arg UpdateImportRunCountsParams) (ImportRun, error)
 }

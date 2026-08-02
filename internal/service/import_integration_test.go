@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,8 +13,10 @@ import (
 	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/abteilung6/assetagent/internal/service"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/shopspring/decimal"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
@@ -172,6 +175,141 @@ func TestIntegration_Import(t *testing.T) {
 			t.Fatalf("count = %d, want 22 (no partial write on parse error)", count)
 		}
 	})
+}
+
+func TestIntegration_ImportRollback(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx := context.Background()
+	pool := setupPostgres(t, ctx)
+	t.Cleanup(pool.Close)
+
+	importer := service.NewImport(pool)
+	repo := repository.NewTransaction(pool)
+	reports := repository.NewReports(pool)
+	queries := sqldb.New(pool)
+
+	minimalPath := filepath.Join("..", "..", "testdata", "sparkasse", "minimal.csv")
+	runAPath := filepath.Join(t.TempDir(), "run-a.csv")
+	if err := os.WriteFile(runAPath, []byte(readFile(t, minimalPath)), 0o600); err != nil {
+		t.Fatalf("write run-a: %v", err)
+	}
+
+	runBPath := filepath.Join(t.TempDir(), "run-b.csv")
+	runBCSV := sparkasseHeader() + "\n" +
+		`"DE89370400440532013000";"15.01.26";"15.01.26";"KARTENZAHLUNG";"Unique rollback B row";"";"";"E2E-ROLLBACK-B";"";"";"";"Rollback Cafe";"DE90100900002868569037";"BEVODEBBXXX";"-42,00";"EUR";"Umsatz gebucht"` + "\n"
+	if err := os.WriteFile(runBPath, []byte(runBCSV), 0o600); err != nil {
+		t.Fatalf("write run-b: %v", err)
+	}
+
+	resultA, err := importer.ImportFile(ctx, runAPath, domain.ImportOptions{AccountName: "Rollback Test"})
+	if err != nil {
+		t.Fatalf("import A: %v", err)
+	}
+	if resultA.Inserted != 6 {
+		t.Fatalf("A inserted = %d, want 6", resultA.Inserted)
+	}
+
+	resultB, err := importer.ImportFile(ctx, runBPath, domain.ImportOptions{})
+	if err != nil {
+		t.Fatalf("import B: %v", err)
+	}
+	if resultB.Inserted != 1 {
+		t.Fatalf("B inserted = %d, want 1", resultB.Inserted)
+	}
+
+	count, err := repo.Count(ctx)
+	if err != nil {
+		t.Fatalf("Count: %v", err)
+	}
+	if count != 7 {
+		t.Fatalf("count before rollback = %d, want 7", count)
+	}
+
+	rollback, err := importer.Rollback(ctx, resultA.ImportRunID)
+	if err != nil {
+		t.Fatalf("Rollback A: %v", err)
+	}
+	if rollback.Deleted != 6 {
+		t.Fatalf("deleted = %d, want 6", rollback.Deleted)
+	}
+
+	runA, err := queries.GetImportRun(ctx, resultA.ImportRunID)
+	if err != nil {
+		t.Fatalf("GetImportRun A: %v", err)
+	}
+	if runA.Status != domain.ImportRunStatusRolledBack {
+		t.Fatalf("A status = %q, want rolled_back", runA.Status)
+	}
+
+	linkedA, err := queries.CountTransactionsByImportRun(ctx, pgtype.UUID{Bytes: resultA.ImportRunID, Valid: true})
+	if err != nil {
+		t.Fatalf("linked A: %v", err)
+	}
+	if linkedA != 0 {
+		t.Fatalf("linked A = %d, want 0", linkedA)
+	}
+
+	linkedB, err := queries.CountTransactionsByImportRun(ctx, pgtype.UUID{Bytes: resultB.ImportRunID, Valid: true})
+	if err != nil {
+		t.Fatalf("linked B: %v", err)
+	}
+	if linkedB != 1 {
+		t.Fatalf("linked B = %d, want 1", linkedB)
+	}
+
+	count, err = repo.Count(ctx)
+	if err != nil {
+		t.Fatalf("Count after rollback: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("count after rollback = %d, want 1", count)
+	}
+
+	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
+	cashflow, err := reports.GetCashflow(ctx, from, to)
+	if err != nil {
+		t.Fatalf("GetCashflow: %v", err)
+	}
+	if !cashflow.Expenses.Equal(mustDecimal(t, "42.00")) {
+		t.Fatalf("expenses = %s, want 42.00", cashflow.Expenses)
+	}
+
+	if _, err := importer.Rollback(ctx, resultA.ImportRunID); err == nil {
+		t.Fatal("second Rollback A error = nil, want already rolled back")
+	} else if !errors.Is(err, service.ErrImportRunAlreadyRolledBack) {
+		t.Fatalf("second Rollback A error = %v, want ErrImportRunAlreadyRolledBack", err)
+	}
+
+	if _, err := importer.Rollback(ctx, uuid.MustParse("00000000-0000-0000-0000-000000000099")); err == nil {
+		t.Fatal("unknown Rollback error = nil, want not found")
+	} else if !errors.Is(err, service.ErrImportRunNotFound) {
+		t.Fatalf("unknown Rollback error = %v, want ErrImportRunNotFound", err)
+	}
+
+	runs, err := importer.ListRuns(ctx, 10)
+	if err != nil {
+		t.Fatalf("ListRuns: %v", err)
+	}
+	if len(runs) < 2 {
+		t.Fatalf("ListRuns len = %d, want >= 2", len(runs))
+	}
+}
+
+func sparkasseHeader() string {
+	return `"Auftragskonto";"Buchungstag";"Valutadatum";"Buchungstext";"Verwendungszweck";"Glaeubiger ID";"Mandatsreferenz";"Kundenreferenz (End-to-End)";"Sammlerreferenz";"Lastschrift Ursprungsbetrag";"Auslagenersatz Ruecklastschrift";"Beguenstigter/Zahlungspflichtiger";"Kontonummer/IBAN";"BIC (SWIFT-Code)";"Betrag";"Waehrung";"Info"`
+}
+
+func mustDecimal(t *testing.T, raw string) decimal.Decimal {
+	t.Helper()
+	value, err := decimal.NewFromString(raw)
+	if err != nil {
+		t.Fatalf("decimal %q: %v", raw, err)
+	}
+	return value
 }
 
 func setupPostgres(t *testing.T, ctx context.Context) *pgxpool.Pool {

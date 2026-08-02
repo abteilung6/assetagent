@@ -49,6 +49,25 @@ SELECT COUNT(*)::bigint AS count
 FROM transactions
 WHERE import_run_id = $1;
 
+-- name: DeleteTransactionsByImportRun :execrows
+DELETE FROM transactions
+WHERE import_run_id = $1;
+
+-- name: MarkImportRunRolledBack :one
+UPDATE import_runs
+SET
+    status = 'rolled_back',
+    rolled_back_at = now()
+WHERE id = $1
+  AND status = 'committed'
+RETURNING *;
+
+-- name: ListImportRuns :many
+SELECT *
+FROM import_runs
+ORDER BY created_at DESC
+LIMIT $1;
+
 -- name: UpdateImportRunCounts :one
 UPDATE import_runs
 SET

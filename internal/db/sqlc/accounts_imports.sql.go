@@ -151,6 +151,19 @@ func (q *Queries) CreateImportRun(ctx context.Context, arg CreateImportRunParams
 	return i, err
 }
 
+const deleteTransactionsByImportRun = `-- name: DeleteTransactionsByImportRun :execrows
+DELETE FROM transactions
+WHERE import_run_id = $1
+`
+
+func (q *Queries) DeleteTransactionsByImportRun(ctx context.Context, importRunID pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteTransactionsByImportRun, importRunID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getAccountByID = `-- name: GetAccountByID :one
 SELECT id, display_name, bank, currency, order_account, masked_identifier, created_at, updated_at FROM accounts
 WHERE id = $1
@@ -200,6 +213,88 @@ WHERE id = $1
 
 func (q *Queries) GetImportRun(ctx context.Context, id uuid.UUID) (ImportRun, error) {
 	row := q.db.QueryRow(ctx, getImportRun, id)
+	var i ImportRun
+	err := row.Scan(
+		&i.ID,
+		&i.AccountID,
+		&i.SourceFilename,
+		&i.FileHash,
+		&i.ParserName,
+		&i.ParserVersion,
+		&i.Status,
+		&i.PeriodFrom,
+		&i.PeriodTo,
+		&i.RowTotal,
+		&i.RowValid,
+		&i.RowInvalid,
+		&i.RowInserted,
+		&i.RowDuplicate,
+		&i.Warnings,
+		&i.CreatedAt,
+		&i.CommittedAt,
+		&i.RolledBackAt,
+	)
+	return i, err
+}
+
+const listImportRuns = `-- name: ListImportRuns :many
+SELECT id, account_id, source_filename, file_hash, parser_name, parser_version, status, period_from, period_to, row_total, row_valid, row_invalid, row_inserted, row_duplicate, warnings, created_at, committed_at, rolled_back_at
+FROM import_runs
+ORDER BY created_at DESC
+LIMIT $1
+`
+
+func (q *Queries) ListImportRuns(ctx context.Context, limit int32) ([]ImportRun, error) {
+	rows, err := q.db.Query(ctx, listImportRuns, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ImportRun{}
+	for rows.Next() {
+		var i ImportRun
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.SourceFilename,
+			&i.FileHash,
+			&i.ParserName,
+			&i.ParserVersion,
+			&i.Status,
+			&i.PeriodFrom,
+			&i.PeriodTo,
+			&i.RowTotal,
+			&i.RowValid,
+			&i.RowInvalid,
+			&i.RowInserted,
+			&i.RowDuplicate,
+			&i.Warnings,
+			&i.CreatedAt,
+			&i.CommittedAt,
+			&i.RolledBackAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markImportRunRolledBack = `-- name: MarkImportRunRolledBack :one
+UPDATE import_runs
+SET
+    status = 'rolled_back',
+    rolled_back_at = now()
+WHERE id = $1
+  AND status = 'committed'
+RETURNING id, account_id, source_filename, file_hash, parser_name, parser_version, status, period_from, period_to, row_total, row_valid, row_invalid, row_inserted, row_duplicate, warnings, created_at, committed_at, rolled_back_at
+`
+
+func (q *Queries) MarkImportRunRolledBack(ctx context.Context, id uuid.UUID) (ImportRun, error) {
+	row := q.db.QueryRow(ctx, markImportRunRolledBack, id)
 	var i ImportRun
 	err := row.Scan(
 		&i.ID,

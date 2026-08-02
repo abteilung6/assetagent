@@ -56,3 +56,23 @@ type ImportInvalidRow struct {
 type ImportOptions struct {
 	AccountName string
 }
+
+type ImportRunSummary struct {
+	ID             uuid.UUID
+	AccountID      uuid.UUID
+	SourceFilename string
+	Status         string
+	RowTotal       int
+	RowValid       int
+	RowInserted    int
+	RowDuplicate   int
+	CreatedAt      time.Time
+	CommittedAt    *time.Time
+	RolledBackAt   *time.Time
+}
+
+type ImportRollbackResult struct {
+	ImportRunID   uuid.UUID
+	Deleted       int64
+	SourceFilename string
+}

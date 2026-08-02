@@ -19,6 +19,7 @@ import (
 	"github.com/abteilung6/assetagent/internal/domain"
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
 	"github.com/abteilung6/assetagent/internal/parser/sparkasse"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -200,6 +201,110 @@ func (s *Import) commitTransactions(
 		AccountID:   account.ID,
 		AccountName: account.DisplayName,
 	}, nil
+}
+
+func (s *Import) ListRuns(ctx context.Context, limit int) ([]domain.ImportRunSummary, error) {
+	if s == nil || s.pool == nil {
+		return nil, fmt.Errorf("import service is not configured")
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	rows, err := sqldb.New(s.pool).ListImportRuns(ctx, int32(limit))
+	if err != nil {
+		return nil, fmt.Errorf("list import runs: %w", err)
+	}
+
+	out := make([]domain.ImportRunSummary, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, importRunToSummary(row))
+	}
+	return out, nil
+}
+
+func (s *Import) Rollback(ctx context.Context, runID uuid.UUID) (domain.ImportRollbackResult, error) {
+	if s == nil || s.pool == nil {
+		return domain.ImportRollbackResult{}, fmt.Errorf("import service is not configured")
+	}
+	if runID == uuid.Nil {
+		return domain.ImportRollbackResult{}, fmt.Errorf("%w: empty id", ErrImportRunNotFound)
+	}
+
+	q := sqldb.New(s.pool)
+	run, err := q.GetImportRun(ctx, runID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ImportRollbackResult{}, ErrImportRunNotFound
+		}
+		return domain.ImportRollbackResult{}, fmt.Errorf("get import run: %w", err)
+	}
+
+	switch run.Status {
+	case domain.ImportRunStatusRolledBack:
+		return domain.ImportRollbackResult{}, ErrImportRunAlreadyRolledBack
+	case domain.ImportRunStatusCommitted:
+		// ok
+	default:
+		return domain.ImportRollbackResult{}, fmt.Errorf("%w: status %q", ErrImportRunNotCommitted, run.Status)
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return domain.ImportRollbackResult{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tq := sqldb.New(tx)
+	deleted, err := tq.DeleteTransactionsByImportRun(ctx, pgtype.UUID{Bytes: runID, Valid: true})
+	if err != nil {
+		return domain.ImportRollbackResult{}, fmt.Errorf("delete transactions: %w", err)
+	}
+
+	if _, err := tq.MarkImportRunRolledBack(ctx, runID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ImportRollbackResult{}, ErrImportRunAlreadyRolledBack
+		}
+		return domain.ImportRollbackResult{}, fmt.Errorf("mark rolled back: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return domain.ImportRollbackResult{}, fmt.Errorf("commit tx: %w", err)
+	}
+
+	return domain.ImportRollbackResult{
+		ImportRunID:    runID,
+		Deleted:        deleted,
+		SourceFilename: run.SourceFilename,
+	}, nil
+}
+
+func importRunToSummary(row sqldb.ImportRun) domain.ImportRunSummary {
+	summary := domain.ImportRunSummary{
+		ID:             row.ID,
+		AccountID:      row.AccountID,
+		SourceFilename: row.SourceFilename,
+		Status:         row.Status,
+		RowTotal:       int(row.RowTotal),
+		RowValid:       int(row.RowValid),
+		RowInserted:    int(row.RowInserted),
+		RowDuplicate:   int(row.RowDuplicate),
+	}
+	if row.CreatedAt.Valid {
+		summary.CreatedAt = row.CreatedAt.Time
+	}
+	if row.CommittedAt.Valid {
+		t := row.CommittedAt.Time
+		summary.CommittedAt = &t
+	}
+	if row.RolledBackAt.Valid {
+		t := row.RolledBackAt.Time
+		summary.RolledBackAt = &t
+	}
+	return summary
 }
 
 func ensureAccount(

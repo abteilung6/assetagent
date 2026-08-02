@@ -11,6 +11,8 @@ import (
 	"github.com/abteilung6/assetagent/internal/db"
 	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/abteilung6/assetagent/internal/service"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/cobra"
 )
 
@@ -21,8 +23,11 @@ func newImportCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "import [file.csv]",
 		Short: "Import Sparkasse CSV transactions",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return cmd.Help()
+			}
 			path := args[0]
 
 			if dryRun {
@@ -34,25 +39,14 @@ func newImportCmd() *cobra.Command {
 				return nil
 			}
 
-			cfg, err := config.Load()
+			pool, cleanup, err := openImportDB()
 			if err != nil {
 				return err
 			}
-			if cfg.DatabaseURL == "" {
-				return fmt.Errorf("DATABASE_URL is required")
-			}
-
-			slog.SetDefault(newLogger(cfg))
-
-			ctx := context.Background()
-			pool, err := db.NewPool(ctx, cfg.DatabaseURL)
-			if err != nil {
-				return err
-			}
-			defer pool.Close()
+			defer cleanup()
 
 			importer := service.NewImport(pool)
-			result, err := importer.ImportFile(ctx, path, domain.ImportOptions{
+			result, err := importer.ImportFile(context.Background(), path, domain.ImportOptions{
 				AccountName: accountName,
 			})
 			if err != nil {
@@ -66,7 +60,82 @@ func newImportCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Parse and validate the CSV without writing to the database")
 	cmd.Flags().StringVar(&accountName, "account-name", "", "Display name for the account (created on first import)")
+
+	cmd.AddCommand(newImportRunsCmd())
+	cmd.AddCommand(newImportRollbackCmd())
 	return cmd
+}
+
+func newImportRunsCmd() *cobra.Command {
+	var limit int
+
+	cmd := &cobra.Command{
+		Use:   "runs",
+		Short: "List recent import runs",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			pool, cleanup, err := openImportDB()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			runs, err := service.NewImport(pool).ListRuns(context.Background(), limit)
+			if err != nil {
+				return err
+			}
+			printImportRuns(runs)
+			return nil
+		},
+	}
+	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum number of runs to list")
+	return cmd
+}
+
+func newImportRollbackCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "rollback [run-id]",
+		Short: "Undo a committed import run and delete its transactions",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			runID, err := uuid.Parse(args[0])
+			if err != nil {
+				return fmt.Errorf("invalid run id: %w", err)
+			}
+
+			pool, cleanup, err := openImportDB()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			result, err := service.NewImport(pool).Rollback(context.Background(), runID)
+			if err != nil {
+				return err
+			}
+			printImportRollback(result)
+			return nil
+		},
+	}
+}
+
+func openImportDB() (*pgxpool.Pool, func(), error) {
+	cfg, err := config.Load()
+	if err != nil {
+		return nil, nil, err
+	}
+	if cfg.DatabaseURL == "" {
+		return nil, nil, fmt.Errorf("DATABASE_URL is required")
+	}
+
+	slog.SetDefault(newLogger(cfg))
+
+	ctx := context.Background()
+	pool, err := db.NewPool(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return nil, nil, err
+	}
+	return pool, func() { pool.Close() }, nil
 }
 
 func printImportResult(path string, result domain.ImportResult) {
@@ -78,6 +147,33 @@ func printImportResult(path string, result domain.ImportResult) {
 	fmt.Printf("  Inserted:   %d\n", result.Inserted)
 	fmt.Printf("  Duplicates: %d\n", result.Duplicates)
 	fmt.Printf("  Errors:     %d\n", result.Errors)
+}
+
+func printImportRuns(runs []domain.ImportRunSummary) {
+	if len(runs) == 0 {
+		fmt.Println("No import runs found")
+		return
+	}
+
+	fmt.Println("Import runs")
+	for _, run := range runs {
+		created := run.CreatedAt.Format("2006-01-02 15:04:05")
+		fmt.Printf("  %s  %-12s  inserted=%-4d dup=%-4d  %s  %s\n",
+			run.ID,
+			run.Status,
+			run.RowInserted,
+			run.RowDuplicate,
+			created,
+			run.SourceFilename,
+		)
+	}
+}
+
+func printImportRollback(result domain.ImportRollbackResult) {
+	fmt.Println("Import rollback complete")
+	fmt.Printf("  Import run: %s\n", result.ImportRunID)
+	fmt.Printf("  File:       %s\n", result.SourceFilename)
+	fmt.Printf("  Deleted:    %d transactions\n", result.Deleted)
 }
 
 func printImportPreview(path string, preview domain.ImportPreview) {
