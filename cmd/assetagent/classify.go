@@ -20,6 +20,7 @@ func newClassifyCmd() *cobra.Command {
 	cmd.AddCommand(newClassifyTransfersCmd())
 	cmd.AddCommand(newClassifyMerchantsCmd())
 	cmd.AddCommand(newClassifyRunCmd())
+	cmd.AddCommand(newClassifyCorrectCmd())
 	return cmd
 }
 
@@ -294,4 +295,49 @@ func newClassifyRunCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func newClassifyCorrectCmd() *cobra.Command {
+	var category string
+	var applyToMerchant bool
+
+	cmd := &cobra.Command{
+		Use:   "correct <transaction-id>",
+		Short: "Set a transaction category and optionally remember it for the merchant",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if category == "" {
+				return fmt.Errorf("--category is required")
+			}
+			txID, err := uuid.Parse(args[0])
+			if err != nil {
+				return fmt.Errorf("invalid transaction id: %w", err)
+			}
+
+			pool, cleanup, err := openImportDB()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			result, err := service.NewClassify(pool).Correct(context.Background(), txID, domain.ClassifyCorrectOptions{
+				CategorySlug:    category,
+				ApplyToMerchant: applyToMerchant,
+			})
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("Classification corrected")
+			fmt.Printf("  Transaction: %s\n", result.TransactionID)
+			fmt.Printf("  Category:    %s\n", result.CategorySlug)
+			if result.RuleCreated && result.MerchantID != nil {
+				fmt.Printf("  Merchant rule saved for %s\n", *result.MerchantID)
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&category, "category", "", "Category slug (e.g. groceries, leisure)")
+	cmd.Flags().BoolVar(&applyToMerchant, "apply-to-merchant", false, "Remember this category for the merchant on future classify runs")
+	return cmd
 }

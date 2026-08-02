@@ -31,6 +31,16 @@ type Category struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
+type ClassificationRule struct {
+	ID                       uuid.UUID          `json:"id"`
+	Priority                 int32              `json:"priority"`
+	MerchantID               pgtype.UUID        `json:"merchant_id"`
+	Pattern                  pgtype.Text        `json:"pattern"`
+	CategoryID               uuid.UUID          `json:"category_id"`
+	CreatedFromTransactionID pgtype.UUID        `json:"created_from_transaction_id"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+}
+
 type ImportRun struct {
 	ID             uuid.UUID          `json:"id"`
 	AccountID      uuid.UUID          `json:"account_id"`

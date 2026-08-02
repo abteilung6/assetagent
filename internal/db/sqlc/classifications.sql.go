@@ -13,39 +13,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const countClassificationsByCategorySlug = `-- name: CountClassificationsByCategorySlug :many
-SELECT c.slug, COUNT(*)::bigint AS count
-FROM transaction_classifications tc
-JOIN categories c ON c.id = tc.category_id
-GROUP BY c.slug
-ORDER BY c.slug
-`
-
-type CountClassificationsByCategorySlugRow struct {
-	Slug  string `json:"slug"`
-	Count int64  `json:"count"`
-}
-
-func (q *Queries) CountClassificationsByCategorySlug(ctx context.Context) ([]CountClassificationsByCategorySlugRow, error) {
-	rows, err := q.db.Query(ctx, countClassificationsByCategorySlug)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []CountClassificationsByCategorySlugRow{}
-	for rows.Next() {
-		var i CountClassificationsByCategorySlugRow
-		if err := rows.Scan(&i.Slug, &i.Count); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const countClassificationsBySource = `-- name: CountClassificationsBySource :many
 SELECT source, COUNT(*)::bigint AS count
 FROM transaction_classifications
@@ -68,6 +35,206 @@ func (q *Queries) CountClassificationsBySource(ctx context.Context) ([]CountClas
 	for rows.Next() {
 		var i CountClassificationsBySourceRow
 		if err := rows.Scan(&i.Source, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const createClassificationRule = `-- name: CreateClassificationRule :one
+INSERT INTO classification_rules (
+    priority,
+    merchant_id,
+    category_id,
+    created_from_transaction_id
+) VALUES (
+    $1, $2, $3, $4
+)
+RETURNING id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at
+`
+
+type CreateClassificationRuleParams struct {
+	Priority                 int32       `json:"priority"`
+	MerchantID               pgtype.UUID `json:"merchant_id"`
+	CategoryID               uuid.UUID   `json:"category_id"`
+	CreatedFromTransactionID pgtype.UUID `json:"created_from_transaction_id"`
+}
+
+func (q *Queries) CreateClassificationRule(ctx context.Context, arg CreateClassificationRuleParams) (ClassificationRule, error) {
+	row := q.db.QueryRow(ctx, createClassificationRule,
+		arg.Priority,
+		arg.MerchantID,
+		arg.CategoryID,
+		arg.CreatedFromTransactionID,
+	)
+	var i ClassificationRule
+	err := row.Scan(
+		&i.ID,
+		&i.Priority,
+		&i.MerchantID,
+		&i.Pattern,
+		&i.CategoryID,
+		&i.CreatedFromTransactionID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const forceUpsertTransactionClassification = `-- name: ForceUpsertTransactionClassification :one
+INSERT INTO transaction_classifications (
+    transaction_id,
+    category_id,
+    merchant_id,
+    source,
+    confidence,
+    algorithm_version,
+    updated_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, now()
+)
+ON CONFLICT (transaction_id) DO UPDATE SET
+    category_id = EXCLUDED.category_id,
+    merchant_id = EXCLUDED.merchant_id,
+    source = EXCLUDED.source,
+    confidence = EXCLUDED.confidence,
+    algorithm_version = EXCLUDED.algorithm_version,
+    updated_at = now()
+RETURNING transaction_id, category_id, merchant_id, source, confidence, algorithm_version, updated_at
+`
+
+type ForceUpsertTransactionClassificationParams struct {
+	TransactionID    uuid.UUID   `json:"transaction_id"`
+	CategoryID       uuid.UUID   `json:"category_id"`
+	MerchantID       pgtype.UUID `json:"merchant_id"`
+	Source           string      `json:"source"`
+	Confidence       string      `json:"confidence"`
+	AlgorithmVersion string      `json:"algorithm_version"`
+}
+
+func (q *Queries) ForceUpsertTransactionClassification(ctx context.Context, arg ForceUpsertTransactionClassificationParams) (TransactionClassification, error) {
+	row := q.db.QueryRow(ctx, forceUpsertTransactionClassification,
+		arg.TransactionID,
+		arg.CategoryID,
+		arg.MerchantID,
+		arg.Source,
+		arg.Confidence,
+		arg.AlgorithmVersion,
+	)
+	var i TransactionClassification
+	err := row.Scan(
+		&i.TransactionID,
+		&i.CategoryID,
+		&i.MerchantID,
+		&i.Source,
+		&i.Confidence,
+		&i.AlgorithmVersion,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getClassificationRuleByMerchant = `-- name: GetClassificationRuleByMerchant :one
+SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at
+FROM classification_rules
+WHERE merchant_id = $1
+`
+
+func (q *Queries) GetClassificationRuleByMerchant(ctx context.Context, merchantID pgtype.UUID) (ClassificationRule, error) {
+	row := q.db.QueryRow(ctx, getClassificationRuleByMerchant, merchantID)
+	var i ClassificationRule
+	err := row.Scan(
+		&i.ID,
+		&i.Priority,
+		&i.MerchantID,
+		&i.Pattern,
+		&i.CategoryID,
+		&i.CreatedFromTransactionID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getTransactionClassification = `-- name: GetTransactionClassification :one
+SELECT transaction_id, category_id, merchant_id, source, confidence, algorithm_version, updated_at
+FROM transaction_classifications
+WHERE transaction_id = $1
+`
+
+func (q *Queries) GetTransactionClassification(ctx context.Context, transactionID uuid.UUID) (TransactionClassification, error) {
+	row := q.db.QueryRow(ctx, getTransactionClassification, transactionID)
+	var i TransactionClassification
+	err := row.Scan(
+		&i.TransactionID,
+		&i.CategoryID,
+		&i.MerchantID,
+		&i.Source,
+		&i.Confidence,
+		&i.AlgorithmVersion,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getTransactionForClassify = `-- name: GetTransactionForClassify :one
+SELECT
+    id,
+    counterparty,
+    purpose,
+    booking_text,
+    amount
+FROM transactions
+WHERE id = $1
+`
+
+type GetTransactionForClassifyRow struct {
+	ID           uuid.UUID       `json:"id"`
+	Counterparty string          `json:"counterparty"`
+	Purpose      string          `json:"purpose"`
+	BookingText  string          `json:"booking_text"`
+	Amount       decimal.Decimal `json:"amount"`
+}
+
+func (q *Queries) GetTransactionForClassify(ctx context.Context, id uuid.UUID) (GetTransactionForClassifyRow, error) {
+	row := q.db.QueryRow(ctx, getTransactionForClassify, id)
+	var i GetTransactionForClassifyRow
+	err := row.Scan(
+		&i.ID,
+		&i.Counterparty,
+		&i.Purpose,
+		&i.BookingText,
+		&i.Amount,
+	)
+	return i, err
+}
+
+const listClassificationRules = `-- name: ListClassificationRules :many
+SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at
+FROM classification_rules
+ORDER BY priority ASC, created_at ASC
+`
+
+func (q *Queries) ListClassificationRules(ctx context.Context) ([]ClassificationRule, error) {
+	rows, err := q.db.Query(ctx, listClassificationRules)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ClassificationRule{}
+	for rows.Next() {
+		var i ClassificationRule
+		if err := rows.Scan(
+			&i.ID,
+			&i.Priority,
+			&i.MerchantID,
+			&i.Pattern,
+			&i.CategoryID,
+			&i.CreatedFromTransactionID,
+			&i.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -147,6 +314,67 @@ func (q *Queries) ListTransactionsForClassify(ctx context.Context) ([]ListTransa
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateClassificationRuleCategory = `-- name: UpdateClassificationRuleCategory :one
+UPDATE classification_rules
+SET
+    category_id = $2,
+    created_from_transaction_id = $3,
+    priority = $4
+WHERE id = $1
+RETURNING id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at
+`
+
+type UpdateClassificationRuleCategoryParams struct {
+	ID                       uuid.UUID   `json:"id"`
+	CategoryID               uuid.UUID   `json:"category_id"`
+	CreatedFromTransactionID pgtype.UUID `json:"created_from_transaction_id"`
+	Priority                 int32       `json:"priority"`
+}
+
+func (q *Queries) UpdateClassificationRuleCategory(ctx context.Context, arg UpdateClassificationRuleCategoryParams) (ClassificationRule, error) {
+	row := q.db.QueryRow(ctx, updateClassificationRuleCategory,
+		arg.ID,
+		arg.CategoryID,
+		arg.CreatedFromTransactionID,
+		arg.Priority,
+	)
+	var i ClassificationRule
+	err := row.Scan(
+		&i.ID,
+		&i.Priority,
+		&i.MerchantID,
+		&i.Pattern,
+		&i.CategoryID,
+		&i.CreatedFromTransactionID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateMerchantDefaultCategory = `-- name: UpdateMerchantDefaultCategory :one
+UPDATE merchants
+SET default_category_id = $2
+WHERE id = $1
+RETURNING id, display_name, default_category_id, created_at
+`
+
+type UpdateMerchantDefaultCategoryParams struct {
+	ID                uuid.UUID   `json:"id"`
+	DefaultCategoryID pgtype.UUID `json:"default_category_id"`
+}
+
+func (q *Queries) UpdateMerchantDefaultCategory(ctx context.Context, arg UpdateMerchantDefaultCategoryParams) (Merchant, error) {
+	row := q.db.QueryRow(ctx, updateMerchantDefaultCategory, arg.ID, arg.DefaultCategoryID)
+	var i Merchant
+	err := row.Scan(
+		&i.ID,
+		&i.DisplayName,
+		&i.DefaultCategoryID,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const upsertTransactionClassification = `-- name: UpsertTransactionClassification :one
