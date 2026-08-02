@@ -391,6 +391,64 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/categories:
+    get:
+      operationId: getCategories
+      summary: List system (and user) categories
+      responses:
+        "200":
+          description: Category taxonomy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryListResponse"
+  /api/classifications/queue:
+    get:
+      operationId: getClassificationQueue
+      summary: List high-impact classifications awaiting review
+      responses:
+        "200":
+          description: Classification queue items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassificationQueueListResponse"
+  /api/classifications/{transaction_id}/correct:
+    post:
+      operationId: postClassificationCorrect
+      summary: Correct a transaction category and optionally save a merchant rule
+      parameters:
+        - name: transaction_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassificationCorrectRequest"
+      responses:
+        "200":
+          description: Classification corrected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassificationCorrectResponse"
+        "400":
+          description: Invalid category or request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     Error:
@@ -874,4 +932,113 @@ components:
         confirmed_at:
           type: string
           format: date-time
+          nullable: true
+    Category:
+      type: object
+      required:
+        - id
+        - slug
+        - display_name
+        - kind
+        - is_system
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        display_name:
+          type: string
+        kind:
+          type: string
+        is_system:
+          type: boolean
+    CategoryListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
+    ClassificationQueueItem:
+      type: object
+      required:
+        - transaction_id
+        - booking_date
+        - amount
+        - counterparty
+        - purpose
+        - booking_text
+        - category_slug
+        - category_name
+        - source
+        - confidence
+        - merchant_name
+      properties:
+        transaction_id:
+          type: string
+          format: uuid
+        booking_date:
+          type: string
+          format: date
+        amount:
+          type: string
+        counterparty:
+          type: string
+        purpose:
+          type: string
+        booking_text:
+          type: string
+        category_slug:
+          type: string
+        category_name:
+          type: string
+        source:
+          type: string
+        confidence:
+          type: string
+        merchant_id:
+          type: string
+          format: uuid
+          nullable: true
+        merchant_name:
+          type: string
+    ClassificationQueueListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClassificationQueueItem"
+    ClassificationCorrectRequest:
+      type: object
+      required:
+        - category_slug
+      properties:
+        category_slug:
+          type: string
+        apply_to_merchant:
+          type: boolean
+          default: false
+    ClassificationCorrectResponse:
+      type: object
+      required:
+        - transaction_id
+        - category_slug
+        - rule_created
+      properties:
+        transaction_id:
+          type: string
+          format: uuid
+        category_slug:
+          type: string
+        rule_created:
+          type: boolean
+        merchant_id:
+          type: string
+          format: uuid
           nullable: true

@@ -30,6 +30,8 @@ type Handler struct {
 	llmRegistry *llm.Registry
 	importer    ImportService
 	transfers   TransferService
+	classify    ClassifyService
+	categories  CategoryService
 }
 
 func New(
@@ -38,6 +40,8 @@ func New(
 	registry *llm.Registry,
 	importer ImportService,
 	transfers TransferService,
+	classify ClassifyService,
+	categories CategoryService,
 ) *Handler {
 	return &Handler{
 		list:        list,
@@ -45,6 +49,8 @@ func New(
 		llmRegistry: registry,
 		importer:    importer,
 		transfers:   transfers,
+		classify:    classify,
+		categories:  categories,
 	}
 }
 

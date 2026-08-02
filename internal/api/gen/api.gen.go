@@ -227,6 +227,20 @@ func (e GetTransactionsParamsOrder) Valid() bool {
 	}
 }
 
+// Category defines model for Category.
+type Category struct {
+	DisplayName string             `json:"display_name"`
+	Id          openapi_types.UUID `json:"id"`
+	IsSystem    bool               `json:"is_system"`
+	Kind        string             `json:"kind"`
+	Slug        string             `json:"slug"`
+}
+
+// CategoryListResponse defines model for CategoryListResponse.
+type CategoryListResponse struct {
+	Data []Category `json:"data"`
+}
+
 // ChatMessage defines model for ChatMessage.
 type ChatMessage struct {
 	Content string          `json:"content"`
@@ -261,6 +275,41 @@ type ChatToolCall struct {
 	Input  map[string]interface{} `json:"input"`
 	Name   string                 `json:"name"`
 	Result map[string]interface{} `json:"result"`
+}
+
+// ClassificationCorrectRequest defines model for ClassificationCorrectRequest.
+type ClassificationCorrectRequest struct {
+	ApplyToMerchant *bool  `json:"apply_to_merchant,omitempty"`
+	CategorySlug    string `json:"category_slug"`
+}
+
+// ClassificationCorrectResponse defines model for ClassificationCorrectResponse.
+type ClassificationCorrectResponse struct {
+	CategorySlug  string              `json:"category_slug"`
+	MerchantId    *openapi_types.UUID `json:"merchant_id,omitempty"`
+	RuleCreated   bool                `json:"rule_created"`
+	TransactionId openapi_types.UUID  `json:"transaction_id"`
+}
+
+// ClassificationQueueItem defines model for ClassificationQueueItem.
+type ClassificationQueueItem struct {
+	Amount        string              `json:"amount"`
+	BookingDate   openapi_types.Date  `json:"booking_date"`
+	BookingText   string              `json:"booking_text"`
+	CategoryName  string              `json:"category_name"`
+	CategorySlug  string              `json:"category_slug"`
+	Confidence    string              `json:"confidence"`
+	Counterparty  string              `json:"counterparty"`
+	MerchantId    *openapi_types.UUID `json:"merchant_id,omitempty"`
+	MerchantName  string              `json:"merchant_name"`
+	Purpose       string              `json:"purpose"`
+	Source        string              `json:"source"`
+	TransactionId openapi_types.UUID  `json:"transaction_id"`
+}
+
+// ClassificationQueueListResponse defines model for ClassificationQueueListResponse.
+type ClassificationQueueListResponse struct {
+	Data []ClassificationQueueItem `json:"data"`
 }
 
 // Error defines model for Error.
@@ -537,6 +586,9 @@ type PostChatJSONRequestBody = ChatRequest
 // PostChatStreamJSONRequestBody defines body for PostChatStream for application/json ContentType.
 type PostChatStreamJSONRequestBody = ChatRequest
 
+// PostClassificationCorrectJSONRequestBody defines body for PostClassificationCorrect for application/json ContentType.
+type PostClassificationCorrectJSONRequestBody = ClassificationCorrectRequest
+
 // PostImportsMultipartRequestBody defines body for PostImports for multipart/form-data ContentType.
 type PostImportsMultipartRequestBody PostImportsMultipartBody
 
@@ -545,12 +597,21 @@ type PostImportsPreviewMultipartRequestBody PostImportsPreviewMultipartBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// List system (and user) categories
+	// (GET /api/categories)
+	GetCategories(w http.ResponseWriter, r *http.Request)
 	// Send a chat message and receive a grounded finance answer
 	// (POST /api/chat)
 	PostChat(w http.ResponseWriter, r *http.Request)
 	// Stream a grounded finance answer as server-sent events
 	// (POST /api/chat/stream)
 	PostChatStream(w http.ResponseWriter, r *http.Request)
+	// List high-impact classifications awaiting review
+	// (GET /api/classifications/queue)
+	GetClassificationQueue(w http.ResponseWriter, r *http.Request)
+	// Correct a transaction category and optionally save a merchant rule
+	// (POST /api/classifications/{transaction_id}/correct)
+	PostClassificationCorrect(w http.ResponseWriter, r *http.Request, transactionId openapi_types.UUID)
 	// Health check
 	// (GET /api/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
@@ -590,6 +651,12 @@ type ServerInterface interface {
 
 type Unimplemented struct{}
 
+// List system (and user) categories
+// (GET /api/categories)
+func (_ Unimplemented) GetCategories(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Send a chat message and receive a grounded finance answer
 // (POST /api/chat)
 func (_ Unimplemented) PostChat(w http.ResponseWriter, r *http.Request) {
@@ -599,6 +666,18 @@ func (_ Unimplemented) PostChat(w http.ResponseWriter, r *http.Request) {
 // Stream a grounded finance answer as server-sent events
 // (POST /api/chat/stream)
 func (_ Unimplemented) PostChatStream(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List high-impact classifications awaiting review
+// (GET /api/classifications/queue)
+func (_ Unimplemented) GetClassificationQueue(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Correct a transaction category and optionally save a merchant rule
+// (POST /api/classifications/{transaction_id}/correct)
+func (_ Unimplemented) PostClassificationCorrect(w http.ResponseWriter, r *http.Request, transactionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -677,6 +756,20 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
+// GetCategories operation middleware
+func (siw *ServerInterfaceWrapper) GetCategories(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCategories(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PostChat operation middleware
 func (siw *ServerInterfaceWrapper) PostChat(w http.ResponseWriter, r *http.Request) {
 
@@ -696,6 +789,46 @@ func (siw *ServerInterfaceWrapper) PostChatStream(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostChatStream(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetClassificationQueue operation middleware
+func (siw *ServerInterfaceWrapper) GetClassificationQueue(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetClassificationQueue(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostClassificationCorrect operation middleware
+func (siw *ServerInterfaceWrapper) PostClassificationCorrect(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "transaction_id" -------------
+	var transactionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "transaction_id", chi.URLParam(r, "transaction_id"), &transactionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "transaction_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostClassificationCorrect(w, r, transactionId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1189,10 +1322,19 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/categories", wrapper.GetCategories)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/chat", wrapper.PostChat)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/chat/stream", wrapper.PostChatStream)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/classifications/queue", wrapper.GetClassificationQueue)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/classifications/{transaction_id}/correct", wrapper.PostClassificationCorrect)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/health", wrapper.GetHealth)

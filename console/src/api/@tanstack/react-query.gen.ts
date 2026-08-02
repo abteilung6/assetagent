@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { getHealth, getImport, getImports, getLlmModels, getTransactions, getTransferCandidates, type Options, postChat, postImportRollback, postImports, postImportsPreview, postTransferConfirm, postTransferReject } from '../sdk.gen';
-import type { GetHealthData, GetHealthResponse, GetImportData, GetImportError, GetImportResponse, GetImportsData, GetImportsError, GetImportsResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, GetTransferCandidatesData, GetTransferCandidatesResponse, PostChatData, PostChatError, PostChatResponse, PostImportRollbackData, PostImportRollbackError, PostImportRollbackResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse, PostTransferConfirmData, PostTransferConfirmError, PostTransferConfirmResponse, PostTransferRejectData, PostTransferRejectError, PostTransferRejectResponse } from '../types.gen';
+import { getCategories, getClassificationQueue, getHealth, getImport, getImports, getLlmModels, getTransactions, getTransferCandidates, type Options, postChat, postClassificationCorrect, postImportRollback, postImports, postImportsPreview, postTransferConfirm, postTransferReject } from '../sdk.gen';
+import type { GetCategoriesData, GetCategoriesResponse, GetClassificationQueueData, GetClassificationQueueResponse, GetHealthData, GetHealthResponse, GetImportData, GetImportError, GetImportResponse, GetImportsData, GetImportsError, GetImportsResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, GetTransferCandidatesData, GetTransferCandidatesResponse, PostChatData, PostChatError, PostChatResponse, PostClassificationCorrectData, PostClassificationCorrectError, PostClassificationCorrectResponse, PostImportRollbackData, PostImportRollbackError, PostImportRollbackResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse, PostTransferConfirmData, PostTransferConfirmError, PostTransferConfirmResponse, PostTransferRejectData, PostTransferRejectError, PostTransferRejectResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -298,6 +298,59 @@ export const postTransferRejectMutation = (options?: Partial<Options<PostTransfe
     const mutationOptions: UseMutationOptions<PostTransferRejectResponse, PostTransferRejectError, Options<PostTransferRejectData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await postTransferReject({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getCategoriesQueryKey = (options?: Options<GetCategoriesData>) => createQueryKey('getCategories', options);
+
+/**
+ * List system (and user) categories
+ */
+export const getCategoriesOptions = (options?: Options<GetCategoriesData>) => queryOptions<GetCategoriesResponse, DefaultError, GetCategoriesResponse, ReturnType<typeof getCategoriesQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getCategories({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getCategoriesQueryKey(options)
+});
+
+export const getClassificationQueueQueryKey = (options?: Options<GetClassificationQueueData>) => createQueryKey('getClassificationQueue', options);
+
+/**
+ * List high-impact classifications awaiting review
+ */
+export const getClassificationQueueOptions = (options?: Options<GetClassificationQueueData>) => queryOptions<GetClassificationQueueResponse, DefaultError, GetClassificationQueueResponse, ReturnType<typeof getClassificationQueueQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getClassificationQueue({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getClassificationQueueQueryKey(options)
+});
+
+/**
+ * Correct a transaction category and optionally save a merchant rule
+ */
+export const postClassificationCorrectMutation = (options?: Partial<Options<PostClassificationCorrectData>>): UseMutationOptions<PostClassificationCorrectResponse, PostClassificationCorrectError, Options<PostClassificationCorrectData>> => {
+    const mutationOptions: UseMutationOptions<PostClassificationCorrectResponse, PostClassificationCorrectError, Options<PostClassificationCorrectData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postClassificationCorrect({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

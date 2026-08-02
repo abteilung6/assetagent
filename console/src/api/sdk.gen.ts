@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type ServerSentEventsResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetHealthData, GetHealthResponses, GetImportData, GetImportErrors, GetImportResponses, GetImportsData, GetImportsErrors, GetImportsResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, GetTransferCandidatesData, GetTransferCandidatesResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostImportRollbackData, PostImportRollbackErrors, PostImportRollbackResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses, PostTransferConfirmData, PostTransferConfirmErrors, PostTransferConfirmResponses, PostTransferRejectData, PostTransferRejectErrors, PostTransferRejectResponses } from './types.gen';
+import type { GetCategoriesData, GetCategoriesResponses, GetClassificationQueueData, GetClassificationQueueResponses, GetHealthData, GetHealthResponses, GetImportData, GetImportErrors, GetImportResponses, GetImportsData, GetImportsErrors, GetImportsResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, GetTransferCandidatesData, GetTransferCandidatesResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostClassificationCorrectData, PostClassificationCorrectErrors, PostClassificationCorrectResponses, PostImportRollbackData, PostImportRollbackErrors, PostImportRollbackResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses, PostTransferConfirmData, PostTransferConfirmErrors, PostTransferConfirmResponses, PostTransferRejectData, PostTransferRejectErrors, PostTransferRejectResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -112,3 +112,25 @@ export const postTransferConfirm = <ThrowOnError extends boolean = false>(option
  * Reject a suggested transfer pair
  */
 export const postTransferReject = <ThrowOnError extends boolean = false>(options: Options<PostTransferRejectData, ThrowOnError>): RequestResult<PostTransferRejectResponses, PostTransferRejectErrors, ThrowOnError> => (options.client ?? client).post<PostTransferRejectResponses, PostTransferRejectErrors, ThrowOnError>({ url: '/api/transfers/{id}/reject', ...options });
+
+/**
+ * List system (and user) categories
+ */
+export const getCategories = <ThrowOnError extends boolean = false>(options?: Options<GetCategoriesData, ThrowOnError>): RequestResult<GetCategoriesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetCategoriesResponses, unknown, ThrowOnError>({ url: '/api/categories', ...options });
+
+/**
+ * List high-impact classifications awaiting review
+ */
+export const getClassificationQueue = <ThrowOnError extends boolean = false>(options?: Options<GetClassificationQueueData, ThrowOnError>): RequestResult<GetClassificationQueueResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetClassificationQueueResponses, unknown, ThrowOnError>({ url: '/api/classifications/queue', ...options });
+
+/**
+ * Correct a transaction category and optionally save a merchant rule
+ */
+export const postClassificationCorrect = <ThrowOnError extends boolean = false>(options: Options<PostClassificationCorrectData, ThrowOnError>): RequestResult<PostClassificationCorrectResponses, PostClassificationCorrectErrors, ThrowOnError> => (options.client ?? client).post<PostClassificationCorrectResponses, PostClassificationCorrectErrors, ThrowOnError>({
+    url: '/api/classifications/{transaction_id}/correct',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});

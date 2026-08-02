@@ -27,8 +27,14 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Soft inbox badge query runs on every layout mount.
+  // Soft inbox badge queries run on every layout mount.
   vi.spyOn(sdk, "getTransferCandidates").mockResolvedValue(
+    mockApiResponse({ data: [] }),
+  );
+  vi.spyOn(sdk, "getClassificationQueue").mockResolvedValue(
+    mockApiResponse({ data: [] }),
+  );
+  vi.spyOn(sdk, "getCategories").mockResolvedValue(
     mockApiResponse({ data: [] }),
   );
 });

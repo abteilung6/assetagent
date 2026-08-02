@@ -202,6 +202,49 @@ export type TransferPair = {
     confirmed_at?: string | null;
 };
 
+export type Category = {
+    id: string;
+    slug: string;
+    display_name: string;
+    kind: string;
+    is_system: boolean;
+};
+
+export type CategoryListResponse = {
+    data: Array<Category>;
+};
+
+export type ClassificationQueueItem = {
+    transaction_id: string;
+    booking_date: string;
+    amount: string;
+    counterparty: string;
+    purpose: string;
+    booking_text: string;
+    category_slug: string;
+    category_name: string;
+    source: string;
+    confidence: string;
+    merchant_id?: string | null;
+    merchant_name: string;
+};
+
+export type ClassificationQueueListResponse = {
+    data: Array<ClassificationQueueItem>;
+};
+
+export type ClassificationCorrectRequest = {
+    category_slug: string;
+    apply_to_merchant?: boolean;
+};
+
+export type ClassificationCorrectResponse = {
+    transaction_id: string;
+    category_slug: string;
+    rule_created: boolean;
+    merchant_id?: string | null;
+};
+
 export type GetHealthData = {
     body?: never;
     path?: never;
@@ -600,3 +643,66 @@ export type PostTransferRejectResponses = {
 };
 
 export type PostTransferRejectResponse = PostTransferRejectResponses[keyof PostTransferRejectResponses];
+
+export type GetCategoriesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/categories';
+};
+
+export type GetCategoriesResponses = {
+    /**
+     * Category taxonomy
+     */
+    200: CategoryListResponse;
+};
+
+export type GetCategoriesResponse = GetCategoriesResponses[keyof GetCategoriesResponses];
+
+export type GetClassificationQueueData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/classifications/queue';
+};
+
+export type GetClassificationQueueResponses = {
+    /**
+     * Classification queue items
+     */
+    200: ClassificationQueueListResponse;
+};
+
+export type GetClassificationQueueResponse = GetClassificationQueueResponses[keyof GetClassificationQueueResponses];
+
+export type PostClassificationCorrectData = {
+    body: ClassificationCorrectRequest;
+    path: {
+        transaction_id: string;
+    };
+    query?: never;
+    url: '/api/classifications/{transaction_id}/correct';
+};
+
+export type PostClassificationCorrectErrors = {
+    /**
+     * Invalid category or request
+     */
+    400: Error;
+    /**
+     * Transaction not found
+     */
+    404: Error;
+};
+
+export type PostClassificationCorrectError = PostClassificationCorrectErrors[keyof PostClassificationCorrectErrors];
+
+export type PostClassificationCorrectResponses = {
+    /**
+     * Classification corrected
+     */
+    200: ClassificationCorrectResponse;
+};
+
+export type PostClassificationCorrectResponse = PostClassificationCorrectResponses[keyof PostClassificationCorrectResponses];

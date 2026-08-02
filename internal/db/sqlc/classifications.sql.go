@@ -211,6 +211,83 @@ func (q *Queries) GetTransactionForClassify(ctx context.Context, id uuid.UUID) (
 	return i, err
 }
 
+const listClassificationQueue = `-- name: ListClassificationQueue :many
+SELECT
+    t.id AS transaction_id,
+    t.booking_date,
+    t.amount,
+    t.counterparty,
+    t.purpose,
+    t.booking_text,
+    c.slug AS category_slug,
+    c.display_name AS category_name,
+    tc.source,
+    tc.confidence,
+    m.id AS merchant_id,
+    COALESCE(m.display_name, '') AS merchant_name
+FROM transaction_classifications tc
+JOIN transactions t ON t.id = tc.transaction_id
+JOIN categories c ON c.id = tc.category_id
+LEFT JOIN merchants m ON m.id = tc.merchant_id
+WHERE tc.source <> 'user_rule'
+  AND c.slug <> 'transfer'
+  AND (
+    tc.source = 'unresolved'
+    OR tc.confidence = 'low'
+    OR ABS(t.amount) >= 100
+  )
+ORDER BY ABS(t.amount) DESC, t.booking_date DESC, t.id ASC
+LIMIT 50
+`
+
+type ListClassificationQueueRow struct {
+	TransactionID uuid.UUID       `json:"transaction_id"`
+	BookingDate   pgtype.Date     `json:"booking_date"`
+	Amount        decimal.Decimal `json:"amount"`
+	Counterparty  string          `json:"counterparty"`
+	Purpose       string          `json:"purpose"`
+	BookingText   string          `json:"booking_text"`
+	CategorySlug  string          `json:"category_slug"`
+	CategoryName  string          `json:"category_name"`
+	Source        string          `json:"source"`
+	Confidence    string          `json:"confidence"`
+	MerchantID    pgtype.UUID     `json:"merchant_id"`
+	MerchantName  string          `json:"merchant_name"`
+}
+
+func (q *Queries) ListClassificationQueue(ctx context.Context) ([]ListClassificationQueueRow, error) {
+	rows, err := q.db.Query(ctx, listClassificationQueue)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListClassificationQueueRow{}
+	for rows.Next() {
+		var i ListClassificationQueueRow
+		if err := rows.Scan(
+			&i.TransactionID,
+			&i.BookingDate,
+			&i.Amount,
+			&i.Counterparty,
+			&i.Purpose,
+			&i.BookingText,
+			&i.CategorySlug,
+			&i.CategoryName,
+			&i.Source,
+			&i.Confidence,
+			&i.MerchantID,
+			&i.MerchantName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listClassificationRules = `-- name: ListClassificationRules :many
 SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at
 FROM classification_rules

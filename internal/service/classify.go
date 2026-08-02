@@ -235,3 +235,38 @@ func (s *Classify) Correct(
 
 	return result, nil
 }
+
+func (s *Classify) ListQueue(ctx context.Context) ([]domain.ClassificationQueueItem, error) {
+	// Keep the inbox populated after imports without a separate classify step.
+	if _, err := s.Run(ctx); err != nil {
+		return nil, fmt.Errorf("classify before queue: %w", err)
+	}
+
+	rows, err := sqldb.New(s.pool).ListClassificationQueue(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]domain.ClassificationQueueItem, len(rows))
+	for i, row := range rows {
+		item := domain.ClassificationQueueItem{
+			TransactionID: row.TransactionID,
+			BookingDate:   row.BookingDate.Time,
+			Amount:        row.Amount,
+			Counterparty:  row.Counterparty,
+			Purpose:       row.Purpose,
+			BookingText:   row.BookingText,
+			CategorySlug:  row.CategorySlug,
+			CategoryName:  row.CategoryName,
+			Source:        row.Source,
+			Confidence:    row.Confidence,
+			MerchantName:  row.MerchantName,
+		}
+		if row.MerchantID.Valid {
+			id := uuid.UUID(row.MerchantID.Bytes)
+			item.MerchantID = &id
+		}
+		out[i] = item
+	}
+	return out, nil
+}

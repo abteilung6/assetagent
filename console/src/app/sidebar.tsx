@@ -19,12 +19,16 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { useClassificationQueue } from "@/hooks/use-classification-queue";
 import { useTransferCandidates } from "@/hooks/use-transfer-candidates";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
 
 export const AppSidebar: React.FC = () => {
   const candidatesQuery = useTransferCandidates();
-  const pendingCount = candidatesQuery.data?.data.length ?? 0;
+  const classificationQuery = useClassificationQueue();
+  const pendingCount =
+    (candidatesQuery.data?.data.length ?? 0) +
+    (classificationQuery.data?.data.length ?? 0);
 
   return (
     <Sidebar collapsible="icon">

@@ -113,3 +113,31 @@ SET default_category_id = $2
 WHERE id = $1
 RETURNING *;
 
+-- name: ListClassificationQueue :many
+SELECT
+    t.id AS transaction_id,
+    t.booking_date,
+    t.amount,
+    t.counterparty,
+    t.purpose,
+    t.booking_text,
+    c.slug AS category_slug,
+    c.display_name AS category_name,
+    tc.source,
+    tc.confidence,
+    m.id AS merchant_id,
+    COALESCE(m.display_name, '') AS merchant_name
+FROM transaction_classifications tc
+JOIN transactions t ON t.id = tc.transaction_id
+JOIN categories c ON c.id = tc.category_id
+LEFT JOIN merchants m ON m.id = tc.merchant_id
+WHERE tc.source <> 'user_rule'
+  AND c.slug <> 'transfer'
+  AND (
+    tc.source = 'unresolved'
+    OR tc.confidence = 'low'
+    OR ABS(t.amount) >= 100
+  )
+ORDER BY ABS(t.amount) DESC, t.booking_date DESC, t.id ASC
+LIMIT 50;
+

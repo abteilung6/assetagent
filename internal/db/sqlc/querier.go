@@ -41,6 +41,7 @@ type Querier interface {
 	InsertTransactionIfNew(ctx context.Context, arg InsertTransactionIfNewParams) (uuid.UUID, error)
 	InsertTransferPair(ctx context.Context, arg InsertTransferPairParams) (TransferPair, error)
 	ListCategories(ctx context.Context) ([]Category, error)
+	ListClassificationQueue(ctx context.Context) ([]ListClassificationQueueRow, error)
 	ListClassificationRules(ctx context.Context) ([]ClassificationRule, error)
 	ListConfirmedTransferTransactionIDs(ctx context.Context) ([]uuid.UUID, error)
 	ListImportRuns(ctx context.Context, limit int32) ([]ImportRun, error)

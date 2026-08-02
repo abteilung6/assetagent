@@ -32,6 +32,29 @@ const sampleCandidate = {
   },
 };
 
+const sampleCategory = {
+  id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  slug: "groceries",
+  display_name: "Groceries",
+  kind: "expense",
+  is_system: true,
+};
+
+const sampleQueueItem = {
+  transaction_id: "44444444-4444-4444-4444-444444444444",
+  booking_date: "2026-03-12",
+  amount: "-120.00",
+  counterparty: "REWE MARKT",
+  purpose: "Kartenzahlung",
+  booking_text: "REWE",
+  category_slug: "unresolved",
+  category_name: "Unresolved",
+  source: "heuristic",
+  confidence: "low",
+  merchant_id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+  merchant_name: "REWE",
+};
+
 describe("Needs review inbox", () => {
   beforeEach(() => {
     vi.spyOn(sdk, "getHealth").mockResolvedValue(
@@ -45,6 +68,12 @@ describe("Needs review inbox", () => {
 
   it("shows empty inbox", async () => {
     vi.spyOn(sdk, "getTransferCandidates").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
+    vi.spyOn(sdk, "getClassificationQueue").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
+    vi.spyOn(sdk, "getCategories").mockResolvedValue(
       mockApiResponse({ data: [] }),
     );
 
@@ -63,6 +92,9 @@ describe("Needs review inbox", () => {
     vi.spyOn(sdk, "getTransferCandidates").mockResolvedValue(
       mockApiResponse({ data: [sampleCandidate] }),
     );
+    vi.spyOn(sdk, "getClassificationQueue").mockResolvedValue(
+      mockApiResponse({ data: [sampleQueueItem] }),
+    );
 
     testRender({ route: "/chat" });
 
@@ -72,12 +104,15 @@ describe("Needs review inbox", () => {
     await waitFor(() => {
       expect(
         document.querySelector('[data-sidebar="menu-badge"]'),
-      ).toHaveTextContent("1");
+      ).toHaveTextContent("2");
     });
   });
 
   it("keeps the nav item when the inbox is empty", async () => {
     vi.spyOn(sdk, "getTransferCandidates").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
+    vi.spyOn(sdk, "getClassificationQueue").mockResolvedValue(
       mockApiResponse({ data: [] }),
     );
 
@@ -94,6 +129,9 @@ describe("Needs review inbox", () => {
       .spyOn(sdk, "getTransferCandidates")
       .mockResolvedValueOnce(mockApiResponse({ data: [sampleCandidate] }))
       .mockResolvedValue(mockApiResponse({ data: [] }));
+    vi.spyOn(sdk, "getClassificationQueue").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
     vi.spyOn(sdk, "postTransferConfirm").mockResolvedValue(
       mockApiResponse({
         id: sampleCandidate.id,
@@ -110,7 +148,7 @@ describe("Needs review inbox", () => {
     expect(
       await screen.findByText("Possible internal transfers"),
     ).toBeInTheDocument();
-    expect(screen.getByText("500.00 EUR")).toBeInTheDocument();
+    expect(screen.getByText(/500,00\s*€/)).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: "Confirm transfer" }),
@@ -118,6 +156,50 @@ describe("Needs review inbox", () => {
 
     await waitFor(() => {
       expect(sdk.postTransferConfirm).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(getSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
+    expect(await screen.findByText(/Inbox clear/i)).toBeInTheDocument();
+  });
+
+  it("corrects a classification and clears it from the queue", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(sdk, "getTransferCandidates").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
+    const getSpy = vi
+      .spyOn(sdk, "getClassificationQueue")
+      .mockResolvedValueOnce(mockApiResponse({ data: [sampleQueueItem] }))
+      .mockResolvedValue(mockApiResponse({ data: [] }));
+    vi.spyOn(sdk, "getCategories").mockResolvedValue(
+      mockApiResponse({ data: [sampleCategory] }),
+    );
+    vi.spyOn(sdk, "postClassificationCorrect").mockResolvedValue(
+      mockApiResponse({
+        transaction_id: sampleQueueItem.transaction_id,
+        category_slug: "groceries",
+        rule_created: true,
+        merchant_id: sampleQueueItem.merchant_id,
+      }),
+    );
+
+    testRender({ route: "/review" });
+
+    expect(await screen.findByText("Categories to check")).toBeInTheDocument();
+    expect(screen.getAllByText("REWE").length).toBeGreaterThan(0);
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Category/i }),
+      "groceries",
+    );
+    expect(
+      screen.getByText(/Remember this for/i),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(sdk.postClassificationCorrect).toHaveBeenCalled();
     });
     await waitFor(() => {
       expect(getSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
