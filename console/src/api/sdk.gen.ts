@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type ServerSentEventsResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetHealthData, GetHealthResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses } from './types.gen';
+import type { GetHealthData, GetHealthResponses, GetImportData, GetImportErrors, GetImportResponses, GetImportsData, GetImportsErrors, GetImportsResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostImportRollbackData, PostImportRollbackErrors, PostImportRollbackResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -71,6 +71,11 @@ export const postImportsPreview = <ThrowOnError extends boolean = false>(options
 });
 
 /**
+ * List recent import runs
+ */
+export const getImports = <ThrowOnError extends boolean = false>(options?: Options<GetImportsData, ThrowOnError>): RequestResult<GetImportsResponses, GetImportsErrors, ThrowOnError> => (options?.client ?? client).get<GetImportsResponses, GetImportsErrors, ThrowOnError>({ url: '/api/imports', ...options });
+
+/**
  * Commit a Sparkasse CSV import
  */
 export const postImports = <ThrowOnError extends boolean = false>(options: Options<PostImportsData, ThrowOnError>): RequestResult<PostImportsResponses, PostImportsErrors, ThrowOnError> => (options.client ?? client).post<PostImportsResponses, PostImportsErrors, ThrowOnError>({
@@ -82,3 +87,13 @@ export const postImports = <ThrowOnError extends boolean = false>(options: Optio
         ...options.headers
     }
 });
+
+/**
+ * Get an import run by id
+ */
+export const getImport = <ThrowOnError extends boolean = false>(options: Options<GetImportData, ThrowOnError>): RequestResult<GetImportResponses, GetImportErrors, ThrowOnError> => (options.client ?? client).get<GetImportResponses, GetImportErrors, ThrowOnError>({ url: '/api/imports/{id}', ...options });
+
+/**
+ * Roll back a committed import run and delete its transactions
+ */
+export const postImportRollback = <ThrowOnError extends boolean = false>(options: Options<PostImportRollbackData, ThrowOnError>): RequestResult<PostImportRollbackResponses, PostImportRollbackErrors, ThrowOnError> => (options.client ?? client).post<PostImportRollbackResponses, PostImportRollbackErrors, ThrowOnError>({ url: '/api/imports/{id}/rollback', ...options });

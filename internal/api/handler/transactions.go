@@ -8,6 +8,7 @@ import (
 	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/abteilung6/assetagent/internal/llm"
 	"github.com/abteilung6/assetagent/internal/service"
+	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/shopspring/decimal"
 )
@@ -18,6 +19,9 @@ type ListService interface {
 
 type ImportService interface {
 	ImportBytes(ctx context.Context, data []byte, filename string, opts domain.ImportOptions) (domain.ImportResult, error)
+	ListRuns(ctx context.Context, limit int) ([]domain.ImportRunSummary, error)
+	GetRun(ctx context.Context, runID uuid.UUID) (domain.ImportRunSummary, error)
+	Rollback(ctx context.Context, runID uuid.UUID) (domain.ImportRollbackResult, error)
 }
 
 type Handler struct {

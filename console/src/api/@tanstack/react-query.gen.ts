@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { getHealth, getLlmModels, getTransactions, type Options, postChat, postImports, postImportsPreview } from '../sdk.gen';
-import type { GetHealthData, GetHealthResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, PostChatData, PostChatError, PostChatResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse } from '../types.gen';
+import { getHealth, getImport, getImports, getLlmModels, getTransactions, type Options, postChat, postImportRollback, postImports, postImportsPreview } from '../sdk.gen';
+import type { GetHealthData, GetHealthResponse, GetImportData, GetImportError, GetImportResponse, GetImportsData, GetImportsError, GetImportsResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, PostChatData, PostChatError, PostChatResponse, PostImportRollbackData, PostImportRollbackError, PostImportRollbackResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -186,6 +186,24 @@ export const postImportsPreviewMutation = (options?: Partial<Options<PostImports
     return mutationOptions;
 };
 
+export const getImportsQueryKey = (options?: Options<GetImportsData>) => createQueryKey('getImports', options);
+
+/**
+ * List recent import runs
+ */
+export const getImportsOptions = (options?: Options<GetImportsData>) => queryOptions<GetImportsResponse, GetImportsError, GetImportsResponse, ReturnType<typeof getImportsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getImports({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getImportsQueryKey(options)
+});
+
 /**
  * Commit a Sparkasse CSV import
  */
@@ -193,6 +211,41 @@ export const postImportsMutation = (options?: Partial<Options<PostImportsData>>)
     const mutationOptions: UseMutationOptions<PostImportsResponse, PostImportsError, Options<PostImportsData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await postImports({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getImportQueryKey = (options: Options<GetImportData>) => createQueryKey('getImport', options);
+
+/**
+ * Get an import run by id
+ */
+export const getImportOptions = (options: Options<GetImportData>) => queryOptions<GetImportResponse, GetImportError, GetImportResponse, ReturnType<typeof getImportQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getImport({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getImportQueryKey(options)
+});
+
+/**
+ * Roll back a committed import run and delete its transactions
+ */
+export const postImportRollbackMutation = (options?: Partial<Options<PostImportRollbackData>>): UseMutationOptions<PostImportRollbackResponse, PostImportRollbackError, Options<PostImportRollbackData>> => {
+    const mutationOptions: UseMutationOptions<PostImportRollbackResponse, PostImportRollbackError, Options<PostImportRollbackData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postImportRollback({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

@@ -230,6 +230,160 @@ func TestIntegration_ImportsCommitAPI(t *testing.T) {
 	})
 }
 
+func TestIntegration_ImportsLifecycleAPI(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx := context.Background()
+	pool := setupPostgres(t, ctx)
+	t.Cleanup(pool.Close)
+
+	repo := repository.NewTransaction(pool)
+	importer := service.NewImport(pool)
+	router := newTestRouter(repo, importer)
+
+	runAPath := writeTempCSV(t, "run-a.csv", sparkasseHeader()+`
+"DE89370400440532013000";"10.01.26";"10.01.26";"KARTENZAHLUNG";"Lifecycle A";"";"";"E2E-LIFE-A";"";"";"";"Cafe A";"DE90100900002868569037";"BEVODEBBXXX";"-10,00";"EUR";"Umsatz gebucht"
+`)
+	runBPath := writeTempCSV(t, "run-b.csv", sparkasseHeader()+`
+"DE89370400440532013000";"11.01.26";"11.01.26";"KARTENZAHLUNG";"Lifecycle B";"";"";"E2E-LIFE-B";"";"";"";"Cafe B";"DE90100900002868569037";"BEVODEBBXXX";"-20,00";"EUR";"Umsatz gebucht"
+`)
+
+	resultA, err := importer.ImportFile(ctx, runAPath, domain.ImportOptions{AccountName: "Lifecycle"})
+	if err != nil {
+		t.Fatalf("ImportFile A: %v", err)
+	}
+	resultB, err := importer.ImportFile(ctx, runBPath, domain.ImportOptions{AccountName: "Lifecycle"})
+	if err != nil {
+		t.Fatalf("ImportFile B: %v", err)
+	}
+
+	t.Run("list includes both runs", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/imports?limit=10", nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+		}
+		var resp gen.ImportRunListResponse
+		if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if len(resp.Data) < 2 {
+			t.Fatalf("len(data) = %d, want >= 2", len(resp.Data))
+		}
+		found := map[uuid.UUID]bool{}
+		for _, run := range resp.Data {
+			found[run.Id] = true
+		}
+		if !found[resultA.ImportRunID] || !found[resultB.ImportRunID] {
+			t.Fatalf("missing runs in list: %+v", resp.Data)
+		}
+	})
+
+	t.Run("get by id", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/imports/"+resultA.ImportRunID.String(), nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+		}
+		var run gen.ImportRun
+		if err := json.NewDecoder(rec.Body).Decode(&run); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if run.Id != resultA.ImportRunID || run.RowInserted != 1 {
+			t.Fatalf("run = %+v", run)
+		}
+	})
+
+	t.Run("get unknown id", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/imports/00000000-0000-0000-0000-000000000099", nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("status = %d, want 404; body=%s", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("rollback A leaves B intact", func(t *testing.T) {
+		before, err := repo.Count(ctx)
+		if err != nil {
+			t.Fatalf("Count before: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/api/imports/"+resultA.ImportRunID.String()+"/rollback", nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("rollback status = %d body=%s", rec.Code, rec.Body.String())
+		}
+		var rb gen.ImportRollbackResponse
+		if err := json.NewDecoder(rec.Body).Decode(&rb); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if rb.Deleted != 1 || rb.ImportRunId != resultA.ImportRunID {
+			t.Fatalf("rollback = %+v", rb)
+		}
+
+		after, err := repo.Count(ctx)
+		if err != nil {
+			t.Fatalf("Count after: %v", err)
+		}
+		if after != before-1 {
+			t.Fatalf("count = %d, want %d", after, before-1)
+		}
+
+		getB := httptest.NewRequest(http.MethodGet, "/api/imports/"+resultB.ImportRunID.String(), nil)
+		recB := httptest.NewRecorder()
+		router.ServeHTTP(recB, getB)
+		if recB.Code != http.StatusOK {
+			t.Fatalf("get B status = %d", recB.Code)
+		}
+		var runB gen.ImportRun
+		if err := json.NewDecoder(recB.Body).Decode(&runB); err != nil {
+			t.Fatalf("decode B: %v", err)
+		}
+		if runB.Status != gen.Committed {
+			t.Fatalf("B status = %q, want committed", runB.Status)
+		}
+
+		getA := httptest.NewRequest(http.MethodGet, "/api/imports/"+resultA.ImportRunID.String(), nil)
+		recA := httptest.NewRecorder()
+		router.ServeHTTP(recA, getA)
+		var runA gen.ImportRun
+		if err := json.NewDecoder(recA.Body).Decode(&runA); err != nil {
+			t.Fatalf("decode A: %v", err)
+		}
+		if runA.Status != gen.RolledBack {
+			t.Fatalf("A status = %q, want rolled_back", runA.Status)
+		}
+	})
+
+	t.Run("second rollback conflicts", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/api/imports/"+resultA.ImportRunID.String()+"/rollback", nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusConflict {
+			t.Fatalf("status = %d, want 409; body=%s", rec.Code, rec.Body.String())
+		}
+	})
+}
+
+func sparkasseHeader() string {
+	return `"Auftragskonto";"Buchungstag";"Valutadatum";"Buchungstext";"Verwendungszweck";"Glaeubiger ID";"Mandatsreferenz";"Kundenreferenz (End-to-End)";"Sammlerreferenz";"Lastschrift Ursprungsbetrag";"Auslagenersatz Ruecklastschrift";"Beguenstigter/Zahlungspflichtiger";"Kontonummer/IBAN";"BIC (SWIFT-Code)";"Betrag";"Waehrung";"Info"`
+}
+
+func writeTempCSV(t *testing.T, name, contents string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), name)
+	if err := os.WriteFile(path, []byte(contents), 0o644); err != nil {
+		t.Fatalf("write temp csv: %v", err)
+	}
+	return path
+}
+
 func newTestRouter(repo *repository.Transaction, importer *service.Import) chi.Router {
 	router := chi.NewRouter()
 	gen.HandlerWithOptions(handler.New(service.NewList(repo), nil, nil, importer), gen.ChiServerOptions{

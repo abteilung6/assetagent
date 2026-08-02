@@ -253,6 +253,24 @@ func (s *Import) ListRuns(ctx context.Context, limit int) ([]domain.ImportRunSum
 	return out, nil
 }
 
+func (s *Import) GetRun(ctx context.Context, runID uuid.UUID) (domain.ImportRunSummary, error) {
+	if s == nil || s.pool == nil {
+		return domain.ImportRunSummary{}, fmt.Errorf("import service is not configured")
+	}
+	if runID == uuid.Nil {
+		return domain.ImportRunSummary{}, fmt.Errorf("%w: empty id", ErrImportRunNotFound)
+	}
+
+	run, err := sqldb.New(s.pool).GetImportRun(ctx, runID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ImportRunSummary{}, ErrImportRunNotFound
+		}
+		return domain.ImportRunSummary{}, fmt.Errorf("get import run: %w", err)
+	}
+	return importRunToSummary(run), nil
+}
+
 func (s *Import) Rollback(ctx context.Context, runID uuid.UUID) (domain.ImportRollbackResult, error) {
 	if s == nil || s.pool == nil {
 		return domain.ImportRollbackResult{}, fmt.Errorf("import service is not configured")

@@ -17,6 +17,20 @@ func writeValidationError(w http.ResponseWriter, message string) {
 	})
 }
 
+func writeNotFoundError(w http.ResponseWriter, message string) {
+	writeJSON(w, http.StatusNotFound, gen.Error{
+		Error:   "not_found",
+		Message: message,
+	})
+}
+
+func writeConflictError(w http.ResponseWriter, message string) {
+	writeJSON(w, http.StatusConflict, gen.Error{
+		Error:   "conflict",
+		Message: message,
+	})
+}
+
 func writeInternalError(w http.ResponseWriter, message string) {
 	writeJSON(w, http.StatusInternalServerError, gen.Error{
 		Error:   "internal_error",

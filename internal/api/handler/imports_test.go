@@ -11,12 +11,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/abteilung6/assetagent/internal/api/gen"
 	"github.com/abteilung6/assetagent/internal/api/handler"
 	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/abteilung6/assetagent/internal/service"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 func TestPostImportsPreview_ok(t *testing.T) {
@@ -122,6 +124,78 @@ func TestPostImports_missingImporter(t *testing.T) {
 	}
 }
 
+func TestGetImport_notFound(t *testing.T) {
+	importer := &stubImportService{err: service.ErrImportRunNotFound}
+	router := newImportsTestRouter(importer)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/imports/"+uuid.NewString(), nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404; body = %s", rec.Code, rec.Body.String())
+	}
+	var resp gen.Error
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Error != "not_found" {
+		t.Fatalf("error = %q, want not_found", resp.Error)
+	}
+}
+
+func TestPostImportRollback_conflict(t *testing.T) {
+	importer := &stubImportService{err: service.ErrImportRunAlreadyRolledBack}
+	router := newImportsTestRouter(importer)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/imports/"+uuid.NewString()+"/rollback", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want 409; body = %s", rec.Code, rec.Body.String())
+	}
+	var resp gen.Error
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Error != "conflict" {
+		t.Fatalf("error = %q, want conflict", resp.Error)
+	}
+}
+
+func TestGetImports_ok(t *testing.T) {
+	runID := uuid.New()
+	importer := &stubImportService{
+		runs: []domain.ImportRunSummary{{
+			ID:             runID,
+			AccountID:      uuid.New(),
+			SourceFilename: "minimal.csv",
+			Status:         domain.ImportRunStatusCommitted,
+			RowTotal:       6,
+			RowValid:       6,
+			RowInserted:    6,
+			CreatedAt:      time.Now().UTC(),
+		}},
+	}
+	router := newImportsTestRouter(importer)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/imports?limit=10", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+	var resp gen.ImportRunListResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.Data) != 1 || resp.Data[0].Id != runID {
+		t.Fatalf("data = %+v", resp.Data)
+	}
+}
+
 func newImportsTestRouter(importer handler.ImportService) chi.Router {
 	router := chi.NewRouter()
 	gen.HandlerWithOptions(handler.New(nil, nil, nil, importer), gen.ChiServerOptions{
@@ -134,6 +208,9 @@ func newImportsTestRouter(importer handler.ImportService) chi.Router {
 type stubImportService struct {
 	err    error
 	result domain.ImportResult
+	runs   []domain.ImportRunSummary
+	run    domain.ImportRunSummary
+	rb     domain.ImportRollbackResult
 }
 
 func (s *stubImportService) ImportBytes(ctx context.Context, data []byte, filename string, opts domain.ImportOptions) (domain.ImportResult, error) {
@@ -141,6 +218,27 @@ func (s *stubImportService) ImportBytes(ctx context.Context, data []byte, filena
 		return domain.ImportResult{}, s.err
 	}
 	return s.result, nil
+}
+
+func (s *stubImportService) ListRuns(ctx context.Context, limit int) ([]domain.ImportRunSummary, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return s.runs, nil
+}
+
+func (s *stubImportService) GetRun(ctx context.Context, runID uuid.UUID) (domain.ImportRunSummary, error) {
+	if s.err != nil {
+		return domain.ImportRunSummary{}, s.err
+	}
+	return s.run, nil
+}
+
+func (s *stubImportService) Rollback(ctx context.Context, runID uuid.UUID) (domain.ImportRollbackResult, error) {
+	if s.err != nil {
+		return domain.ImportRollbackResult{}, s.err
+	}
+	return s.rb, nil
 }
 
 func multipartFile(t *testing.T, filename string, data []byte) (*bytes.Buffer, string) {

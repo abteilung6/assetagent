@@ -64,6 +64,63 @@ func (h *Handler) PostImports(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, toAPIImportCommit(result))
 }
 
+func (h *Handler) GetImports(w http.ResponseWriter, r *http.Request, params gen.GetImportsParams) {
+	if h.importer == nil {
+		writeInternalError(w, "import service is not configured")
+		return
+	}
+
+	limit := 20
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+
+	runs, err := h.importer.ListRuns(r.Context(), limit)
+	if err != nil {
+		writeInternalError(w, "failed to list import runs")
+		return
+	}
+
+	data := make([]gen.ImportRun, len(runs))
+	for i, run := range runs {
+		data[i] = toAPIImportRun(run)
+	}
+	writeJSON(w, http.StatusOK, gen.ImportRunListResponse{Data: data})
+}
+
+func (h *Handler) GetImport(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	if h.importer == nil {
+		writeInternalError(w, "import service is not configured")
+		return
+	}
+
+	run, err := h.importer.GetRun(r.Context(), id)
+	if err != nil {
+		writeImportLookupError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toAPIImportRun(run))
+}
+
+func (h *Handler) PostImportRollback(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	if h.importer == nil {
+		writeInternalError(w, "import service is not configured")
+		return
+	}
+
+	result, err := h.importer.Rollback(r.Context(), id)
+	if err != nil {
+		writeImportRollbackError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, gen.ImportRollbackResponse{
+		ImportRunId:    result.ImportRunID,
+		Deleted:        result.Deleted,
+		SourceFilename: result.SourceFilename,
+	})
+}
+
 func readImportUpload(w http.ResponseWriter, r *http.Request) ([]byte, string, bool) {
 	if err := r.ParseMultipartForm(maxImportUploadBytes); err != nil {
 		writeValidationError(w, "invalid multipart form")
@@ -127,6 +184,26 @@ func writeImportCommitError(w http.ResponseWriter, err error) {
 	}
 }
 
+func writeImportLookupError(w http.ResponseWriter, err error) {
+	if errors.Is(err, service.ErrImportRunNotFound) {
+		writeNotFoundError(w, err.Error())
+		return
+	}
+	writeInternalError(w, "failed to get import run")
+}
+
+func writeImportRollbackError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, service.ErrImportRunNotFound):
+		writeNotFoundError(w, err.Error())
+	case errors.Is(err, service.ErrImportRunAlreadyRolledBack),
+		errors.Is(err, service.ErrImportRunNotCommitted):
+		writeConflictError(w, err.Error())
+	default:
+		writeInternalError(w, "failed to roll back import")
+	}
+}
+
 func toAPIImportCommit(result domain.ImportResult) gen.ImportCommitResponse {
 	return gen.ImportCommitResponse{
 		ImportRunId: result.ImportRunID,
@@ -136,6 +213,27 @@ func toAPIImportCommit(result domain.ImportResult) gen.ImportCommitResponse {
 		Inserted:    result.Inserted,
 		Duplicates:  result.Duplicates,
 	}
+}
+
+func toAPIImportRun(run domain.ImportRunSummary) gen.ImportRun {
+	out := gen.ImportRun{
+		Id:             run.ID,
+		AccountId:      run.AccountID,
+		SourceFilename: run.SourceFilename,
+		Status:         gen.ImportRunStatus(run.Status),
+		RowTotal:       run.RowTotal,
+		RowValid:       run.RowValid,
+		RowInserted:    run.RowInserted,
+		RowDuplicate:   run.RowDuplicate,
+		CreatedAt:      run.CreatedAt,
+	}
+	if run.CommittedAt != nil {
+		out.CommittedAt = run.CommittedAt
+	}
+	if run.RolledBackAt != nil {
+		out.RolledBackAt = run.RolledBackAt
+	}
+	return out
 }
 
 func toAPIImportPreview(preview domain.ImportPreview) gen.ImportPreviewResponse {

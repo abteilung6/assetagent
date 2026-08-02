@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/oapi-codegen/runtime"
@@ -46,6 +47,27 @@ func (e ChatRequestProvider) Valid() bool {
 	case ChatRequestProviderOllama:
 		return true
 	case ChatRequestProviderOpenrouter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportRunStatus.
+const (
+	Committed  ImportRunStatus = "committed"
+	Failed     ImportRunStatus = "failed"
+	RolledBack ImportRunStatus = "rolled_back"
+)
+
+// Valid indicates whether the value is a known member of the ImportRunStatus enum.
+func (e ImportRunStatus) Valid() bool {
+	switch e {
+	case Committed:
+		return true
+	case Failed:
+		return true
+	case RolledBack:
 		return true
 	default:
 		return false
@@ -223,6 +245,36 @@ type ImportPreviewSampleRow struct {
 	Purpose      string             `json:"purpose"`
 }
 
+// ImportRollbackResponse defines model for ImportRollbackResponse.
+type ImportRollbackResponse struct {
+	Deleted        int64              `json:"deleted"`
+	ImportRunId    openapi_types.UUID `json:"import_run_id"`
+	SourceFilename string             `json:"source_filename"`
+}
+
+// ImportRun defines model for ImportRun.
+type ImportRun struct {
+	AccountId      openapi_types.UUID `json:"account_id"`
+	CommittedAt    *time.Time         `json:"committed_at,omitempty"`
+	CreatedAt      time.Time          `json:"created_at"`
+	Id             openapi_types.UUID `json:"id"`
+	RolledBackAt   *time.Time         `json:"rolled_back_at,omitempty"`
+	RowDuplicate   int                `json:"row_duplicate"`
+	RowInserted    int                `json:"row_inserted"`
+	RowTotal       int                `json:"row_total"`
+	RowValid       int                `json:"row_valid"`
+	SourceFilename string             `json:"source_filename"`
+	Status         ImportRunStatus    `json:"status"`
+}
+
+// ImportRunStatus defines model for ImportRun.Status.
+type ImportRunStatus string
+
+// ImportRunListResponse defines model for ImportRunListResponse.
+type ImportRunListResponse struct {
+	Data []ImportRun `json:"data"`
+}
+
 // LLMModelCatalog defines model for LLMModelCatalog.
 type LLMModelCatalog struct {
 	Default LLMModelSelection `json:"default"`
@@ -283,6 +335,11 @@ type Transaction struct {
 type TransactionListResponse struct {
 	Data       []Transaction `json:"data"`
 	Pagination Pagination    `json:"pagination"`
+}
+
+// GetImportsParams defines parameters for GetImports.
+type GetImportsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // PostImportsMultipartBody defines parameters for PostImports.
@@ -368,12 +425,21 @@ type ServerInterface interface {
 	// Health check
 	// (GET /api/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// List recent import runs
+	// (GET /api/imports)
+	GetImports(w http.ResponseWriter, r *http.Request, params GetImportsParams)
 	// Commit a Sparkasse CSV import
 	// (POST /api/imports)
 	PostImports(w http.ResponseWriter, r *http.Request)
 	// Preview a Sparkasse CSV import without writing transactions
 	// (POST /api/imports/preview)
 	PostImportsPreview(w http.ResponseWriter, r *http.Request)
+	// Get an import run by id
+	// (GET /api/imports/{id})
+	GetImport(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Roll back a committed import run and delete its transactions
+	// (POST /api/imports/{id}/rollback)
+	PostImportRollback(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List available LLM models for chat
 	// (GET /api/llm/models)
 	GetLLMModels(w http.ResponseWriter, r *http.Request)
@@ -404,6 +470,12 @@ func (_ Unimplemented) GetHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List recent import runs
+// (GET /api/imports)
+func (_ Unimplemented) GetImports(w http.ResponseWriter, r *http.Request, params GetImportsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Commit a Sparkasse CSV import
 // (POST /api/imports)
 func (_ Unimplemented) PostImports(w http.ResponseWriter, r *http.Request) {
@@ -413,6 +485,18 @@ func (_ Unimplemented) PostImports(w http.ResponseWriter, r *http.Request) {
 // Preview a Sparkasse CSV import without writing transactions
 // (POST /api/imports/preview)
 func (_ Unimplemented) PostImportsPreview(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get an import run by id
+// (GET /api/imports/{id})
+func (_ Unimplemented) GetImport(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Roll back a committed import run and delete its transactions
+// (POST /api/imports/{id}/rollback)
+func (_ Unimplemented) PostImportRollback(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -479,6 +563,39 @@ func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// GetImports operation middleware
+func (siw *ServerInterfaceWrapper) GetImports(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetImportsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetImports(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PostImports operation middleware
 func (siw *ServerInterfaceWrapper) PostImports(w http.ResponseWriter, r *http.Request) {
 
@@ -498,6 +615,58 @@ func (siw *ServerInterfaceWrapper) PostImportsPreview(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostImportsPreview(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetImport operation middleware
+func (siw *ServerInterfaceWrapper) GetImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostImportRollback operation middleware
+func (siw *ServerInterfaceWrapper) PostImportRollback(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostImportRollback(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -807,10 +976,19 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/api/health", wrapper.GetHealth)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/imports", wrapper.GetImports)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/imports", wrapper.PostImports)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/imports/preview", wrapper.PostImportsPreview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/imports/{id}", wrapper.GetImport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/imports/{id}/rollback", wrapper.PostImportRollback)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/llm/models", wrapper.GetLLMModels)

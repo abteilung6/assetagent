@@ -203,6 +203,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
   /api/imports:
+    get:
+      operationId: getImports
+      summary: List recent import runs
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Recent import runs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportRunListResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     post:
       operationId: postImports
       summary: Commit a Sparkasse CSV import
@@ -238,6 +262,60 @@ paths:
                 $ref: "#/components/schemas/ImportCommitResponse"
         "400":
           description: Invalid request, unreadable CSV, or preview hash mismatch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/imports/{id}:
+    get:
+      operationId: getImport
+      summary: Get an import run by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Import run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportRun"
+        "404":
+          description: Import run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/imports/{id}/rollback:
+    post:
+      operationId: postImportRollback
+      summary: Roll back a committed import run and delete its transactions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Import run rolled back
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportRollbackResponse"
+        "404":
+          description: Import run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Import run already rolled back or not committed
           content:
             application/json:
               schema:
@@ -561,3 +639,70 @@ components:
           type: integer
         duplicates:
           type: integer
+    ImportRun:
+      type: object
+      required:
+        - id
+        - account_id
+        - source_filename
+        - status
+        - row_total
+        - row_valid
+        - row_inserted
+        - row_duplicate
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        source_filename:
+          type: string
+        status:
+          type: string
+          enum: [committed, rolled_back, failed]
+        row_total:
+          type: integer
+        row_valid:
+          type: integer
+        row_inserted:
+          type: integer
+        row_duplicate:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        committed_at:
+          type: string
+          format: date-time
+          nullable: true
+        rolled_back_at:
+          type: string
+          format: date-time
+          nullable: true
+    ImportRunListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportRun"
+    ImportRollbackResponse:
+      type: object
+      required:
+        - import_run_id
+        - deleted
+        - source_filename
+      properties:
+        import_run_id:
+          type: string
+          format: uuid
+        deleted:
+          type: integer
+          format: int64
+        source_filename:
+          type: string

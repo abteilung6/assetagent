@@ -141,6 +141,30 @@ export type ImportCommitResponse = {
     duplicates: number;
 };
 
+export type ImportRun = {
+    id: string;
+    account_id: string;
+    source_filename: string;
+    status: 'committed' | 'rolled_back' | 'failed';
+    row_total: number;
+    row_valid: number;
+    row_inserted: number;
+    row_duplicate: number;
+    created_at: string;
+    committed_at?: string | null;
+    rolled_back_at?: string | null;
+};
+
+export type ImportRunListResponse = {
+    data: Array<ImportRun>;
+};
+
+export type ImportRollbackResponse = {
+    import_run_id: string;
+    deleted: number;
+    source_filename: string;
+};
+
 export type GetHealthData = {
     body?: never;
     path?: never;
@@ -335,6 +359,33 @@ export type PostImportsPreviewResponses = {
 
 export type PostImportsPreviewResponse = PostImportsPreviewResponses[keyof PostImportsPreviewResponses];
 
+export type GetImportsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        limit?: number;
+    };
+    url: '/api/imports';
+};
+
+export type GetImportsErrors = {
+    /**
+     * Invalid request
+     */
+    400: Error;
+};
+
+export type GetImportsError = GetImportsErrors[keyof GetImportsErrors];
+
+export type GetImportsResponses = {
+    /**
+     * Recent import runs
+     */
+    200: ImportRunListResponse;
+};
+
+export type GetImportsResponse = GetImportsResponses[keyof GetImportsResponses];
+
 export type PostImportsData = {
     body: {
         /**
@@ -376,3 +427,61 @@ export type PostImportsResponses = {
 };
 
 export type PostImportsResponse = PostImportsResponses[keyof PostImportsResponses];
+
+export type GetImportData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/imports/{id}';
+};
+
+export type GetImportErrors = {
+    /**
+     * Import run not found
+     */
+    404: Error;
+};
+
+export type GetImportError = GetImportErrors[keyof GetImportErrors];
+
+export type GetImportResponses = {
+    /**
+     * Import run
+     */
+    200: ImportRun;
+};
+
+export type GetImportResponse = GetImportResponses[keyof GetImportResponses];
+
+export type PostImportRollbackData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/imports/{id}/rollback';
+};
+
+export type PostImportRollbackErrors = {
+    /**
+     * Import run not found
+     */
+    404: Error;
+    /**
+     * Import run already rolled back or not committed
+     */
+    409: Error;
+};
+
+export type PostImportRollbackError = PostImportRollbackErrors[keyof PostImportRollbackErrors];
+
+export type PostImportRollbackResponses = {
+    /**
+     * Import run rolled back
+     */
+    200: ImportRollbackResponse;
+};
+
+export type PostImportRollbackResponse = PostImportRollbackResponses[keyof PostImportRollbackResponses];
