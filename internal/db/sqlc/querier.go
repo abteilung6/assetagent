@@ -13,6 +13,8 @@ import (
 
 type Querier interface {
 	ConfirmTransferPair(ctx context.Context, id uuid.UUID) (TransferPair, error)
+	CountClassificationsByCategorySlug(ctx context.Context) ([]CountClassificationsByCategorySlugRow, error)
+	CountClassificationsBySource(ctx context.Context) ([]CountClassificationsBySourceRow, error)
 	CountMerchantAliases(ctx context.Context) (int64, error)
 	CountTransactions(ctx context.Context) (int64, error)
 	CountTransactionsByImportRun(ctx context.Context, importRunID pgtype.UUID) (int64, error)
@@ -35,11 +37,13 @@ type Querier interface {
 	InsertTransactionIfNew(ctx context.Context, arg InsertTransactionIfNewParams) (uuid.UUID, error)
 	InsertTransferPair(ctx context.Context, arg InsertTransferPairParams) (TransferPair, error)
 	ListCategories(ctx context.Context) ([]Category, error)
+	ListConfirmedTransferTransactionIDs(ctx context.Context) ([]uuid.UUID, error)
 	ListImportRuns(ctx context.Context, limit int32) ([]ImportRun, error)
 	ListMerchantSourceLabels(ctx context.Context) ([]ListMerchantSourceLabelsRow, error)
 	ListMerchants(ctx context.Context) ([]ListMerchantsRow, error)
 	ListSuggestedTransferCandidates(ctx context.Context) ([]ListSuggestedTransferCandidatesRow, error)
 	ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]Transaction, error)
+	ListTransactionsForClassify(ctx context.Context) ([]ListTransactionsForClassifyRow, error)
 	ListTransactionsForTransferScan(ctx context.Context) ([]ListTransactionsForTransferScanRow, error)
 	ListTransferPairLegs(ctx context.Context) ([]ListTransferPairLegsRow, error)
 	ListTransferPairs(ctx context.Context) ([]TransferPair, error)
@@ -47,6 +51,7 @@ type Querier interface {
 	Ping(ctx context.Context) (int32, error)
 	RejectTransferPair(ctx context.Context, id uuid.UUID) (TransferPair, error)
 	UpdateImportRunCounts(ctx context.Context, arg UpdateImportRunCountsParams) (ImportRun, error)
+	UpsertTransactionClassification(ctx context.Context, arg UpsertTransactionClassificationParams) (TransactionClassification, error)
 }
 
 var _ Querier = (*Queries)(nil)

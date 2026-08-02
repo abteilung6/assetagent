@@ -19,6 +19,7 @@ func newClassifyCmd() *cobra.Command {
 	cmd.AddCommand(newClassifyCategoriesCmd())
 	cmd.AddCommand(newClassifyTransfersCmd())
 	cmd.AddCommand(newClassifyMerchantsCmd())
+	cmd.AddCommand(newClassifyRunCmd())
 	return cmd
 }
 
@@ -252,6 +253,43 @@ func newClassifyMerchantsListCmd() *cobra.Command {
 			fmt.Println("Merchants")
 			for _, m := range merchants {
 				fmt.Printf("  %-28s  aliases=%d  %s\n", m.DisplayName, m.AliasCount, m.ID)
+			}
+			return nil
+		},
+	}
+}
+
+func newClassifyRunCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "run",
+		Short: "Classify all transactions into categories",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			pool, cleanup, err := openImportDB()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			result, err := service.NewClassify(pool).Run(context.Background())
+			if err != nil {
+				return err
+			}
+			fmt.Println("Classify run complete")
+			fmt.Printf("  Transactions:   %d\n", result.Transactions)
+			fmt.Printf("  Upserted:       %d\n", result.Upserted)
+			fmt.Printf("  Skipped (user): %d\n", result.SkippedUser)
+			if len(result.BySource) > 0 {
+				fmt.Println("  By source:")
+				for source, count := range result.BySource {
+					fmt.Printf("    %-12s %d\n", source, count)
+				}
+			}
+			if len(result.ByCategory) > 0 {
+				fmt.Println("  By category:")
+				for slug, count := range result.ByCategory {
+					fmt.Printf("    %-18s %d\n", slug, count)
+				}
 			}
 			return nil
 		},

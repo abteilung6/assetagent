@@ -91,6 +91,16 @@ type Transaction struct {
 	ImportRunID                    pgtype.UUID     `json:"import_run_id"`
 }
 
+type TransactionClassification struct {
+	TransactionID    uuid.UUID          `json:"transaction_id"`
+	CategoryID       uuid.UUID          `json:"category_id"`
+	MerchantID       pgtype.UUID        `json:"merchant_id"`
+	Source           string             `json:"source"`
+	Confidence       string             `json:"confidence"`
+	AlgorithmVersion string             `json:"algorithm_version"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
 type TransferPair struct {
 	ID          uuid.UUID          `json:"id"`
 	TxOutID     uuid.UUID          `json:"tx_out_id"`
