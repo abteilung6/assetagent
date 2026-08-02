@@ -101,6 +101,7 @@ console-e2e-run:
 		-v "$(CURDIR):/repo" \
 		-w /repo/console \
 		-e CI=1 \
+		-e DATABASE_URL="$(DATABASE_URL)" \
 		$(PLAYWRIGHT_IMAGE) \
 		npm run e2e
 

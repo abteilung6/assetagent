@@ -1,0 +1,3 @@
+"Auftragskonto";"Buchungstag";"Valutadatum";"Buchungstext";"Verwendungszweck";"Glaeubiger ID";"Mandatsreferenz";"Kundenreferenz (End-to-End)";"Sammlerreferenz";"Lastschrift Ursprungsbetrag";"Auslagenersatz Ruecklastschrift";"Beguenstigter/Zahlungspflichtiger";"Kontonummer/IBAN";"BIC (SWIFT-Code)";"Betrag";"Waehrung";"Info"
+"DE89370400440532013000";"15.01.26";"15.01.26";"KARTENZAHLUNG";"E2E unique coffee";"";"";"E2E-FLOW-COFFEE";"";"";"";"Flow Cafe";"DE90100900002868569037";"BEVODEBBXXX";"-4,20";"EUR";"Umsatz gebucht"
+"DE89370400440532013000";"16.01.26";"16.01.26";"KARTENZAHLUNG";"E2E unique lunch";"";"";"E2E-FLOW-LUNCH";"";"";"";"Flow Deli";"DE90100900002868569037";"BEVODEBBXXX";"-14,80";"EUR";"Umsatz gebucht"

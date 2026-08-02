@@ -1,0 +1,4 @@
+"Auftragskonto";"Buchungstag";"Valutadatum";"Buchungstext";"Verwendungszweck";"Glaeubiger ID";"Mandatsreferenz";"Kundenreferenz (End-to-End)";"Sammlerreferenz";"Lastschrift Ursprungsbetrag";"Auslagenersatz Ruecklastschrift";"Beguenstigter/Zahlungspflichtiger";"Kontonummer/IBAN";"BIC (SWIFT-Code)";"Betrag";"Waehrung";"Info"
+"DE89370400440532013000";"30.12.25";"30.12.25";"KARTENZAHLUNG";"Valid cafe visit";"";"";"E2E-MIX-OK-1";"";"";"";"Café Berlin";"DE90100900002868569037";"BEVODEBBXXX";"-12,50";"EUR";"Umsatz gebucht"
+"DE89370400440532013000";"not-a-date";"30.12.25";"KARTENZAHLUNG";"Bad date row";"";"";"E2E-MIX-BAD";"";"";"";"Bad Merchant";"DE90100900002868569037";"BEVODEBBXXX";"-1,00";"EUR";"Umsatz gebucht"
+"DE89370400440532013000";"29.12.25";"29.12.25";"LOHN  GEHALT";"Valid salary line";"";"";"E2E-MIX-OK-2";"";"";"";"Employer GmbH";"DE12500105154832912731";"INGDDEFFXXX";"2500,00";"EUR";"Umsatz gebucht"

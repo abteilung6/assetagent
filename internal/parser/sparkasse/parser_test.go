@@ -125,6 +125,28 @@ func TestParseLenient_collectsInvalidRows(t *testing.T) {
 	}
 }
 
+func TestParseLenient_mixedInvalidFixture(t *testing.T) {
+	f, err := os.Open("../../../testdata/sparkasse/mixed_invalid.csv")
+	if err != nil {
+		t.Fatalf("open fixture: %v", err)
+	}
+	t.Cleanup(func() { _ = f.Close() })
+
+	result, err := sparkasse.ParseLenient(f)
+	if err != nil {
+		t.Fatalf("ParseLenient() error = %v", err)
+	}
+	if len(result.Transactions) != 2 {
+		t.Fatalf("len(transactions) = %d, want 2", len(result.Transactions))
+	}
+	if len(result.Invalid) != 1 {
+		t.Fatalf("len(invalid) = %d, want 1", len(result.Invalid))
+	}
+	if result.Invalid[0].Line != 3 || result.Invalid[0].Field != "booking_date" {
+		t.Fatalf("invalid = %+v", result.Invalid[0])
+	}
+}
+
 func TestParse_nullableCounterpartyFields(t *testing.T) {
 	csv := minimalHeader() + "\n" +
 		`"DE89370400440532013000";"30.12.25";"30.12.25";"ENTGELTABSCHLUSS";"fee";"";"";"";"";"";"";"";"";"";"-4,95";"EUR";"Umsatz gebucht"`

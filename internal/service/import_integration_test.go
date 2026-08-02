@@ -154,6 +154,40 @@ func TestIntegration_Import(t *testing.T) {
 		}
 	})
 
+	t.Run("import_flow fixture", func(t *testing.T) {
+		flowPath := filepath.Join("..", "..", "testdata", "sparkasse", "import_flow.csv")
+		result, err := importer.ImportFile(ctx, flowPath, domain.ImportOptions{
+			AccountName: "Flow Account",
+		})
+		if err != nil {
+			t.Fatalf("ImportFile() error = %v", err)
+		}
+		if result.Inserted != 2 || result.Duplicates != 0 {
+			t.Fatalf("Inserted = %d, Duplicates = %d, want 2/0", result.Inserted, result.Duplicates)
+		}
+
+		again, err := importer.ImportFile(ctx, flowPath, domain.ImportOptions{})
+		if err != nil {
+			t.Fatalf("reimport error = %v", err)
+		}
+		if again.Inserted != 0 || again.Duplicates != 2 {
+			t.Fatalf("reimport Inserted = %d, Duplicates = %d, want 0/2", again.Inserted, again.Duplicates)
+		}
+	})
+
+	t.Run("latin1 fixture commits", func(t *testing.T) {
+		latin1Path := filepath.Join("..", "..", "testdata", "sparkasse", "latin1.csv")
+		result, err := importer.ImportFile(ctx, latin1Path, domain.ImportOptions{
+			AccountName: "Latin1 Account",
+		})
+		if err != nil {
+			t.Fatalf("ImportFile() error = %v", err)
+		}
+		if result.Inserted != 2 {
+			t.Fatalf("Inserted = %d, want 2", result.Inserted)
+		}
+	})
+
 	t.Run("malformed row", func(t *testing.T) {
 		malformedPath := filepath.Join(t.TempDir(), "malformed.csv")
 		content := readFile(t, samplePath)
@@ -171,8 +205,8 @@ func TestIntegration_Import(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Count() error = %v", err)
 		}
-		if count != 22 {
-			t.Fatalf("count = %d, want 22 (no partial write on parse error)", count)
+		if count != 26 {
+			t.Fatalf("count = %d, want 26 (no partial write on parse error)", count)
 		}
 	})
 }

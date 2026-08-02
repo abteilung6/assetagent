@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/abteilung6/assetagent/internal/service"
@@ -93,6 +94,42 @@ func TestPreviewFile_headersOnly(t *testing.T) {
 	}
 	if preview.PeriodFrom != nil || preview.PeriodTo != nil {
 		t.Fatal("expected no period for headers-only file")
+	}
+}
+
+func TestPreviewBytes_latin1Fixture(t *testing.T) {
+	path := filepath.Join("..", "..", "testdata", "sparkasse", "latin1.csv")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	if utf8.Valid(data) {
+		t.Fatal("latin1 fixture unexpectedly valid UTF-8")
+	}
+
+	preview, err := service.PreviewBytes(data, "latin1.csv")
+	if err != nil {
+		t.Fatalf("PreviewBytes() error = %v", err)
+	}
+	if preview.RowValid != 2 || preview.RowInvalid != 0 {
+		t.Fatalf("counts = valid=%d invalid=%d", preview.RowValid, preview.RowInvalid)
+	}
+	if !strings.Contains(preview.SampleRows[0].Counterparty, "Müller") {
+		t.Fatalf("counterparty = %q, want decoded Müller", preview.SampleRows[0].Counterparty)
+	}
+}
+
+func TestPreviewFile_mixedInvalidFixture(t *testing.T) {
+	path := filepath.Join("..", "..", "testdata", "sparkasse", "mixed_invalid.csv")
+	preview, err := service.PreviewFile(path)
+	if err != nil {
+		t.Fatalf("PreviewFile() error = %v", err)
+	}
+	if preview.RowTotal != 3 || preview.RowValid != 2 || preview.RowInvalid != 1 {
+		t.Fatalf("counts = total=%d valid=%d invalid=%d", preview.RowTotal, preview.RowValid, preview.RowInvalid)
+	}
+	if len(preview.InvalidRows) != 1 || preview.InvalidRows[0].Line != 3 {
+		t.Fatalf("invalid_rows = %+v", preview.InvalidRows)
 	}
 }
 

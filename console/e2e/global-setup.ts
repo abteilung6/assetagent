@@ -46,10 +46,12 @@ async function waitForPostgres() {
   }
 }
 
-async function resetTransactions() {
+async function resetImportData() {
   const client = new pg.Client({ connectionString: e2eEnv.databaseUrl });
   await client.connect();
-  await client.query("TRUNCATE transactions");
+  await client.query(
+    "TRUNCATE transactions, import_runs, accounts RESTART IDENTITY CASCADE",
+  );
   await client.end();
 }
 
@@ -66,6 +68,6 @@ export default async function globalSetup() {
 
   await waitForPostgres();
   run(`"${e2eEnv.binaryPath}" migrate up`);
-  await resetTransactions();
-  run(`"${e2eEnv.binaryPath}" import "${e2eEnv.seedFile}"`);
+  await resetImportData();
+  run(`"${e2eEnv.binaryPath}" import --account-name "E2E Seed" "${e2eEnv.seedFile}"`);
 }
