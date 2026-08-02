@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
 )
@@ -74,6 +75,18 @@ func (q *Queries) GetCashflowV2(ctx context.Context, arg GetCashflowV2Params) (G
 	return i, err
 }
 
+const getLatestBookingDate = `-- name: GetLatestBookingDate :one
+SELECT MAX(booking_date)::date AS latest_booking_date
+FROM transactions
+`
+
+func (q *Queries) GetLatestBookingDate(ctx context.Context) (pgtype.Date, error) {
+	row := q.db.QueryRow(ctx, getLatestBookingDate)
+	var latest_booking_date pgtype.Date
+	err := row.Scan(&latest_booking_date)
+	return latest_booking_date, err
+}
+
 const getTopCounterparties = `-- name: GetTopCounterparties :many
 SELECT
   counterparty,
@@ -114,6 +127,119 @@ func (q *Queries) GetTopCounterparties(ctx context.Context, arg GetTopCounterpar
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAccountsInPeriod = `-- name: ListAccountsInPeriod :many
+SELECT DISTINCT COALESCE(a.display_name, t.order_account, 'unknown')::text AS account_name
+FROM transactions t
+LEFT JOIN accounts a ON a.id = t.account_id
+WHERE t.booking_date >= $1::date
+  AND t.booking_date <= $2::date
+ORDER BY account_name ASC
+`
+
+type ListAccountsInPeriodParams struct {
+	FromDate pgtype.Date `json:"from_date"`
+	ToDate   pgtype.Date `json:"to_date"`
+}
+
+func (q *Queries) ListAccountsInPeriod(ctx context.Context, arg ListAccountsInPeriodParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, listAccountsInPeriod, arg.FromDate, arg.ToDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var account_name string
+		if err := rows.Scan(&account_name); err != nil {
+			return nil, err
+		}
+		items = append(items, account_name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCashflowV2TransactionIDs = `-- name: ListCashflowV2TransactionIDs :many
+SELECT t.id
+FROM transactions t
+WHERE t.booking_date >= $1::date
+  AND t.booking_date <= $2::date
+  AND NOT EXISTS (
+    SELECT 1
+    FROM transfer_pairs p
+    WHERE p.status = 'confirmed'
+      AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
+  )
+ORDER BY t.booking_date ASC, t.id ASC
+LIMIT $3
+`
+
+type ListCashflowV2TransactionIDsParams struct {
+	FromDate pgtype.Date `json:"from_date"`
+	ToDate   pgtype.Date `json:"to_date"`
+	RowLimit int32       `json:"row_limit"`
+}
+
+func (q *Queries) ListCashflowV2TransactionIDs(ctx context.Context, arg ListCashflowV2TransactionIDsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listCashflowV2TransactionIDs, arg.FromDate, arg.ToDate, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listConfirmedTransferIDsInPeriod = `-- name: ListConfirmedTransferIDsInPeriod :many
+SELECT p.id
+FROM transfer_pairs p
+JOIN transactions out_tx ON out_tx.id = p.tx_out_id
+JOIN transactions in_tx ON in_tx.id = p.tx_in_id
+WHERE p.status = 'confirmed'
+  AND (
+    (out_tx.booking_date >= $1::date AND out_tx.booking_date <= $2::date)
+    OR (in_tx.booking_date >= $1::date AND in_tx.booking_date <= $2::date)
+  )
+ORDER BY p.created_at ASC
+`
+
+type ListConfirmedTransferIDsInPeriodParams struct {
+	FromDate pgtype.Date `json:"from_date"`
+	ToDate   pgtype.Date `json:"to_date"`
+}
+
+func (q *Queries) ListConfirmedTransferIDsInPeriod(ctx context.Context, arg ListConfirmedTransferIDsInPeriodParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listConfirmedTransferIDsInPeriod, arg.FromDate, arg.ToDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

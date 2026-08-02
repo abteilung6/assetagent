@@ -18,6 +18,7 @@ var ErrUnknownTool = errors.New("unknown tool")
 
 type Reports interface {
 	GetCashflow(ctx context.Context, from, to time.Time) (domain.CashflowReport, error)
+	GetCashflowV2Evidence(ctx context.Context, from, to time.Time) (domain.CashflowV2Evidence, error)
 	GetTopCounterparties(ctx context.Context, from, to time.Time, limit int) ([]domain.CounterpartySpend, error)
 }
 
@@ -42,6 +43,7 @@ type toolEntry struct {
 func NewRegistry(deps Dependencies) *Registry {
 	r := &Registry{tools: make(map[string]toolEntry)}
 	r.register(cashflowTool(deps.Reports))
+	r.register(cashflowV2Tool(deps.Reports))
 	r.register(counterpartiesTool(deps.Reports))
 	r.register(searchTool(deps.Lister))
 	return r

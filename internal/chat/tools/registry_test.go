@@ -14,6 +14,7 @@ import (
 
 type fakeReports struct {
 	cashflow       domain.CashflowReport
+	cashflowV2     domain.CashflowV2Evidence
 	counterparties []domain.CounterpartySpend
 	cashflowFrom   time.Time
 	cashflowTo     time.Time
@@ -26,6 +27,15 @@ func (f *fakeReports) GetCashflow(ctx context.Context, from, to time.Time) (doma
 	f.cashflowFrom = from
 	f.cashflowTo = to
 	return f.cashflow, nil
+}
+
+func (f *fakeReports) GetCashflowV2Evidence(
+	ctx context.Context,
+	from, to time.Time,
+) (domain.CashflowV2Evidence, error) {
+	f.cashflowFrom = from
+	f.cashflowTo = to
+	return f.cashflowV2, nil
 }
 
 func (f *fakeReports) GetTopCounterparties(
@@ -66,12 +76,81 @@ func TestRegistry_tools(t *testing.T) {
 
 	for _, want := range []string{
 		"get_cashflow",
+		"get_cashflow_v2",
 		"get_top_counterparties",
 		"search_transactions",
 	} {
 		if !names[want] {
 			t.Fatalf("missing tool %q", want)
 		}
+	}
+}
+
+func TestRegistry_executeCashflowV2(t *testing.T) {
+	reports := &fakeReports{
+		cashflowV2: domain.CashflowV2Evidence{
+			Income:            decimal.RequireFromString("2000.00"),
+			Expenses:          decimal.RequireFromString("12.50"),
+			Net:               decimal.RequireFromString("1987.50"),
+			Currency:          "EUR",
+			AccountsIncluded:  []string{"Checking", "Savings"},
+			TransfersExcluded: true,
+			Calculation:       "Sum excluding confirmed transfers",
+			Confidence:        "high",
+			DataFreshness:     "2026-03-10",
+			Assumptions:       []string{"Only confirmed transfers excluded"},
+			EvidenceIDs:       []string{"transfer_aaa", "tx_bbb"},
+		},
+	}
+	registry := tools.NewRegistry(tools.Dependencies{Reports: reports, Lister: &fakeLister{}})
+
+	raw, err := registry.Execute(context.Background(), "get_cashflow_v2", json.RawMessage(`{
+		"from": "2026-03-01",
+		"to": "2026-03-31"
+	}`))
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	var result struct {
+		Income            string   `json:"income"`
+		Expenses          string   `json:"expenses"`
+		Net               string   `json:"net"`
+		TransfersExcluded bool     `json:"transfers_excluded"`
+		EvidenceIDs       []string `json:"evidence_ids"`
+		AccountsIncluded  []string `json:"accounts_included"`
+		Period            struct {
+			From string `json:"from"`
+			To   string `json:"to"`
+		} `json:"period"`
+		Calculation   string   `json:"calculation"`
+		Confidence    string   `json:"confidence"`
+		DataFreshness string   `json:"data_freshness"`
+		Assumptions   []string `json:"assumptions"`
+	}
+	if err := json.Unmarshal(raw, &result); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if result.Income != "2000" && result.Income != "2000.00" {
+		// decimalString uses String() which may drop trailing zeros
+		if result.Income != "2000" {
+			t.Fatalf("income = %q", result.Income)
+		}
+	}
+	if result.Expenses != "12.5" && result.Expenses != "12.50" {
+		t.Fatalf("expenses = %q", result.Expenses)
+	}
+	if !result.TransfersExcluded {
+		t.Fatal("expected transfers_excluded")
+	}
+	if result.Period.From != "2026-03-01" || result.Period.To != "2026-03-31" {
+		t.Fatalf("period = %+v", result.Period)
+	}
+	if result.Calculation == "" || result.Confidence == "" || result.DataFreshness == "" {
+		t.Fatalf("missing evidence fields: %+v", result)
+	}
+	if len(result.EvidenceIDs) == 0 || len(result.AccountsIncluded) == 0 {
+		t.Fatalf("missing evidence_ids/accounts: %+v", result)
 	}
 }
 
