@@ -75,3 +75,14 @@ type Transaction struct {
 	AccountID                      pgtype.UUID     `json:"account_id"`
 	ImportRunID                    pgtype.UUID     `json:"import_run_id"`
 }
+
+type TransferPair struct {
+	ID          uuid.UUID          `json:"id"`
+	TxOutID     uuid.UUID          `json:"tx_out_id"`
+	TxInID      uuid.UUID          `json:"tx_in_id"`
+	Status      string             `json:"status"`
+	Confidence  string             `json:"confidence"`
+	Rationale   []byte             `json:"rationale"`
+	ConfirmedAt pgtype.Timestamptz `json:"confirmed_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
