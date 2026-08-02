@@ -27,9 +27,7 @@ describe("ImportsPage", () => {
     expect(
       screen.getByText(/Drop a Sparkasse CSV here/i),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/preview only, no import yet/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/confirm to save/i)).toBeInTheDocument();
   });
 
   it("previews a selected CSV via the API", async () => {
@@ -56,12 +54,97 @@ describe("ImportsPage", () => {
 
     expect(await screen.findByText("Sample rows")).toBeInTheDocument();
     expect(screen.getByText("PayPal Europe")).toBeInTheDocument();
-    expect(screen.getByText("Valid")).toBeInTheDocument();
+    expect(screen.getByLabelText("Account name")).toHaveValue("DE89…3000");
     expect(
       screen.getByRole("button", { name: "Confirm import" }),
-    ).toBeDisabled();
+    ).toBeEnabled();
+  });
+
+  it("commits after naming the account", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(sdk, "postImportsPreview").mockResolvedValue(
+      mockApiResponse(sampleImportPreview()),
+    );
+    const commitSpy = vi.spyOn(sdk, "postImports").mockResolvedValue(
+      mockApiResponse({
+        import_run_id: "11111111-1111-1111-1111-111111111111",
+        account_id: "22222222-2222-2222-2222-222222222222",
+        account_name: "Sparkasse",
+        rows: 6,
+        inserted: 6,
+        duplicates: 0,
+      }),
+    );
+    vi.spyOn(sdk, "getTransactions").mockResolvedValue(
+      mockApiResponse({
+        data: [],
+        pagination: { limit: 50, offset: 0, total: 0 },
+      }),
+    );
+
+    testRender({ route: "/imports" });
     expect(
-      screen.getByText(/Confirming the import comes in the next step/i),
+      await screen.findByText(/Drop a Sparkasse CSV here/i),
+    ).toBeInTheDocument();
+
+    await user.upload(
+      screen.getByTestId("import-file-input"),
+      new File(["csv"], "minimal.csv", { type: "text/csv" }),
+    );
+
+    const accountInput = await screen.findByLabelText("Account name");
+    await user.clear(accountInput);
+    await user.type(accountInput, "Sparkasse");
+    await user.click(screen.getByRole("button", { name: "Confirm import" }));
+
+    await waitFor(() => {
+      expect(commitSpy).toHaveBeenCalled();
+    });
+
+    expect(await screen.findByText("Import complete")).toBeInTheDocument();
+    expect(screen.getByText("New transactions")).toBeInTheDocument();
+    expect(screen.getByText("Sparkasse")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "View transactions" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Prepare first Money Review" }),
+    ).toBeDisabled();
+  });
+
+  it("shows duplicate messaging when nothing new is inserted", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(sdk, "postImportsPreview").mockResolvedValue(
+      mockApiResponse(sampleImportPreview()),
+    );
+    vi.spyOn(sdk, "postImports").mockResolvedValue(
+      mockApiResponse({
+        import_run_id: "11111111-1111-1111-1111-111111111111",
+        account_id: "22222222-2222-2222-2222-222222222222",
+        account_name: "Sparkasse",
+        rows: 6,
+        inserted: 0,
+        duplicates: 6,
+      }),
+    );
+
+    testRender({ route: "/imports" });
+    expect(
+      await screen.findByText(/Drop a Sparkasse CSV here/i),
+    ).toBeInTheDocument();
+    await user.upload(
+      screen.getByTestId("import-file-input"),
+      new File(["csv"], "minimal.csv", { type: "text/csv" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Confirm import" }),
+    );
+
+    expect(
+      await screen.findByText("Nothing new to import"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/already in your ledger/i),
     ).toBeInTheDocument();
   });
 
@@ -85,5 +168,33 @@ describe("ImportsPage", () => {
       "csv: empty file",
     );
     expect(screen.queryByText("Sample rows")).not.toBeInTheDocument();
+  });
+
+  it("shows commit errors on the preview step", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(sdk, "postImportsPreview").mockResolvedValue(
+      mockApiResponse(sampleImportPreview()),
+    );
+    vi.spyOn(sdk, "postImports").mockRejectedValue({
+      error: "validation_failed",
+      message: "preview_hash does not match uploaded file",
+    });
+
+    testRender({ route: "/imports" });
+    expect(
+      await screen.findByText(/Drop a Sparkasse CSV here/i),
+    ).toBeInTheDocument();
+    await user.upload(
+      screen.getByTestId("import-file-input"),
+      new File(["csv"], "minimal.csv", { type: "text/csv" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Confirm import" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "preview_hash does not match uploaded file",
+    );
+    expect(screen.getByText("Sample rows")).toBeInTheDocument();
   });
 });

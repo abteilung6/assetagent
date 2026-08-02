@@ -1,8 +1,10 @@
 import { AlertTriangleIcon, FileTextIcon } from "lucide-react";
 import type React from "react";
+import { useId } from "react";
 
 import type { ImportPreviewResponse } from "@/api/types.gen";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -16,8 +18,13 @@ import { cn } from "@/lib/utils";
 type PreviewPanelProps = {
   file: File;
   preview: ImportPreviewResponse;
+  accountName: string;
+  onAccountNameChange: (value: string) => void;
+  isCommitting?: boolean;
+  commitError?: string | null;
   onClear: () => void;
   onReplace: () => void;
+  onCommit: () => void;
 };
 
 function formatPeriod(preview: ImportPreviewResponse): string {
@@ -57,11 +64,19 @@ function formatBytes(size: number): string {
 export const PreviewPanel: React.FC<PreviewPanelProps> = ({
   file,
   preview,
+  accountName,
+  onAccountNameChange,
+  isCommitting = false,
+  commitError = null,
   onClear,
   onReplace,
+  onCommit,
 }) => {
+  const accountId = useId();
   const hasInvalid = preview.row_invalid > 0;
   const hasWarnings = preview.warnings.length > 0;
+  const canCommit =
+    accountName.trim().length > 0 && preview.row_valid > 0 && !isCommitting;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">
@@ -74,17 +89,26 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
             <p className="truncate text-sm font-medium">{file.name}</p>
             <p className="text-xs text-muted-foreground">
               {formatBytes(file.size)}
-              {preview.suggested_account
-                ? ` · suggested account ${preview.suggested_account}`
-                : null}
             </p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button type="button" variant="outline" size="sm" onClick={onReplace}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isCommitting}
+            onClick={onReplace}
+          >
             Choose another file
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={onClear}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={isCommitting}
+            onClick={onClear}
+          >
             Start over
           </Button>
         </div>
@@ -206,12 +230,39 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
         </section>
       ) : null}
 
-      <div className="mt-auto flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          Looks right? Confirming the import comes in the next step.
+      <div className="space-y-2 border-t pt-4">
+        <label htmlFor={accountId} className="text-sm font-medium">
+          Account name
+        </label>
+        <Input
+          id={accountId}
+          value={accountName}
+          disabled={isCommitting}
+          placeholder="e.g. Sparkasse checking"
+          autoComplete="off"
+          onChange={(event) => onAccountNameChange(event.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          {preview.suggested_account
+            ? `Detected in file: ${preview.suggested_account}. Use a name you’ll recognize later.`
+            : "Name this account so you can find it later."}
         </p>
-        <Button type="button" disabled title="Available in the next release step">
-          Confirm import
+      </div>
+
+      {commitError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {commitError}
+        </p>
+      ) : null}
+
+      <div className="mt-auto flex flex-col items-stretch gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-end">
+        {preview.row_valid === 0 ? (
+          <p className="mr-auto text-sm text-muted-foreground">
+            No valid rows to import.
+          </p>
+        ) : null}
+        <Button type="button" disabled={!canCommit} onClick={onCommit}>
+          {isCommitting ? "Importing…" : "Confirm import"}
         </Button>
       </div>
     </div>
