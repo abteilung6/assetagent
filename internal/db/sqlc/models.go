@@ -21,6 +21,19 @@ type Account struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Action struct {
+	ID                   uuid.UUID          `json:"id"`
+	DecisionID           uuid.UUID          `json:"decision_id"`
+	Title                string             `json:"title"`
+	ExpectedAnnualEffect decimal.Decimal    `json:"expected_annual_effect"`
+	DueOn                pgtype.Date        `json:"due_on"`
+	Status               string             `json:"status"`
+	OutcomeNote          string             `json:"outcome_note"`
+	VerifiedAt           pgtype.Timestamptz `json:"verified_at"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+}
+
 type BaselineAdjustment struct {
 	ID            uuid.UUID          `json:"id"`
 	BaselineID    uuid.UUID          `json:"baseline_id"`
@@ -49,6 +62,17 @@ type ClassificationRule struct {
 	CategoryID               uuid.UUID          `json:"category_id"`
 	CreatedFromTransactionID pgtype.UUID        `json:"created_from_transaction_id"`
 	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+}
+
+type Decision struct {
+	ID          uuid.UUID          `json:"id"`
+	ReviewID    pgtype.UUID        `json:"review_id"`
+	ScenarioID  pgtype.UUID        `json:"scenario_id"`
+	Title       string             `json:"title"`
+	Assumptions []byte             `json:"assumptions"`
+	TargetValue pgtype.Numeric     `json:"target_value"`
+	DecidedAt   pgtype.Timestamptz `json:"decided_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type FinancialBaseline struct {

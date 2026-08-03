@@ -77,7 +77,7 @@ func TestGetMoneyReviewNotFound(t *testing.T) {
 
 func newMoneyReviewTestRouter(svc handler.MoneyReviewService) chi.Router {
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(nil, nil, nil, nil, nil, nil, nil, nil, nil, svc, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(nil, nil, nil, nil, nil, nil, nil, nil, nil, svc, nil, nil), gen.ChiServerOptions{
 		BaseRouter: router,
 	})
 	return router

@@ -62,6 +62,27 @@ func (q *Queries) GetLatestForecastForBaseline(ctx context.Context, baselineID u
 	return i, err
 }
 
+const getScenario = `-- name: GetScenario :one
+SELECT id, forecast_id, kind, params, result, status, created_at
+FROM scenarios
+WHERE id = $1
+`
+
+func (q *Queries) GetScenario(ctx context.Context, id uuid.UUID) (Scenario, error) {
+	row := q.db.QueryRow(ctx, getScenario, id)
+	var i Scenario
+	err := row.Scan(
+		&i.ID,
+		&i.ForecastID,
+		&i.Kind,
+		&i.Params,
+		&i.Result,
+		&i.Status,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const insertForecast = `-- name: InsertForecast :one
 INSERT INTO forecasts (
     baseline_id,

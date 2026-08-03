@@ -14,6 +14,54 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ActionStatus.
+const (
+	ActionStatusDone       ActionStatus = "done"
+	ActionStatusIrrelevant ActionStatus = "irrelevant"
+	ActionStatusPlanned    ActionStatus = "planned"
+	ActionStatusSkipped    ActionStatus = "skipped"
+)
+
+// Valid indicates whether the value is a known member of the ActionStatus enum.
+func (e ActionStatus) Valid() bool {
+	switch e {
+	case ActionStatusDone:
+		return true
+	case ActionStatusIrrelevant:
+		return true
+	case ActionStatusPlanned:
+		return true
+	case ActionStatusSkipped:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActionStatusRequestStatus.
+const (
+	ActionStatusRequestStatusDone       ActionStatusRequestStatus = "done"
+	ActionStatusRequestStatusIrrelevant ActionStatusRequestStatus = "irrelevant"
+	ActionStatusRequestStatusPlanned    ActionStatusRequestStatus = "planned"
+	ActionStatusRequestStatusSkipped    ActionStatusRequestStatus = "skipped"
+)
+
+// Valid indicates whether the value is a known member of the ActionStatusRequestStatus enum.
+func (e ActionStatusRequestStatus) Valid() bool {
+	switch e {
+	case ActionStatusRequestStatusDone:
+		return true
+	case ActionStatusRequestStatusIrrelevant:
+		return true
+	case ActionStatusRequestStatusPlanned:
+		return true
+	case ActionStatusRequestStatusSkipped:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BaselineAdjustRequestMetricKey.
 const (
 	BaselineAdjustRequestMetricKeyAvgVariableSpend        BaselineAdjustRequestMetricKey = "avg_variable_spend"
@@ -524,6 +572,30 @@ func (e TransferPairStatus) Valid() bool {
 	}
 }
 
+// Defines values for GetActionsParamsStatus.
+const (
+	Done       GetActionsParamsStatus = "done"
+	Irrelevant GetActionsParamsStatus = "irrelevant"
+	Planned    GetActionsParamsStatus = "planned"
+	Skipped    GetActionsParamsStatus = "skipped"
+)
+
+// Valid indicates whether the value is a known member of the GetActionsParamsStatus enum.
+func (e GetActionsParamsStatus) Valid() bool {
+	switch e {
+	case Done:
+		return true
+	case Irrelevant:
+		return true
+	case Planned:
+		return true
+	case Skipped:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetTransactionsParamsSort.
 const (
 	Amount       GetTransactionsParamsSort = "amount"
@@ -562,6 +634,46 @@ func (e GetTransactionsParamsOrder) Valid() bool {
 		return false
 	}
 }
+
+// Action defines model for Action.
+type Action struct {
+	CreatedAt  time.Time          `json:"created_at"`
+	DecisionId openapi_types.UUID `json:"decision_id"`
+	DueOn      openapi_types.Date `json:"due_on"`
+
+	// ExpectedAnnualEffect Expected annual EUR effect (string decimal)
+	ExpectedAnnualEffect string             `json:"expected_annual_effect"`
+	Id                   openapi_types.UUID `json:"id"`
+	OutcomeNote          string             `json:"outcome_note"`
+	Status               ActionStatus       `json:"status"`
+	Title                string             `json:"title"`
+	UpdatedAt            time.Time          `json:"updated_at"`
+	VerifiedAt           *time.Time         `json:"verified_at,omitempty"`
+}
+
+// ActionStatus defines model for Action.Status.
+type ActionStatus string
+
+// ActionCreateRequest defines model for ActionCreateRequest.
+type ActionCreateRequest struct {
+	DueOn                openapi_types.Date `json:"due_on"`
+	ExpectedAnnualEffect string             `json:"expected_annual_effect"`
+	Title                string             `json:"title"`
+}
+
+// ActionListResponse defines model for ActionListResponse.
+type ActionListResponse struct {
+	Data []Action `json:"data"`
+}
+
+// ActionStatusRequest defines model for ActionStatusRequest.
+type ActionStatusRequest struct {
+	OutcomeNote *string                   `json:"outcome_note,omitempty"`
+	Status      ActionStatusRequestStatus `json:"status"`
+}
+
+// ActionStatusRequestStatus defines model for ActionStatusRequest.Status.
+type ActionStatusRequestStatus string
 
 // BaselineAdjustRequest defines model for BaselineAdjustRequest.
 type BaselineAdjustRequest struct {
@@ -681,6 +793,38 @@ type ClassificationQueueItem struct {
 // ClassificationQueueListResponse defines model for ClassificationQueueListResponse.
 type ClassificationQueueListResponse struct {
 	Data []ClassificationQueueItem `json:"data"`
+}
+
+// Decision defines model for Decision.
+type Decision struct {
+	Action      Action                 `json:"action"`
+	Assumptions map[string]interface{} `json:"assumptions"`
+	CreatedAt   time.Time              `json:"created_at"`
+	DecidedAt   time.Time              `json:"decided_at"`
+	Id          openapi_types.UUID     `json:"id"`
+	ReviewId    *openapi_types.UUID    `json:"review_id,omitempty"`
+	ScenarioId  *openapi_types.UUID    `json:"scenario_id,omitempty"`
+
+	// TargetValue Optional numeric target (EUR string)
+	TargetValue *string `json:"target_value,omitempty"`
+	Title       string  `json:"title"`
+}
+
+// DecisionCreateRequest defines model for DecisionCreateRequest.
+type DecisionCreateRequest struct {
+	Action      ActionCreateRequest     `json:"action"`
+	Assumptions *map[string]interface{} `json:"assumptions,omitempty"`
+	ReviewId    *openapi_types.UUID     `json:"review_id,omitempty"`
+	ScenarioId  *openapi_types.UUID     `json:"scenario_id,omitempty"`
+
+	// TargetValue Optional numeric target (EUR string)
+	TargetValue *string `json:"target_value,omitempty"`
+	Title       string  `json:"title"`
+}
+
+// DecisionListResponse defines model for DecisionListResponse.
+type DecisionListResponse struct {
+	Data []Decision `json:"data"`
 }
 
 // Error defines model for Error.
@@ -1081,6 +1225,20 @@ type TransferPairConfidence string
 // TransferPairStatus defines model for TransferPair.Status.
 type TransferPairStatus string
 
+// GetActionsParams defines parameters for GetActions.
+type GetActionsParams struct {
+	Status *GetActionsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	Limit  *int                    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetActionsParamsStatus defines parameters for GetActions.
+type GetActionsParamsStatus string
+
+// GetDecisionsParams defines parameters for GetDecisions.
+type GetDecisionsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetImportsParams defines parameters for GetImports.
 type GetImportsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
@@ -1151,6 +1309,9 @@ type GetTransactionsParamsSort string
 // GetTransactionsParamsOrder defines parameters for GetTransactions.
 type GetTransactionsParamsOrder string
 
+// PostActionStatusJSONRequestBody defines body for PostActionStatus for application/json ContentType.
+type PostActionStatusJSONRequestBody = ActionStatusRequest
+
 // PostBaselinesRecomputeJSONRequestBody defines body for PostBaselinesRecompute for application/json ContentType.
 type PostBaselinesRecomputeJSONRequestBody = BaselineRecomputeRequest
 
@@ -1165,6 +1326,9 @@ type PostChatStreamJSONRequestBody = ChatRequest
 
 // PostClassificationCorrectJSONRequestBody defines body for PostClassificationCorrect for application/json ContentType.
 type PostClassificationCorrectJSONRequestBody = ClassificationCorrectRequest
+
+// PostDecisionsJSONRequestBody defines body for PostDecisions for application/json ContentType.
+type PostDecisionsJSONRequestBody = DecisionCreateRequest
 
 // PostForecastsJSONRequestBody defines body for PostForecasts for application/json ContentType.
 type PostForecastsJSONRequestBody = ForecastCreateRequest
@@ -1183,6 +1347,12 @@ type PostMoneyReviewsJSONRequestBody = MoneyReviewCreateRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// List actions (optionally by status)
+	// (GET /api/actions)
+	GetActions(w http.ResponseWriter, r *http.Request, params GetActionsParams)
+	// Update an action status
+	// (POST /api/actions/{id}/status)
+	PostActionStatus(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Get the current draft or confirmed FinancialBaseline
 	// (GET /api/baselines/current)
 	GetCurrentBaseline(w http.ResponseWriter, r *http.Request)
@@ -1210,6 +1380,12 @@ type ServerInterface interface {
 	// Correct a transaction category and optionally save a merchant rule
 	// (POST /api/classifications/{transaction_id}/correct)
 	PostClassificationCorrect(w http.ResponseWriter, r *http.Request, transactionId openapi_types.UUID)
+	// List decisions (newest first)
+	// (GET /api/decisions)
+	GetDecisions(w http.ResponseWriter, r *http.Request, params GetDecisionsParams)
+	// Create a decision with one measurable action
+	// (POST /api/decisions)
+	PostDecisions(w http.ResponseWriter, r *http.Request)
 	// Create a 90-day liquidity forecast from the current baseline
 	// (POST /api/forecasts)
 	PostForecasts(w http.ResponseWriter, r *http.Request)
@@ -1285,6 +1461,18 @@ type ServerInterface interface {
 
 type Unimplemented struct{}
 
+// List actions (optionally by status)
+// (GET /api/actions)
+func (_ Unimplemented) GetActions(w http.ResponseWriter, r *http.Request, params GetActionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update an action status
+// (POST /api/actions/{id}/status)
+func (_ Unimplemented) PostActionStatus(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Get the current draft or confirmed FinancialBaseline
 // (GET /api/baselines/current)
 func (_ Unimplemented) GetCurrentBaseline(w http.ResponseWriter, r *http.Request) {
@@ -1336,6 +1524,18 @@ func (_ Unimplemented) GetClassificationQueue(w http.ResponseWriter, r *http.Req
 // Correct a transaction category and optionally save a merchant rule
 // (POST /api/classifications/{transaction_id}/correct)
 func (_ Unimplemented) PostClassificationCorrect(w http.ResponseWriter, r *http.Request, transactionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List decisions (newest first)
+// (GET /api/decisions)
+func (_ Unimplemented) GetDecisions(w http.ResponseWriter, r *http.Request, params GetDecisionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a decision with one measurable action
+// (POST /api/decisions)
+func (_ Unimplemented) PostDecisions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1485,6 +1685,78 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetActions operation middleware
+func (siw *ServerInterfaceWrapper) GetActions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetActionsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetActions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostActionStatus operation middleware
+func (siw *ServerInterfaceWrapper) PostActionStatus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostActionStatus(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetCurrentBaseline operation middleware
 func (siw *ServerInterfaceWrapper) GetCurrentBaseline(w http.ResponseWriter, r *http.Request) {
@@ -1639,6 +1911,53 @@ func (siw *ServerInterfaceWrapper) PostClassificationCorrect(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostClassificationCorrect(w, r, transactionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDecisions operation middleware
+func (siw *ServerInterfaceWrapper) GetDecisions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetDecisionsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDecisions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostDecisions operation middleware
+func (siw *ServerInterfaceWrapper) PostDecisions(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostDecisions(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2403,6 +2722,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/actions", wrapper.GetActions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/actions/{id}/status", wrapper.PostActionStatus)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/baselines/current", wrapper.GetCurrentBaseline)
 	})
 	r.Group(func(r chi.Router) {
@@ -2428,6 +2753,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/classifications/{transaction_id}/correct", wrapper.PostClassificationCorrect)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/decisions", wrapper.GetDecisions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/decisions", wrapper.PostDecisions)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/forecasts", wrapper.PostForecasts)

@@ -4,6 +4,11 @@ import { Link, useParams } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
 import {
+  decisionActionErrorMessage,
+  dueInDays,
+  useCreateDecision,
+} from "@/hooks/use-decisions";
+import {
   moneyReviewActionErrorMessage,
   useConfirmMoneyReview,
   useMoneyReview,
@@ -110,31 +115,11 @@ const ReviewDetail: React.FC<ReviewDetailProps> = ({
         ) : (
           <ul className="divide-y border-y">
             {review.findings.map((finding, index) => (
-              <li key={`${finding.type}-${index}`} className="py-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-xs text-muted-foreground">
-                      {findingTypeLabel(finding.type)}
-                      {" · "}
-                      {confidenceLabel(finding.confidence)} confidence
-                    </p>
-                    <p className="text-sm font-medium text-foreground">
-                      {finding.title}
-                    </p>
-                  </div>
-                  {finding.amount ? (
-                    <p
-                      className={cn(
-                        "shrink-0 text-base font-semibold tabular-nums",
-                        finding.type === "free_cashflow_pressure" &&
-                          "text-red-700 dark:text-red-400",
-                      )}
-                    >
-                      {formatAmount(finding.amount)}
-                    </p>
-                  ) : null}
-                </div>
-              </li>
+              <FindingRow
+                key={`${finding.type}-${index}`}
+                reviewId={review.id}
+                finding={finding}
+              />
             ))}
           </ul>
         )}
@@ -150,6 +135,125 @@ const ReviewDetail: React.FC<ReviewDetailProps> = ({
     </div>
   );
 };
+
+type FindingRowProps = {
+  reviewId: string;
+  finding: MoneyReview["findings"][number];
+};
+
+const FindingRow: React.FC<FindingRowProps> = ({ reviewId, finding }) => {
+  const create = useCreateDecision();
+  const [error, setError] = useState<string | null>(null);
+  const [chosen, setChosen] = useState(false);
+
+  const onChoose = async () => {
+    setError(null);
+    const annual = annualEffectFromFinding(finding.amount, finding.type);
+    try {
+      await create.mutateAsync({
+        body: {
+          review_id: reviewId,
+          title: finding.title,
+          assumptions: {
+            finding_type: finding.type,
+            suggested_action_key: finding.suggested_action_key ?? null,
+          },
+          target_value: finding.amount,
+          action: {
+            title: finding.suggested_action_key
+              ? actionTitleFromKey(finding.suggested_action_key)
+              : finding.title,
+            expected_annual_effect: annual,
+            due_on: dueInDays(30),
+          },
+        },
+      });
+      setChosen(true);
+    } catch (err) {
+      setError(decisionActionErrorMessage(err));
+    }
+  };
+
+  return (
+    <li className="space-y-3 py-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <p className="text-xs text-muted-foreground">
+            {findingTypeLabel(finding.type)}
+            {" · "}
+            {confidenceLabel(finding.confidence)} confidence
+          </p>
+          <p className="text-sm font-medium text-foreground">{finding.title}</p>
+        </div>
+        {finding.amount ? (
+          <p
+            className={cn(
+              "shrink-0 text-base font-semibold tabular-nums",
+              finding.type === "free_cashflow_pressure" &&
+                "text-red-700 dark:text-red-400",
+            )}
+          >
+            {formatAmount(finding.amount)}
+          </p>
+        ) : null}
+      </div>
+      {error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={create.isPending || chosen}
+          onClick={onChoose}
+        >
+          {chosen
+            ? "Action chosen"
+            : create.isPending
+              ? "Saving…"
+              : "Choose this action"}
+        </Button>
+      </div>
+    </li>
+  );
+};
+
+function actionTitleFromKey(key: string): string {
+  switch (key) {
+    case "reduce_variable_or_fixed":
+      return "Reduce variable or fixed spend";
+    case "review_recurring_amount":
+      return "Review the changed recurring amount";
+    case "confirm_recurring":
+      return "Confirm uncertain recurring series";
+    case "explain_one_off":
+      return "Explain or plan for the large expense";
+    case "clear_needs_review":
+      return "Clear the Needs review queue";
+    default:
+      return key;
+  }
+}
+
+function annualEffectFromFinding(
+  amount: string | undefined,
+  type: string,
+): string {
+  if (!amount) {
+    return "0.00";
+  }
+  const value = Number.parseFloat(amount);
+  if (Number.isNaN(value)) {
+    return "0.00";
+  }
+  if (type === "large_expense") {
+    return Math.abs(value).toFixed(2);
+  }
+  return (Math.abs(value) * 12).toFixed(2);
+}
 
 function findingTypeLabel(type: string): string {
   switch (type) {

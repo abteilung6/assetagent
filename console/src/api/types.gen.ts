@@ -421,6 +421,72 @@ export type ScenarioCreateRequest = {
     };
 };
 
+export type Decision = {
+    id: string;
+    review_id?: string | null;
+    scenario_id?: string | null;
+    title: string;
+    assumptions: {
+        [key: string]: unknown;
+    };
+    /**
+     * Optional numeric target (EUR string)
+     */
+    target_value?: string | null;
+    decided_at: string;
+    created_at: string;
+    action: Action;
+};
+
+export type DecisionListResponse = {
+    data: Array<Decision>;
+};
+
+export type DecisionCreateRequest = {
+    review_id?: string;
+    scenario_id?: string;
+    title: string;
+    assumptions?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Optional numeric target (EUR string)
+     */
+    target_value?: string;
+    action: ActionCreateRequest;
+};
+
+export type Action = {
+    id: string;
+    decision_id: string;
+    title: string;
+    /**
+     * Expected annual EUR effect (string decimal)
+     */
+    expected_annual_effect: string;
+    due_on: string;
+    status: 'planned' | 'done' | 'skipped' | 'irrelevant';
+    outcome_note: string;
+    verified_at?: string | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type ActionListResponse = {
+    data: Array<Action>;
+};
+
+export type ActionCreateRequest = {
+    title: string;
+    expected_annual_effect: string;
+    due_on: string;
+};
+
+export type ActionStatusRequest = {
+    status: 'planned' | 'done' | 'skipped' | 'irrelevant';
+    outcome_note?: string;
+};
+
 export type GetHealthData = {
     body?: never;
     path?: never;
@@ -1311,3 +1377,100 @@ export type PostForecastScenarioResponses = {
 };
 
 export type PostForecastScenarioResponse = PostForecastScenarioResponses[keyof PostForecastScenarioResponses];
+
+export type GetDecisionsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        limit?: number;
+    };
+    url: '/api/decisions';
+};
+
+export type GetDecisionsResponses = {
+    /**
+     * Decision history
+     */
+    200: DecisionListResponse;
+};
+
+export type GetDecisionsResponse = GetDecisionsResponses[keyof GetDecisionsResponses];
+
+export type PostDecisionsData = {
+    body: DecisionCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/decisions';
+};
+
+export type PostDecisionsErrors = {
+    /**
+     * Invalid request
+     */
+    400: Error;
+    /**
+     * Review or scenario not found
+     */
+    404: Error;
+};
+
+export type PostDecisionsError = PostDecisionsErrors[keyof PostDecisionsErrors];
+
+export type PostDecisionsResponses = {
+    /**
+     * Decision created
+     */
+    200: Decision;
+};
+
+export type PostDecisionsResponse = PostDecisionsResponses[keyof PostDecisionsResponses];
+
+export type GetActionsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        status?: 'planned' | 'done' | 'skipped' | 'irrelevant';
+        limit?: number;
+    };
+    url: '/api/actions';
+};
+
+export type GetActionsResponses = {
+    /**
+     * Actions
+     */
+    200: ActionListResponse;
+};
+
+export type GetActionsResponse = GetActionsResponses[keyof GetActionsResponses];
+
+export type PostActionStatusData = {
+    body: ActionStatusRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/actions/{id}/status';
+};
+
+export type PostActionStatusErrors = {
+    /**
+     * Invalid status transition
+     */
+    400: Error;
+    /**
+     * Action not found
+     */
+    404: Error;
+};
+
+export type PostActionStatusError = PostActionStatusErrors[keyof PostActionStatusErrors];
+
+export type PostActionStatusResponses = {
+    /**
+     * Action updated
+     */
+    200: Action;
+};
+
+export type PostActionStatusResponse = PostActionStatusResponses[keyof PostActionStatusResponses];

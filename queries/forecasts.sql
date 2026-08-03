@@ -42,3 +42,8 @@ SELECT *
 FROM scenarios
 WHERE forecast_id = $1
 ORDER BY created_at DESC;
+
+-- name: GetScenario :one
+SELECT *
+FROM scenarios
+WHERE id = $1;

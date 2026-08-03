@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type ServerSentEventsResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetCategoriesData, GetCategoriesResponses, GetClassificationQueueData, GetClassificationQueueResponses, GetCurrentBaselineData, GetCurrentBaselineErrors, GetCurrentBaselineResponses, GetForecastData, GetForecastErrors, GetForecastResponses, GetForecastScenariosData, GetForecastScenariosResponses, GetHealthData, GetHealthResponses, GetImportData, GetImportErrors, GetImportResponses, GetImportsData, GetImportsErrors, GetImportsResponses, GetLatestForecastData, GetLatestForecastErrors, GetLatestForecastResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetMoneyReviewData, GetMoneyReviewErrors, GetMoneyReviewResponses, GetMoneyReviewsData, GetMoneyReviewsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, GetTransferCandidatesData, GetTransferCandidatesResponses, GetUncertainRecurringData, GetUncertainRecurringResponses, PostBaselineAdjustData, PostBaselineAdjustErrors, PostBaselineAdjustResponses, PostBaselineConfirmData, PostBaselineConfirmErrors, PostBaselineConfirmResponses, PostBaselinesRecomputeData, PostBaselinesRecomputeErrors, PostBaselinesRecomputeResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostClassificationCorrectData, PostClassificationCorrectErrors, PostClassificationCorrectResponses, PostForecastScenarioData, PostForecastScenarioErrors, PostForecastScenarioResponses, PostForecastsData, PostForecastsErrors, PostForecastsResponses, PostImportRollbackData, PostImportRollbackErrors, PostImportRollbackResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses, PostMoneyReviewConfirmData, PostMoneyReviewConfirmErrors, PostMoneyReviewConfirmResponses, PostMoneyReviewsData, PostMoneyReviewsErrors, PostMoneyReviewsResponses, PostRecurringConfirmData, PostRecurringConfirmErrors, PostRecurringConfirmResponses, PostRecurringRejectData, PostRecurringRejectErrors, PostRecurringRejectResponses, PostTransferConfirmData, PostTransferConfirmErrors, PostTransferConfirmResponses, PostTransferRejectData, PostTransferRejectErrors, PostTransferRejectResponses } from './types.gen';
+import type { GetActionsData, GetActionsResponses, GetCategoriesData, GetCategoriesResponses, GetClassificationQueueData, GetClassificationQueueResponses, GetCurrentBaselineData, GetCurrentBaselineErrors, GetCurrentBaselineResponses, GetDecisionsData, GetDecisionsResponses, GetForecastData, GetForecastErrors, GetForecastResponses, GetForecastScenariosData, GetForecastScenariosResponses, GetHealthData, GetHealthResponses, GetImportData, GetImportErrors, GetImportResponses, GetImportsData, GetImportsErrors, GetImportsResponses, GetLatestForecastData, GetLatestForecastErrors, GetLatestForecastResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetMoneyReviewData, GetMoneyReviewErrors, GetMoneyReviewResponses, GetMoneyReviewsData, GetMoneyReviewsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, GetTransferCandidatesData, GetTransferCandidatesResponses, GetUncertainRecurringData, GetUncertainRecurringResponses, PostActionStatusData, PostActionStatusErrors, PostActionStatusResponses, PostBaselineAdjustData, PostBaselineAdjustErrors, PostBaselineAdjustResponses, PostBaselineConfirmData, PostBaselineConfirmErrors, PostBaselineConfirmResponses, PostBaselinesRecomputeData, PostBaselinesRecomputeErrors, PostBaselinesRecomputeResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostClassificationCorrectData, PostClassificationCorrectErrors, PostClassificationCorrectResponses, PostDecisionsData, PostDecisionsErrors, PostDecisionsResponses, PostForecastScenarioData, PostForecastScenarioErrors, PostForecastScenarioResponses, PostForecastsData, PostForecastsErrors, PostForecastsResponses, PostImportRollbackData, PostImportRollbackErrors, PostImportRollbackResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses, PostMoneyReviewConfirmData, PostMoneyReviewConfirmErrors, PostMoneyReviewConfirmResponses, PostMoneyReviewsData, PostMoneyReviewsErrors, PostMoneyReviewsResponses, PostRecurringConfirmData, PostRecurringConfirmErrors, PostRecurringConfirmResponses, PostRecurringRejectData, PostRecurringRejectErrors, PostRecurringRejectResponses, PostTransferConfirmData, PostTransferConfirmErrors, PostTransferConfirmResponses, PostTransferRejectData, PostTransferRejectErrors, PostTransferRejectResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -243,6 +243,40 @@ export const getForecastScenarios = <ThrowOnError extends boolean = false>(optio
  */
 export const postForecastScenario = <ThrowOnError extends boolean = false>(options: Options<PostForecastScenarioData, ThrowOnError>): RequestResult<PostForecastScenarioResponses, PostForecastScenarioErrors, ThrowOnError> => (options.client ?? client).post<PostForecastScenarioResponses, PostForecastScenarioErrors, ThrowOnError>({
     url: '/api/forecasts/{id}/scenarios',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List decisions (newest first)
+ */
+export const getDecisions = <ThrowOnError extends boolean = false>(options?: Options<GetDecisionsData, ThrowOnError>): RequestResult<GetDecisionsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetDecisionsResponses, unknown, ThrowOnError>({ url: '/api/decisions', ...options });
+
+/**
+ * Create a decision with one measurable action
+ */
+export const postDecisions = <ThrowOnError extends boolean = false>(options: Options<PostDecisionsData, ThrowOnError>): RequestResult<PostDecisionsResponses, PostDecisionsErrors, ThrowOnError> => (options.client ?? client).post<PostDecisionsResponses, PostDecisionsErrors, ThrowOnError>({
+    url: '/api/decisions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List actions (optionally by status)
+ */
+export const getActions = <ThrowOnError extends boolean = false>(options?: Options<GetActionsData, ThrowOnError>): RequestResult<GetActionsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetActionsResponses, unknown, ThrowOnError>({ url: '/api/actions', ...options });
+
+/**
+ * Update an action status
+ */
+export const postActionStatus = <ThrowOnError extends boolean = false>(options: Options<PostActionStatusData, ThrowOnError>): RequestResult<PostActionStatusResponses, PostActionStatusErrors, ThrowOnError> => (options.client ?? client).post<PostActionStatusResponses, PostActionStatusErrors, ThrowOnError>({
+    url: '/api/actions/{id}/status',
     ...options,
     headers: {
         'Content-Type': 'application/json',

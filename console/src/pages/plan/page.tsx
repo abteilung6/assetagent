@@ -18,6 +18,14 @@ import {
   type Forecast,
   type Scenario,
 } from "@/hooks/use-forecast";
+import {
+  decisionActionErrorMessage,
+  dueInDays,
+  useCreateDecision,
+  useOpenActions,
+  useUpdateActionStatus,
+  type Action,
+} from "@/hooks/use-decisions";
 import { cn } from "@/lib/utils";
 
 const PlanPage: React.FC = () => {
@@ -125,6 +133,7 @@ const PlanPage: React.FC = () => {
             <TabsList variant="line" className="w-full justify-start">
               <TabsTrigger value="forecast">Forecast</TabsTrigger>
               <TabsTrigger value="what-if">What if</TabsTrigger>
+              <TabsTrigger value="actions">Actions</TabsTrigger>
             </TabsList>
 
             <TabsContent value="forecast" className="flex flex-col gap-8">
@@ -166,6 +175,10 @@ const PlanPage: React.FC = () => {
                 forecastId={forecast!.id}
                 assumptionsDirty={dirty}
               />
+            </TabsContent>
+
+            <TabsContent value="actions" className="flex flex-col gap-5">
+              <OpenActionsPanel />
             </TabsContent>
           </Tabs>
         )}
@@ -584,8 +597,37 @@ const ScenarioPanel: React.FC<{
 
 const ScenarioRow: React.FC<{ scenario: Scenario }> = ({ scenario }) => {
   const r = scenario.result;
+  const create = useCreateDecision();
+  const [error, setError] = useState<string | null>(null);
+  const [chosen, setChosen] = useState(false);
+
+  const onChoose = async () => {
+    setError(null);
+    const annual = annualFromMonthlyDelta(r.free_cashflow_delta);
+    try {
+      await create.mutateAsync({
+        body: {
+          scenario_id: scenario.id,
+          title: `Act on ${scenarioKindLabel(scenario.kind)}`,
+          assumptions: {
+            scenario_kind: scenario.kind,
+            free_cashflow_delta: r.free_cashflow_delta,
+          },
+          action: {
+            title: actionTitleForScenario(scenario.kind),
+            expected_annual_effect: annual,
+            due_on: dueInDays(30),
+          },
+        },
+      });
+      setChosen(true);
+    } catch (err) {
+      setError(decisionActionErrorMessage(err));
+    }
+  };
+
   return (
-    <li className="space-y-1 py-4">
+    <li className="space-y-2 py-4">
       <p className="text-sm font-medium">{scenarioKindLabel(scenario.kind)}</p>
       <p className="text-xs text-muted-foreground">
         Min {formatAmount(r.min_balance)} · Ending {formatAmount(r.ending_balance)}
@@ -598,9 +640,124 @@ const ScenarioRow: React.FC<{ scenario: Scenario }> = ({ scenario }) => {
             : " · Goal not feasible"
           : null}
       </p>
+      {error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={create.isPending || chosen}
+          onClick={onChoose}
+        >
+          {chosen
+            ? "Action chosen"
+            : create.isPending
+              ? "Saving…"
+              : "Choose this action"}
+        </Button>
+      </div>
     </li>
   );
 };
+
+const OpenActionsPanel: React.FC = () => {
+  const query = useOpenActions();
+  const update = useUpdateActionStatus();
+  const [error, setError] = useState<string | null>(null);
+  const actions = query.data?.data ?? [];
+
+  const onStatus = async (action: Action, status: "done" | "skipped") => {
+    setError(null);
+    try {
+      await update.mutateAsync({
+        path: { id: action.id },
+        body: { status },
+      });
+    } catch (err) {
+      setError(decisionActionErrorMessage(err));
+    }
+  };
+
+  return (
+    <section className="flex flex-col gap-4">
+      <p className="text-sm text-muted-foreground">
+        Open actions from reviews and what-ifs. Mark done when you followed
+        through.
+      </p>
+      {error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {query.isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : actions.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No open actions yet.</p>
+      ) : (
+        <ul className="divide-y border-y">
+          {actions.map((action) => (
+            <li
+              key={action.id}
+              className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0 space-y-1">
+                <p className="text-sm font-medium">{action.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  Due {formatDate(action.due_on)} · Expected{" "}
+                  {formatAmount(action.expected_annual_effect)} / year
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={update.isPending}
+                  onClick={() => onStatus(action, "done")}
+                >
+                  Done
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={update.isPending}
+                  onClick={() => onStatus(action, "skipped")}
+                >
+                  Skip
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+};
+
+function actionTitleForScenario(kind: string): string {
+  switch (kind) {
+    case "new_monthly_obligation":
+      return "Decide on the additional monthly cost";
+    case "income_gap":
+      return "Plan for the income change";
+    case "one_off_plus_goal":
+      return "Fund the one-off cost and savings goal";
+    default:
+      return "Follow through on this what-if";
+  }
+}
+
+function annualFromMonthlyDelta(delta: string): string {
+  const monthly = Number.parseFloat(delta);
+  if (Number.isNaN(monthly)) {
+    return "0.00";
+  }
+  return (monthly * 12).toFixed(2);
+}
 
 const Stat: React.FC<{
   label: string;

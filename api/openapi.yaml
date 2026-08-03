@@ -856,6 +856,113 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/decisions:
+    get:
+      operationId: getDecisions
+      summary: List decisions (newest first)
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: Decision history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionListResponse"
+    post:
+      operationId: postDecisions
+      summary: Create a decision with one measurable action
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecisionCreateRequest"
+      responses:
+        "200":
+          description: Decision created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Decision"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Review or scenario not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/actions:
+    get:
+      operationId: getActions
+      summary: List actions (optionally by status)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [planned, done, skipped, irrelevant]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: Actions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionListResponse"
+  /api/actions/{id}/status:
+    post:
+      operationId: postActionStatus
+      summary: Update an action status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionStatusRequest"
+      responses:
+        "200":
+          description: Action updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+        "400":
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Action not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     Error:
@@ -1904,3 +2011,133 @@ components:
           type: object
           additionalProperties: true
           description: Kind-specific params (amounts as strings, dates as YYYY-MM-DD)
+    Decision:
+      type: object
+      required: [id, title, assumptions, decided_at, created_at, action]
+      properties:
+        id:
+          type: string
+          format: uuid
+        review_id:
+          type: string
+          format: uuid
+          nullable: true
+        scenario_id:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+        assumptions:
+          type: object
+          additionalProperties: true
+        target_value:
+          type: string
+          nullable: true
+          description: Optional numeric target (EUR string)
+        decided_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        action:
+          $ref: "#/components/schemas/Action"
+    DecisionListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Decision"
+    DecisionCreateRequest:
+      type: object
+      required: [title, action]
+      properties:
+        review_id:
+          type: string
+          format: uuid
+        scenario_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        assumptions:
+          type: object
+          additionalProperties: true
+        target_value:
+          type: string
+          description: Optional numeric target (EUR string)
+        action:
+          $ref: "#/components/schemas/ActionCreateRequest"
+    Action:
+      type: object
+      required:
+        - id
+        - decision_id
+        - title
+        - expected_annual_effect
+        - due_on
+        - status
+        - outcome_note
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        decision_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        expected_annual_effect:
+          type: string
+          description: Expected annual EUR effect (string decimal)
+        due_on:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [planned, done, skipped, irrelevant]
+        outcome_note:
+          type: string
+        verified_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ActionListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Action"
+    ActionCreateRequest:
+      type: object
+      required: [title, expected_annual_effect, due_on]
+      properties:
+        title:
+          type: string
+        expected_annual_effect:
+          type: string
+        due_on:
+          type: string
+          format: date
+    ActionStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [planned, done, skipped, irrelevant]
+        outcome_note:
+          type: string

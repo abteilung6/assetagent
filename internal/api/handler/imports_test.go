@@ -198,7 +198,7 @@ func TestGetImports_ok(t *testing.T) {
 
 func newImportsTestRouter(importer handler.ImportService) chi.Router {
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(nil, nil, nil, importer, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(nil, nil, nil, importer, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})
