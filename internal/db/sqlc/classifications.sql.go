@@ -49,27 +49,36 @@ const createClassificationRule = `-- name: CreateClassificationRule :one
 INSERT INTO classification_rules (
     priority,
     merchant_id,
+    pattern,
     category_id,
-    created_from_transaction_id
+    created_from_transaction_id,
+    confidence,
+    is_system
 ) VALUES (
-    $1, $2, $3, $4
+    $1, $2, $3, $4, $5, $6, $7
 )
-RETURNING id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at
+RETURNING id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system
 `
 
 type CreateClassificationRuleParams struct {
 	Priority                 int32       `json:"priority"`
 	MerchantID               pgtype.UUID `json:"merchant_id"`
+	Pattern                  pgtype.Text `json:"pattern"`
 	CategoryID               uuid.UUID   `json:"category_id"`
 	CreatedFromTransactionID pgtype.UUID `json:"created_from_transaction_id"`
+	Confidence               string      `json:"confidence"`
+	IsSystem                 bool        `json:"is_system"`
 }
 
 func (q *Queries) CreateClassificationRule(ctx context.Context, arg CreateClassificationRuleParams) (ClassificationRule, error) {
 	row := q.db.QueryRow(ctx, createClassificationRule,
 		arg.Priority,
 		arg.MerchantID,
+		arg.Pattern,
 		arg.CategoryID,
 		arg.CreatedFromTransactionID,
+		arg.Confidence,
+		arg.IsSystem,
 	)
 	var i ClassificationRule
 	err := row.Scan(
@@ -80,6 +89,8 @@ func (q *Queries) CreateClassificationRule(ctx context.Context, arg CreateClassi
 		&i.CategoryID,
 		&i.CreatedFromTransactionID,
 		&i.CreatedAt,
+		&i.Confidence,
+		&i.IsSystem,
 	)
 	return i, err
 }
@@ -138,7 +149,7 @@ func (q *Queries) ForceUpsertTransactionClassification(ctx context.Context, arg 
 }
 
 const getClassificationRuleByMerchant = `-- name: GetClassificationRuleByMerchant :one
-SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at
+SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system
 FROM classification_rules
 WHERE merchant_id = $1
 `
@@ -154,6 +165,32 @@ func (q *Queries) GetClassificationRuleByMerchant(ctx context.Context, merchantI
 		&i.CategoryID,
 		&i.CreatedFromTransactionID,
 		&i.CreatedAt,
+		&i.Confidence,
+		&i.IsSystem,
+	)
+	return i, err
+}
+
+const getClassificationRuleByPattern = `-- name: GetClassificationRuleByPattern :one
+SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system
+FROM classification_rules
+WHERE merchant_id IS NULL
+  AND lower(pattern) = lower($1)
+`
+
+func (q *Queries) GetClassificationRuleByPattern(ctx context.Context, pattern string) (ClassificationRule, error) {
+	row := q.db.QueryRow(ctx, getClassificationRuleByPattern, pattern)
+	var i ClassificationRule
+	err := row.Scan(
+		&i.ID,
+		&i.Priority,
+		&i.MerchantID,
+		&i.Pattern,
+		&i.CategoryID,
+		&i.CreatedFromTransactionID,
+		&i.CreatedAt,
+		&i.Confidence,
+		&i.IsSystem,
 	)
 	return i, err
 }
@@ -234,7 +271,6 @@ WHERE tc.source <> 'user_rule'
   AND (
     tc.source = 'unresolved'
     OR tc.confidence = 'low'
-    OR ABS(t.amount) >= 100
   )
 ORDER BY ABS(t.amount) DESC, t.booking_date DESC, t.id ASC
 LIMIT 50
@@ -289,7 +325,7 @@ func (q *Queries) ListClassificationQueue(ctx context.Context) ([]ListClassifica
 }
 
 const listClassificationRules = `-- name: ListClassificationRules :many
-SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at
+SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system
 FROM classification_rules
 ORDER BY priority ASC, created_at ASC
 `
@@ -311,6 +347,8 @@ func (q *Queries) ListClassificationRules(ctx context.Context) ([]Classification
 			&i.CategoryID,
 			&i.CreatedFromTransactionID,
 			&i.CreatedAt,
+			&i.Confidence,
+			&i.IsSystem,
 		); err != nil {
 			return nil, err
 		}
@@ -400,7 +438,7 @@ SET
     created_from_transaction_id = $3,
     priority = $4
 WHERE id = $1
-RETURNING id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at
+RETURNING id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system
 `
 
 type UpdateClassificationRuleCategoryParams struct {
@@ -426,6 +464,8 @@ func (q *Queries) UpdateClassificationRuleCategory(ctx context.Context, arg Upda
 		&i.CategoryID,
 		&i.CreatedFromTransactionID,
 		&i.CreatedAt,
+		&i.Confidence,
+		&i.IsSystem,
 	)
 	return i, err
 }
@@ -450,6 +490,62 @@ func (q *Queries) UpdateMerchantDefaultCategory(ctx context.Context, arg UpdateM
 		&i.DisplayName,
 		&i.DefaultCategoryID,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const upsertSystemPatternRule = `-- name: UpsertSystemPatternRule :one
+INSERT INTO classification_rules (
+    priority,
+    merchant_id,
+    pattern,
+    category_id,
+    created_from_transaction_id,
+    confidence,
+    is_system
+) VALUES (
+    $1,
+    NULL,
+    $2,
+    $3,
+    NULL,
+    $4,
+    true
+)
+ON CONFLICT ((lower(pattern))) WHERE merchant_id IS NULL AND pattern IS NOT NULL
+DO UPDATE SET
+    priority = EXCLUDED.priority,
+    category_id = EXCLUDED.category_id,
+    confidence = EXCLUDED.confidence,
+    is_system = true
+RETURNING id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system
+`
+
+type UpsertSystemPatternRuleParams struct {
+	Priority   int32       `json:"priority"`
+	Pattern    pgtype.Text `json:"pattern"`
+	CategoryID uuid.UUID   `json:"category_id"`
+	Confidence string      `json:"confidence"`
+}
+
+func (q *Queries) UpsertSystemPatternRule(ctx context.Context, arg UpsertSystemPatternRuleParams) (ClassificationRule, error) {
+	row := q.db.QueryRow(ctx, upsertSystemPatternRule,
+		arg.Priority,
+		arg.Pattern,
+		arg.CategoryID,
+		arg.Confidence,
+	)
+	var i ClassificationRule
+	err := row.Scan(
+		&i.ID,
+		&i.Priority,
+		&i.MerchantID,
+		&i.Pattern,
+		&i.CategoryID,
+		&i.CreatedFromTransactionID,
+		&i.CreatedAt,
+		&i.Confidence,
+		&i.IsSystem,
 	)
 	return i, err
 }

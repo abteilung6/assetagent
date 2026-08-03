@@ -22,6 +22,7 @@ func newClassifyCmd() *cobra.Command {
 	cmd.AddCommand(newClassifyRecurringCmd())
 	cmd.AddCommand(newClassifyRunCmd())
 	cmd.AddCommand(newClassifyCorrectCmd())
+	cmd.AddCommand(newClassifyRulesCmd())
 	return cmd
 }
 
@@ -434,5 +435,44 @@ func newClassifyCorrectCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&category, "category", "", "Category slug (e.g. groceries, leisure)")
 	cmd.Flags().BoolVar(&applyToMerchant, "apply-to-merchant", false, "Remember this category for the merchant on future classify runs")
+	return cmd
+}
+
+func newClassifyRulesCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "rules",
+		Short: "Classification pattern rules (developer)",
+	}
+	cmd.AddCommand(newClassifyRulesImportCmd())
+	return cmd
+}
+
+func newClassifyRulesImportCmd() *cobra.Command {
+	var file string
+	cmd := &cobra.Command{
+		Use:   "import",
+		Short: "Import system keyword→category patterns from CSV",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if file == "" {
+				return fmt.Errorf("--file is required")
+			}
+			pool, cleanup, err := openImportDB()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			result, err := service.NewClassify(pool).ImportPatternRulesCSV(context.Background(), file)
+			if err != nil {
+				return err
+			}
+			fmt.Println("Pattern rules imported")
+			fmt.Printf("  Upserted: %d\n", result.Upserted)
+			fmt.Printf("  Skipped:  %d\n", result.Skipped)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&file, "file", "testdata/classification_patterns.csv", "CSV with pattern,category_slug,priority,confidence")
 	return cmd
 }

@@ -122,7 +122,12 @@ func runGoldenHousehold(t *testing.T, dir string) {
 		}
 	}
 
-	if _, err := service.NewClassify(pool).Run(ctx); err != nil {
+	classifySvc := service.NewClassify(pool)
+	patternsPath := filepath.Join("..", "..", "testdata", "classification_patterns.csv")
+	if _, err := classifySvc.ImportPatternRulesCSV(ctx, patternsPath); err != nil {
+		t.Fatalf("import classification patterns: %v", err)
+	}
+	if _, err := classifySvc.Run(ctx); err != nil {
 		t.Fatalf("classify run: %v", err)
 	}
 	if _, err := service.NewRecurring(pool).Scan(ctx); err != nil {

@@ -57,6 +57,9 @@ func TestIntegration_ClassifyRun(t *testing.T) {
 	}
 
 	svc := service.NewClassify(pool)
+	if _, err := svc.ImportPatternRulesCSV(ctx, "../../testdata/classification_patterns.csv"); err != nil {
+		t.Fatalf("import patterns: %v", err)
+	}
 	first, err := svc.Run(ctx)
 	if err != nil {
 		t.Fatalf("run: %v", err)

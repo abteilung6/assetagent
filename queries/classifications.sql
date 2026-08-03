@@ -87,15 +87,50 @@ SELECT *
 FROM classification_rules
 WHERE merchant_id = $1;
 
+-- name: GetClassificationRuleByPattern :one
+SELECT *
+FROM classification_rules
+WHERE merchant_id IS NULL
+  AND lower(pattern) = lower(sqlc.arg(pattern));
+
 -- name: CreateClassificationRule :one
 INSERT INTO classification_rules (
     priority,
     merchant_id,
+    pattern,
     category_id,
-    created_from_transaction_id
+    created_from_transaction_id,
+    confidence,
+    is_system
 ) VALUES (
-    $1, $2, $3, $4
+    $1, $2, $3, $4, $5, $6, $7
 )
+RETURNING *;
+
+-- name: UpsertSystemPatternRule :one
+INSERT INTO classification_rules (
+    priority,
+    merchant_id,
+    pattern,
+    category_id,
+    created_from_transaction_id,
+    confidence,
+    is_system
+) VALUES (
+    sqlc.arg(priority),
+    NULL,
+    sqlc.arg(pattern),
+    sqlc.arg(category_id),
+    NULL,
+    sqlc.arg(confidence),
+    true
+)
+ON CONFLICT ((lower(pattern))) WHERE merchant_id IS NULL AND pattern IS NOT NULL
+DO UPDATE SET
+    priority = EXCLUDED.priority,
+    category_id = EXCLUDED.category_id,
+    confidence = EXCLUDED.confidence,
+    is_system = true
 RETURNING *;
 
 -- name: UpdateClassificationRuleCategory :one
@@ -136,8 +171,6 @@ WHERE tc.source <> 'user_rule'
   AND (
     tc.source = 'unresolved'
     OR tc.confidence = 'low'
-    OR ABS(t.amount) >= 100
   )
 ORDER BY ABS(t.amount) DESC, t.booking_date DESC, t.id ASC
 LIMIT 50;
-

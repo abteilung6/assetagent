@@ -2,8 +2,13 @@ package service
 
 import (
 	"context"
+	"encoding/csv"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/abteilung6/assetagent/internal/classify"
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
@@ -20,6 +25,37 @@ type Classify struct {
 
 func NewClassify(pool *pgxpool.Pool) *Classify {
 	return &Classify{pool: pool}
+}
+
+type PatternRuleImportResult struct {
+	Upserted int
+	Skipped  int
+}
+
+type ApplySuggestionsResult struct {
+	Applied int
+	Skipped int
+	Samples []ApplySuggestionSample
+}
+
+type ApplySuggestionSample struct {
+	TransactionID uuid.UUID
+	CategorySlug  string
+	Pattern       string
+	Confidence    string
+}
+
+type CategorySuggestion struct {
+	TransactionID   uuid.UUID
+	BookingDate     string
+	Amount          string
+	Counterparty    string
+	Purpose         string
+	CurrentSlug     string
+	SuggestedSlug   string
+	MatchedPattern  string
+	Confidence      string
+	AutoApplicable  bool
 }
 
 func (s *Classify) Run(ctx context.Context) (domain.ClassifyRunResult, error) {
@@ -45,10 +81,25 @@ func (s *Classify) Run(ctx context.Context) (domain.ClassifyRunResult, error) {
 		return domain.ClassifyRunResult{}, fmt.Errorf("list rules: %w", err)
 	}
 	ruleByMerchant := make(map[uuid.UUID]sqldb.ClassificationRule, len(rules))
+	patternRules := make([]classify.PatternRule, 0)
 	for _, rule := range rules {
 		if rule.MerchantID.Valid {
 			ruleByMerchant[uuid.UUID(rule.MerchantID.Bytes)] = rule
+			continue
 		}
+		if !rule.Pattern.Valid || rule.Pattern.String == "" {
+			continue
+		}
+		slug := slugByID[rule.CategoryID]
+		if slug == "" {
+			continue
+		}
+		patternRules = append(patternRules, classify.PatternRule{
+			Pattern:    rule.Pattern.String,
+			Slug:       slug,
+			Priority:   int(rule.Priority),
+			Confidence: rule.Confidence,
+		})
 	}
 
 	transferRows, err := q.ListConfirmedTransferTransactionIDs(ctx)
@@ -73,11 +124,11 @@ func (s *Classify) Run(ctx context.Context) (domain.ClassifyRunResult, error) {
 
 	for _, tx := range txs {
 		_, isTransfer := transfers[tx.ID]
-		pattern := ""
+		merchantPattern := ""
 		var merchantID pgtype.UUID
 
 		if label, ok := classify.NormalizeMerchantLabel(tx.Counterparty, tx.Purpose); ok {
-			pattern = label.Pattern
+			merchantPattern = label.Pattern
 			alias, err := q.GetMerchantAlias(ctx, sqldb.GetMerchantAliasParams{
 				MatchType: domain.MerchantMatchNormalized,
 				Pattern:   label.Pattern,
@@ -106,7 +157,20 @@ func (s *Classify) Run(ctx context.Context) (domain.ClassifyRunResult, error) {
 		}
 
 		if source == "" {
-			slug, source, confidence = classify.SuggestCategory(tx.Amount, pattern, isTransfer)
+			if match := classify.MatchPattern(tx.Counterparty, tx.Purpose, patternRules); match != nil {
+				var ok bool
+				categoryID, ok = bySlug[match.Slug]
+				if !ok {
+					return domain.ClassifyRunResult{}, fmt.Errorf("missing category slug %q", match.Slug)
+				}
+				slug = match.Slug
+				source = domain.ClassificationSourceExactRule
+				confidence = match.Confidence
+			}
+		}
+
+		if source == "" {
+			slug, source, confidence = classify.SuggestCategory(tx.Amount, merchantPattern, isTransfer)
 			var ok bool
 			categoryID, ok = bySlug[slug]
 			if !ok {
@@ -203,10 +267,10 @@ func (s *Classify) Correct(
 		switch {
 		case err == nil:
 			if _, err := q.UpdateClassificationRuleCategory(ctx, sqldb.UpdateClassificationRuleCategoryParams{
-				ID:                        existing.ID,
-				CategoryID:                category.ID,
-				CreatedFromTransactionID:  pgtype.UUID{Bytes: txID, Valid: true},
-				Priority:                  10,
+				ID:                       existing.ID,
+				CategoryID:               category.ID,
+				CreatedFromTransactionID: pgtype.UUID{Bytes: txID, Valid: true},
+				Priority:                 10,
 			}); err != nil {
 				return domain.ClassifyCorrectResult{}, err
 			}
@@ -215,8 +279,11 @@ func (s *Classify) Correct(
 			if _, err := q.CreateClassificationRule(ctx, sqldb.CreateClassificationRuleParams{
 				Priority:                 10,
 				MerchantID:               merchantID,
+				Pattern:                  pgtype.Text{},
 				CategoryID:               category.ID,
 				CreatedFromTransactionID: pgtype.UUID{Bytes: txID, Valid: true},
+				Confidence:               domain.ClassificationConfidenceHigh,
+				IsSystem:                 false,
 			}); err != nil {
 				return domain.ClassifyCorrectResult{}, err
 			}
@@ -269,4 +336,187 @@ func (s *Classify) ListQueue(ctx context.Context) ([]domain.ClassificationQueueI
 		out[i] = item
 	}
 	return out, nil
+}
+
+func (s *Classify) loadPatternRules(ctx context.Context) ([]classify.PatternRule, error) {
+	q := sqldb.New(s.pool)
+	categories, err := q.ListCategories(ctx)
+	if err != nil {
+		return nil, err
+	}
+	slugByID := make(map[uuid.UUID]string, len(categories))
+	for _, c := range categories {
+		slugByID[c.ID] = c.Slug
+	}
+	rules, err := q.ListClassificationRules(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]classify.PatternRule, 0)
+	for _, rule := range rules {
+		if rule.MerchantID.Valid || !rule.Pattern.Valid || rule.Pattern.String == "" {
+			continue
+		}
+		slug := slugByID[rule.CategoryID]
+		if slug == "" {
+			continue
+		}
+		out = append(out, classify.PatternRule{
+			Pattern:    rule.Pattern.String,
+			Slug:       slug,
+			Priority:   int(rule.Priority),
+			Confidence: rule.Confidence,
+		})
+	}
+	return out, nil
+}
+
+// SuggestCategories returns queue items with pattern-based suggestions.
+func (s *Classify) SuggestCategories(ctx context.Context) ([]CategorySuggestion, error) {
+	queue, err := s.ListQueue(ctx)
+	if err != nil {
+		return nil, err
+	}
+	patterns, err := s.loadPatternRules(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]CategorySuggestion, 0, len(queue))
+	for _, item := range queue {
+		match := classify.MatchPattern(item.Counterparty, item.Purpose, patterns)
+		sug := CategorySuggestion{
+			TransactionID: item.TransactionID,
+			BookingDate:   item.BookingDate.Format("2006-01-02"),
+			Amount:        item.Amount.StringFixed(2),
+			Counterparty:  item.Counterparty,
+			Purpose:       item.Purpose,
+			CurrentSlug:   item.CategorySlug,
+		}
+		if match != nil {
+			sug.SuggestedSlug = match.Slug
+			sug.MatchedPattern = match.Pattern
+			sug.Confidence = match.Confidence
+			sug.AutoApplicable = classify.ShouldAutoApply(match)
+		}
+		out = append(out, sug)
+	}
+	return out, nil
+}
+
+// ApplySuggestions applies high/medium pattern matches on the current queue.
+func (s *Classify) ApplySuggestions(ctx context.Context) (ApplySuggestionsResult, error) {
+	suggestions, err := s.SuggestCategories(ctx)
+	if err != nil {
+		return ApplySuggestionsResult{}, err
+	}
+
+	result := ApplySuggestionsResult{
+		Samples: make([]ApplySuggestionSample, 0),
+	}
+	for _, sug := range suggestions {
+		if !sug.AutoApplicable || sug.SuggestedSlug == "" {
+			result.Skipped++
+			continue
+		}
+		if sug.SuggestedSlug == sug.CurrentSlug && sug.Confidence == domain.ClassificationConfidenceHigh {
+			// Already classified by pattern; still promote to user_rule + merchant memory.
+		}
+		_, err := s.Correct(ctx, sug.TransactionID, domain.ClassifyCorrectOptions{
+			CategorySlug:    sug.SuggestedSlug,
+			ApplyToMerchant: true,
+		})
+		if err != nil {
+			return ApplySuggestionsResult{}, fmt.Errorf("apply %s: %w", sug.TransactionID, err)
+		}
+		result.Applied++
+		if len(result.Samples) < 10 {
+			result.Samples = append(result.Samples, ApplySuggestionSample{
+				TransactionID: sug.TransactionID,
+				CategorySlug:  sug.SuggestedSlug,
+				Pattern:       sug.MatchedPattern,
+				Confidence:    sug.Confidence,
+			})
+		}
+	}
+	return result, nil
+}
+
+// ImportPatternRulesCSV upserts system pattern rules from a CSV file.
+func (s *Classify) ImportPatternRulesCSV(ctx context.Context, path string) (PatternRuleImportResult, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return PatternRuleImportResult{}, err
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	reader.TrimLeadingSpace = true
+	header, err := reader.Read()
+	if err != nil {
+		return PatternRuleImportResult{}, fmt.Errorf("read csv header: %w", err)
+	}
+	col := map[string]int{}
+	for i, name := range header {
+		col[strings.ToLower(strings.TrimSpace(name))] = i
+	}
+	for _, want := range []string{"pattern", "category_slug", "priority", "confidence"} {
+		if _, ok := col[want]; !ok {
+			return PatternRuleImportResult{}, fmt.Errorf("csv missing column %q", want)
+		}
+	}
+
+	q := sqldb.New(s.pool)
+	categories, err := q.ListCategories(ctx)
+	if err != nil {
+		return PatternRuleImportResult{}, err
+	}
+	bySlug := make(map[string]uuid.UUID, len(categories))
+	for _, c := range categories {
+		bySlug[c.Slug] = c.ID
+	}
+
+	var result PatternRuleImportResult
+	for {
+		row, err := reader.Read()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return PatternRuleImportResult{}, fmt.Errorf("read csv row: %w", err)
+		}
+		pattern := strings.TrimSpace(row[col["pattern"]])
+		slug := strings.TrimSpace(row[col["category_slug"]])
+		priorityRaw := strings.TrimSpace(row[col["priority"]])
+		confidence := strings.TrimSpace(row[col["confidence"]])
+		if pattern == "" || slug == "" {
+			result.Skipped++
+			continue
+		}
+		categoryID, ok := bySlug[slug]
+		if !ok {
+			return PatternRuleImportResult{}, fmt.Errorf("unknown category_slug %q", slug)
+		}
+		priority, err := strconv.Atoi(priorityRaw)
+		if err != nil {
+			return PatternRuleImportResult{}, fmt.Errorf("invalid priority %q: %w", priorityRaw, err)
+		}
+		switch confidence {
+		case domain.ClassificationConfidenceHigh,
+			domain.ClassificationConfidenceMedium,
+			domain.ClassificationConfidenceLow:
+		default:
+			return PatternRuleImportResult{}, fmt.Errorf("invalid confidence %q", confidence)
+		}
+
+		if _, err := q.UpsertSystemPatternRule(ctx, sqldb.UpsertSystemPatternRuleParams{
+			Priority:   int32(priority),
+			Pattern:    pgtype.Text{String: pattern, Valid: true},
+			CategoryID: categoryID,
+			Confidence: confidence,
+		}); err != nil {
+			return PatternRuleImportResult{}, fmt.Errorf("upsert pattern %q: %w", pattern, err)
+		}
+		result.Upserted++
+	}
+	return result, nil
 }

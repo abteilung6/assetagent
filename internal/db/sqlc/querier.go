@@ -35,6 +35,7 @@ type Querier interface {
 	GetCashflowV2(ctx context.Context, arg GetCashflowV2Params) (GetCashflowV2Row, error)
 	GetCategoryBySlug(ctx context.Context, slug string) (Category, error)
 	GetClassificationRuleByMerchant(ctx context.Context, merchantID pgtype.UUID) (ClassificationRule, error)
+	GetClassificationRuleByPattern(ctx context.Context, pattern string) (ClassificationRule, error)
 	GetCurrentFinancialBaseline(ctx context.Context) (FinancialBaseline, error)
 	GetDecision(ctx context.Context, id uuid.UUID) (Decision, error)
 	GetFinancialBaseline(ctx context.Context, id uuid.UUID) (FinancialBaseline, error)
@@ -98,6 +99,7 @@ type Querier interface {
 	UpdateClassificationRuleCategory(ctx context.Context, arg UpdateClassificationRuleCategoryParams) (ClassificationRule, error)
 	UpdateImportRunCounts(ctx context.Context, arg UpdateImportRunCountsParams) (ImportRun, error)
 	UpdateMerchantDefaultCategory(ctx context.Context, arg UpdateMerchantDefaultCategoryParams) (Merchant, error)
+	UpsertSystemPatternRule(ctx context.Context, arg UpsertSystemPatternRuleParams) (ClassificationRule, error)
 	UpsertTransactionClassification(ctx context.Context, arg UpsertTransactionClassificationParams) (TransactionClassification, error)
 }
 

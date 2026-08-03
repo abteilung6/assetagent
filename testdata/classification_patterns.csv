@@ -1,0 +1,27 @@
+pattern,category_slug,priority,confidence
+SALARY,income,50,high
+GEHALT,income,50,high
+LOHN,income,50,high
+HAUSGELD,housing,50,high
+WEG ,housing,50,high
+MIETE,housing,55,high
+IMMOBILIENFINANZ,housing,50,high
+RUNDFUNK,housing,55,high
+TELEKOM,housing,50,high
+TELEFONICA,mobility,50,high
+VODAFONE,mobility,50,high
+CONGSTAR,mobility,50,high
+VERSICHER,insurance,50,high
+RECHTSSCHUTZ,insurance,45,high
+HUK,insurance,55,high
+ALLIANZ,insurance,55,high
+REWE,groceries,40,high
+SPOK,leisure,60,medium
+FITNESS,leisure,65,medium
+MCFIT,leisure,60,medium
+AMAZON,leisure,60,medium
+AMZN,leisure,60,medium
+BOOKING.COM,leisure,55,medium
+NETFLIX,leisure,55,medium
+OBI ,housing,60,medium
+BAUMARKT,housing,65,medium

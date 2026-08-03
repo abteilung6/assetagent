@@ -62,6 +62,8 @@ type ClassificationRule struct {
 	CategoryID               uuid.UUID          `json:"category_id"`
 	CreatedFromTransactionID pgtype.UUID        `json:"created_from_transaction_id"`
 	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	Confidence               string             `json:"confidence"`
+	IsSystem                 bool               `json:"is_system"`
 }
 
 type Decision struct {
