@@ -246,3 +246,59 @@ func (q *Queries) ListConfirmedTransferIDsInPeriod(ctx context.Context, arg List
 	}
 	return items, nil
 }
+
+const listMonthlyCashflowV2 = `-- name: ListMonthlyCashflowV2 :many
+SELECT
+  date_trunc('month', t.booking_date)::date AS month_start,
+  COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0)::numeric AS income,
+  COALESCE(SUM(CASE WHEN t.amount < 0 THEN -t.amount ELSE 0 END), 0)::numeric AS expenses,
+  COALESCE(SUM(t.amount), 0)::numeric AS net
+FROM transactions t
+WHERE t.booking_date >= $1::date
+  AND t.booking_date <= $2::date
+  AND NOT EXISTS (
+    SELECT 1
+    FROM transfer_pairs p
+    WHERE p.status = 'confirmed'
+      AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
+  )
+GROUP BY 1
+ORDER BY 1 ASC
+`
+
+type ListMonthlyCashflowV2Params struct {
+	FromDate pgtype.Date `json:"from_date"`
+	ToDate   pgtype.Date `json:"to_date"`
+}
+
+type ListMonthlyCashflowV2Row struct {
+	MonthStart pgtype.Date     `json:"month_start"`
+	Income     decimal.Decimal `json:"income"`
+	Expenses   decimal.Decimal `json:"expenses"`
+	Net        decimal.Decimal `json:"net"`
+}
+
+func (q *Queries) ListMonthlyCashflowV2(ctx context.Context, arg ListMonthlyCashflowV2Params) ([]ListMonthlyCashflowV2Row, error) {
+	rows, err := q.db.Query(ctx, listMonthlyCashflowV2, arg.FromDate, arg.ToDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListMonthlyCashflowV2Row{}
+	for rows.Next() {
+		var i ListMonthlyCashflowV2Row
+		if err := rows.Scan(
+			&i.MonthStart,
+			&i.Income,
+			&i.Expenses,
+			&i.Net,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

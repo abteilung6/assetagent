@@ -214,5 +214,38 @@ func (s *stubBaselineService) Adjust(
 	return s.adjusted, nil
 }
 
+func (s *stubBaselineService) MonthlyCashflow(ctx context.Context, months int) ([]service.MonthlyCashflowPoint, error) {
+	return []service.MonthlyCashflowPoint{
+		{
+			MonthStart: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			Income:     decimal.RequireFromString("3000.00"),
+			Expenses:   decimal.RequireFromString("2000.00"),
+			Net:        decimal.RequireFromString("1000.00"),
+		},
+		{
+			MonthStart: time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC),
+			Income:     decimal.RequireFromString("3000.00"),
+			Expenses:   decimal.RequireFromString("8000.00"),
+			Net:        decimal.RequireFromString("-5000.00"),
+		},
+	}, nil
+}
+
+func TestGetBaselineMonthlyCashflow(t *testing.T) {
+	router := newBaselineTestRouter(&stubBaselineService{})
+	req := httptest.NewRequest(http.MethodGet, "/api/baselines/monthly-cashflow?months=6", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, want := range []string{"8000.00", "2026-02-01", "income"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("body missing %q: %s", want, body)
+		}
+	}
+}
+
 // Ensure JSON round-trip for sample payloads in tests.
 var _ = json.Marshal

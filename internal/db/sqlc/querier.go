@@ -76,6 +76,7 @@ type Querier interface {
 	ListMerchantSourceLabels(ctx context.Context) ([]ListMerchantSourceLabelsRow, error)
 	ListMerchants(ctx context.Context) ([]ListMerchantsRow, error)
 	ListMoneyReviews(ctx context.Context, rowLimit int32) ([]MoneyReview, error)
+	ListMonthlyCashflowV2(ctx context.Context, arg ListMonthlyCashflowV2Params) ([]ListMonthlyCashflowV2Row, error)
 	ListRecurringMemberTransactionIDs(ctx context.Context) ([]uuid.UUID, error)
 	ListRecurringSeries(ctx context.Context) ([]RecurringSeries, error)
 	ListScenariosForForecast(ctx context.Context, forecastID uuid.UUID) ([]Scenario, error)

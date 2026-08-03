@@ -511,3 +511,52 @@ func syncMetricValue(b *ComputedBaseline, key string, value decimal.Decimal) {
 		}
 	}
 }
+
+// MonthlyCashflowPoint is one calendar month for baseline charts.
+type MonthlyCashflowPoint struct {
+	MonthStart time.Time
+	Income     decimal.Decimal
+	Expenses   decimal.Decimal
+	Net        decimal.Decimal
+}
+
+// MonthlyCashflow returns transfer-aware totals for the last n calendar months
+// that contain bookings (ending at the latest booking month).
+func (s *BaselineService) MonthlyCashflow(ctx context.Context, months int) ([]MonthlyCashflowPoint, error) {
+	if months < 2 {
+		months = 6
+	}
+	if months > 12 {
+		months = 12
+	}
+	latest, err := sqldb.New(s.pool).GetLatestBookingDate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !latest.Valid {
+		return []MonthlyCashflowPoint{}, nil
+	}
+	end := dateOnlyUTC(latest.Time)
+	// Inclusive window: first day of (endMonth - (months-1)) through end of endMonth.
+	endMonth := time.Date(end.Year(), end.Month(), 1, 0, 0, 0, 0, time.UTC)
+	startMonth := endMonth.AddDate(0, -(months - 1), 0)
+	lastDay := endMonth.AddDate(0, 1, -1)
+	if end.Before(lastDay) {
+		lastDay = end
+	}
+
+	rows, err := s.reports.ListMonthlyCashflowV2(ctx, startMonth, lastDay)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]MonthlyCashflowPoint, len(rows))
+	for i, row := range rows {
+		out[i] = MonthlyCashflowPoint{
+			MonthStart: dateOnlyUTC(row.MonthStart),
+			Income:     row.Income,
+			Expenses:   row.Expenses,
+			Net:        row.Net,
+		}
+	}
+	return out, nil
+}

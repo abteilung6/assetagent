@@ -701,6 +701,19 @@ type BaselineMetricConfidence string
 // BaselineMetricKey defines model for BaselineMetric.Key.
 type BaselineMetricKey string
 
+// BaselineMonthlyCashflowPoint defines model for BaselineMonthlyCashflowPoint.
+type BaselineMonthlyCashflowPoint struct {
+	Expenses   string             `json:"expenses"`
+	Income     string             `json:"income"`
+	MonthStart openapi_types.Date `json:"month_start"`
+	Net        string             `json:"net"`
+}
+
+// BaselineMonthlyCashflowResponse defines model for BaselineMonthlyCashflowResponse.
+type BaselineMonthlyCashflowResponse struct {
+	Data []BaselineMonthlyCashflowPoint `json:"data"`
+}
+
 // BaselineRecomputeRequest defines model for BaselineRecomputeRequest.
 type BaselineRecomputeRequest struct {
 	// From Inclusive period start (optional; requires to)
@@ -1234,6 +1247,11 @@ type GetActionsParams struct {
 // GetActionsParamsStatus defines parameters for GetActions.
 type GetActionsParamsStatus string
 
+// GetBaselineMonthlyCashflowParams defines parameters for GetBaselineMonthlyCashflow.
+type GetBaselineMonthlyCashflowParams struct {
+	Months *int `form:"months,omitempty" json:"months,omitempty"`
+}
+
 // GetDecisionsParams defines parameters for GetDecisions.
 type GetDecisionsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
@@ -1356,6 +1374,9 @@ type ServerInterface interface {
 	// Get the current draft or confirmed FinancialBaseline
 	// (GET /api/baselines/current)
 	GetCurrentBaseline(w http.ResponseWriter, r *http.Request)
+	// Transfer-aware monthly income/expense totals for baseline charts
+	// (GET /api/baselines/monthly-cashflow)
+	GetBaselineMonthlyCashflow(w http.ResponseWriter, r *http.Request, params GetBaselineMonthlyCashflowParams)
 	// Recompute and persist a draft FinancialBaseline
 	// (POST /api/baselines/recompute)
 	PostBaselinesRecompute(w http.ResponseWriter, r *http.Request)
@@ -1476,6 +1497,12 @@ func (_ Unimplemented) PostActionStatus(w http.ResponseWriter, r *http.Request, 
 // Get the current draft or confirmed FinancialBaseline
 // (GET /api/baselines/current)
 func (_ Unimplemented) GetCurrentBaseline(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Transfer-aware monthly income/expense totals for baseline charts
+// (GET /api/baselines/monthly-cashflow)
+func (_ Unimplemented) GetBaselineMonthlyCashflow(w http.ResponseWriter, r *http.Request, params GetBaselineMonthlyCashflowParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1763,6 +1790,39 @@ func (siw *ServerInterfaceWrapper) GetCurrentBaseline(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCurrentBaseline(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBaselineMonthlyCashflow operation middleware
+func (siw *ServerInterfaceWrapper) GetBaselineMonthlyCashflow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetBaselineMonthlyCashflowParams
+
+	// ------------- Optional query parameter "months" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "months", r.URL.Query(), &params.Months, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "months"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "months", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBaselineMonthlyCashflow(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2729,6 +2789,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/baselines/current", wrapper.GetCurrentBaseline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/baselines/monthly-cashflow", wrapper.GetBaselineMonthlyCashflow)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/baselines/recompute", wrapper.PostBaselinesRecompute)

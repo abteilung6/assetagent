@@ -9,6 +9,7 @@ import (
 	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/shopspring/decimal"
 )
 
 type Reports struct {
@@ -158,4 +159,38 @@ func (r *Reports) GetTopCounterparties(
 	}
 
 	return spends, nil
+}
+
+// MonthlyCashflowV2 is one calendar month of transfer-aware cashflow.
+type MonthlyCashflowV2 struct {
+	MonthStart time.Time
+	Income     decimal.Decimal
+	Expenses   decimal.Decimal
+	Net        decimal.Decimal
+}
+
+func (r *Reports) ListMonthlyCashflowV2(
+	ctx context.Context,
+	from, to time.Time,
+) ([]MonthlyCashflowV2, error) {
+	rows, err := r.queries.ListMonthlyCashflowV2(ctx, sqldb.ListMonthlyCashflowV2Params{
+		FromDate: pgtype.Date{Time: from, Valid: true},
+		ToDate:   pgtype.Date{Time: to, Valid: true},
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]MonthlyCashflowV2, 0, len(rows))
+	for _, row := range rows {
+		if !row.MonthStart.Valid {
+			continue
+		}
+		out = append(out, MonthlyCashflowV2{
+			MonthStart: row.MonthStart.Time,
+			Income:     row.Income,
+			Expenses:   row.Expenses,
+			Net:        row.Net,
+		})
+	}
+	return out, nil
 }

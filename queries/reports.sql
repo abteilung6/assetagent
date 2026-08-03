@@ -73,3 +73,21 @@ WHERE booking_date >= sqlc.arg('from_date')::date
 GROUP BY counterparty
 ORDER BY total_spent DESC, counterparty ASC
 LIMIT sqlc.arg('row_limit');
+
+-- name: ListMonthlyCashflowV2 :many
+SELECT
+  date_trunc('month', t.booking_date)::date AS month_start,
+  COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0)::numeric AS income,
+  COALESCE(SUM(CASE WHEN t.amount < 0 THEN -t.amount ELSE 0 END), 0)::numeric AS expenses,
+  COALESCE(SUM(t.amount), 0)::numeric AS net
+FROM transactions t
+WHERE t.booking_date >= sqlc.arg('from_date')::date
+  AND t.booking_date <= sqlc.arg('to_date')::date
+  AND NOT EXISTS (
+    SELECT 1
+    FROM transfer_pairs p
+    WHERE p.status = 'confirmed'
+      AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
+  )
+GROUP BY 1
+ORDER BY 1 ASC;

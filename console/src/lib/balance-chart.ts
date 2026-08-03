@@ -187,3 +187,98 @@ export function buildBalanceChartLayout(
     moneyLabels,
   };
 }
+
+export type DualSeriesPoint = {
+  date: string;
+  primary: number;
+  secondary: number;
+};
+
+export type DualSeriesChartLayout = {
+  width: number;
+  height: number;
+  padX: number;
+  padTop: number;
+  padBottom: number;
+  innerH: number;
+  min: number;
+  max: number;
+  primaryPath: string;
+  secondaryPath: string;
+  zeroY: number;
+  labelIndexes: number[];
+  moneyLabels: BalanceChartAxisLabel[];
+  xs: number[];
+};
+
+/** Two series on one chart (e.g. income + expenses over months). */
+export function buildDualSeriesChartLayout(
+  points: DualSeriesPoint[],
+  options?: {
+    width?: number;
+    height?: number;
+    padX?: number;
+    padTop?: number;
+    padBottom?: number;
+  },
+): DualSeriesChartLayout | null {
+  if (!points.length) {
+    return null;
+  }
+  if (
+    points.some(
+      (p) => Number.isNaN(p.primary) || Number.isNaN(p.secondary),
+    )
+  ) {
+    return null;
+  }
+
+  const width = options?.width ?? DEFAULT_WIDTH;
+  const height = options?.height ?? DEFAULT_HEIGHT;
+  const padX = options?.padX ?? DEFAULT_PAD_X;
+  const padTop = options?.padTop ?? DEFAULT_PAD_TOP;
+  const padBottom = options?.padBottom ?? DEFAULT_PAD_BOTTOM;
+  const innerW = width - padX * 2;
+  const innerH = height - padTop - padBottom;
+
+  const values = points.flatMap((p) => [p.primary, p.secondary]);
+  const min = Math.min(...values, 0);
+  const max = Math.max(...values, 0);
+  const span = max - min || 1;
+
+  const xs = points.map((_, i) =>
+    padX +
+    (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW),
+  );
+  const primaryCoords = points.map((p, i) => ({
+    x: xs[i]!,
+    y: yForValue(p.primary, min, span, padTop, innerH),
+  }));
+  const secondaryCoords = points.map((p, i) => ({
+    x: xs[i]!,
+    y: yForValue(p.secondary, min, span, padTop, innerH),
+  }));
+  const toPath = (coords: BalanceChartCoord[]) =>
+    coords.map((c, i) => `${i === 0 ? "M" : "L"} ${c.x} ${c.y}`).join(" ");
+
+  return {
+    width,
+    height,
+    padX,
+    padTop,
+    padBottom,
+    innerH,
+    min,
+    max,
+    primaryPath: toPath(primaryCoords),
+    secondaryPath: toPath(secondaryCoords),
+    zeroY: yForValue(0, min, span, padTop, innerH),
+    labelIndexes: chartDateIndexes(points.length),
+    moneyLabels: chartMoneyTicks(min, max).map((value) => ({
+      value,
+      y: yForValue(value, min, span, padTop, innerH),
+      text: formatChartMoney(value),
+    })),
+    xs,
+  };
+}

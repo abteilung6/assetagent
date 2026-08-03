@@ -74,6 +74,30 @@ describe("Baseline page", () => {
     vi.spyOn(sdk, "getUncertainRecurring").mockResolvedValue(
       mockApiResponse({ data: [] }),
     );
+    vi.spyOn(sdk, "getBaselineMonthlyCashflow").mockResolvedValue(
+      mockApiResponse({
+        data: [
+          {
+            month_start: "2026-01-01",
+            income: "3500.00",
+            expenses: "2000.00",
+            net: "1500.00",
+          },
+          {
+            month_start: "2026-02-01",
+            income: "3500.00",
+            expenses: "2100.00",
+            net: "1400.00",
+          },
+          {
+            month_start: "2026-03-01",
+            income: "3500.00",
+            expenses: "2200.00",
+            net: "1300.00",
+          },
+        ],
+      }),
+    );
   });
 
   afterEach(() => {
@@ -123,7 +147,27 @@ describe("Baseline page", () => {
     expect(
       await screen.findByText(/Sustainable free cashflow/i),
     ).toBeInTheDocument();
+    expect(await screen.findByText(/Typical month/i)).toBeInTheDocument();
+    expect(screen.getByText(/Recent months/i)).toBeInTheDocument();
     expect(screen.getByText(/1\.800,00/)).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("tab", { name: /Income & expenses/i }),
+    );
+    expect(
+      await screen.findByText(/Income & expenses over time/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: /Monthly income and expenses over time/i,
+      }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /12 mo/i }));
+    await waitFor(() => {
+      expect(sdk.getBaselineMonthlyCashflow).toHaveBeenCalledWith(
+        expect.objectContaining({ query: { months: 12 } }),
+      );
+    });
 
     await userEvent.click(
       screen.getByRole("button", { name: /Confirm baseline/i }),

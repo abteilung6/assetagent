@@ -291,6 +291,17 @@ export type FinancialBaseline = {
     created_at: string;
 };
 
+export type BaselineMonthlyCashflowPoint = {
+    month_start: string;
+    income: string;
+    expenses: string;
+    net: string;
+};
+
+export type BaselineMonthlyCashflowResponse = {
+    data: Array<BaselineMonthlyCashflowPoint>;
+};
+
 export type BaselineRecomputeRequest = {
     /**
      * Inclusive period start (optional; requires to)
@@ -1051,6 +1062,24 @@ export type GetCurrentBaselineResponses = {
 };
 
 export type GetCurrentBaselineResponse = GetCurrentBaselineResponses[keyof GetCurrentBaselineResponses];
+
+export type GetBaselineMonthlyCashflowData = {
+    body?: never;
+    path?: never;
+    query?: {
+        months?: number;
+    };
+    url: '/api/baselines/monthly-cashflow';
+};
+
+export type GetBaselineMonthlyCashflowResponses = {
+    /**
+     * Monthly cashflow series
+     */
+    200: BaselineMonthlyCashflowResponse;
+};
+
+export type GetBaselineMonthlyCashflowResponse = GetBaselineMonthlyCashflowResponses[keyof GetBaselineMonthlyCashflowResponses];
 
 export type PostBaselinesRecomputeData = {
     body?: BaselineRecomputeRequest;

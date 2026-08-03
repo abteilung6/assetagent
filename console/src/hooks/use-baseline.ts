@@ -1,18 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  getBaselineMonthlyCashflowOptions,
   getCurrentBaselineOptions,
   getCurrentBaselineQueryKey,
+  getBaselineMonthlyCashflowQueryKey,
   postBaselineAdjustMutation,
   postBaselineConfirmMutation,
   postBaselinesRecomputeMutation,
 } from "@/api/@tanstack/react-query.gen";
-import type { FinancialBaseline } from "@/api/types.gen";
+import type {
+  BaselineMonthlyCashflowPoint,
+  FinancialBaseline,
+} from "@/api/types.gen";
 import { apiErrorMessage } from "@/lib/api-error";
 
 export function useCurrentBaseline() {
   return useQuery({
     ...getCurrentBaselineOptions(),
+    retry: false,
+  });
+}
+
+export function useBaselineMonthlyCashflow(months = 6) {
+  return useQuery({
+    ...getBaselineMonthlyCashflowOptions({ query: { months } }),
     retry: false,
   });
 }
@@ -25,6 +37,9 @@ export function useBaselineRecompute() {
       queryClient.setQueryData(getCurrentBaselineQueryKey(), data);
       await queryClient.invalidateQueries({
         queryKey: getCurrentBaselineQueryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: getBaselineMonthlyCashflowQueryKey(),
       });
     },
   });
@@ -83,4 +98,4 @@ export function baselineActionErrorMessage(error: unknown): string {
   );
 }
 
-export type { FinancialBaseline };
+export type { BaselineMonthlyCashflowPoint, FinancialBaseline };

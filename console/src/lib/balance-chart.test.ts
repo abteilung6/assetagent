@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBalanceChartLayout,
+  buildDualSeriesChartLayout,
   chartDateIndexes,
   chartLabelAnchor,
   chartMoneyTicks,
@@ -100,5 +101,23 @@ describe("buildBalanceChartLayout", () => {
     ]);
     expect(layout!.min).toBe(0);
     expect(layout!.max).toBe(80);
+  });
+});
+
+describe("buildDualSeriesChartLayout", () => {
+  it("returns null for empty input", () => {
+    expect(buildDualSeriesChartLayout([])).toBeNull();
+  });
+
+  it("builds two paths on a shared money scale", () => {
+    const layout = buildDualSeriesChartLayout([
+      { date: "2026-01-01", primary: 3000, secondary: 2000 },
+      { date: "2026-02-01", primary: 3100, secondary: 8000 },
+    ]);
+    expect(layout).not.toBeNull();
+    expect(layout!.primaryPath.startsWith("M ")).toBe(true);
+    expect(layout!.secondaryPath.startsWith("M ")).toBe(true);
+    expect(layout!.max).toBe(8000);
+    expect(layout!.xs).toHaveLength(2);
   });
 });

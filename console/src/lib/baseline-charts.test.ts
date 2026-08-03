@@ -1,0 +1,69 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  buildBaselineComposition,
+  detectUnusualMonth,
+  formatMonthLabel,
+} from "@/lib/baseline-charts";
+
+describe("buildBaselineComposition", () => {
+  it("stacks costs and free cashflow against income", () => {
+    const got = buildBaselineComposition({
+      income: 3500,
+      fixed: 1200,
+      irregular: 50,
+      variable: 450,
+      freeCashflow: 1800,
+    });
+    expect(got.overspent).toBe(false);
+    expect(got.segments.map((s) => s.key)).toEqual([
+      "fixed",
+      "irregular",
+      "variable",
+      "free",
+    ]);
+    const shares = got.segments.reduce((sum, s) => sum + s.share, 0);
+    expect(shares).toBeCloseTo(1, 5);
+  });
+
+  it("shows a shortfall segment when free cashflow is negative", () => {
+    const got = buildBaselineComposition({
+      income: 2000,
+      fixed: 1500,
+      irregular: 0,
+      variable: 800,
+      freeCashflow: -300,
+    });
+    expect(got.overspent).toBe(true);
+    expect(got.segments.some((s) => s.key === "deficit")).toBe(true);
+    expect(got.segments.some((s) => s.key === "free")).toBe(false);
+  });
+});
+
+describe("detectUnusualMonth", () => {
+  it("returns not unusual with sparse history", () => {
+    expect(
+      detectUnusualMonth([{ monthStart: "2026-01-01", income: 1, expenses: 1, net: 0 }]),
+    ).toMatchObject({ unusual: false });
+  });
+
+  it("flags a month at least 2× the median expenses", () => {
+    const months = [
+      { monthStart: "2025-10-01", income: 3000, expenses: 2000, net: 1000 },
+      { monthStart: "2025-11-01", income: 3000, expenses: 2100, net: 900 },
+      { monthStart: "2025-12-01", income: 3000, expenses: 1900, net: 1100 },
+      { monthStart: "2026-01-01", income: 3000, expenses: 8000, net: -5000 },
+    ];
+    const got = detectUnusualMonth(months, "2026-01-01");
+    expect(got.unusual).toBe(true);
+    expect(got.monthStart).toBe("2026-01-01");
+    expect(got.ratio).toBeGreaterThanOrEqual(2);
+    expect(got.message).toMatch(/baseline month/i);
+  });
+});
+
+describe("formatMonthLabel", () => {
+  it("formats YYYY-MM as MM.YYYY", () => {
+    expect(formatMonthLabel("2026-03-01")).toBe("03.2026");
+  });
+});

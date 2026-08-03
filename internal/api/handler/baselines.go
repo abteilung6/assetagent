@@ -19,6 +19,7 @@ type BaselineService interface {
 	Current(ctx context.Context) (service.ComputedBaseline, error)
 	Confirm(ctx context.Context, id uuid.UUID) (service.ComputedBaseline, error)
 	Adjust(ctx context.Context, id uuid.UUID, metricKey string, newValue decimal.Decimal, reason string) (service.ComputedBaseline, error)
+	MonthlyCashflow(ctx context.Context, months int) ([]service.MonthlyCashflowPoint, error)
 }
 
 func (h *Handler) GetCurrentBaseline(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +37,32 @@ func (h *Handler) GetCurrentBaseline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, toAPIBaseline(baseline))
+}
+
+func (h *Handler) GetBaselineMonthlyCashflow(w http.ResponseWriter, r *http.Request, params gen.GetBaselineMonthlyCashflowParams) {
+	if h.baseline == nil {
+		writeInternalError(w, "baseline service is not configured")
+		return
+	}
+	months := 6
+	if params.Months != nil {
+		months = *params.Months
+	}
+	items, err := h.baseline.MonthlyCashflow(r.Context(), months)
+	if err != nil {
+		writeInternalError(w, "failed to load monthly cashflow")
+		return
+	}
+	data := make([]gen.BaselineMonthlyCashflowPoint, len(items))
+	for i, item := range items {
+		data[i] = gen.BaselineMonthlyCashflowPoint{
+			MonthStart: openapi_types.Date{Time: item.MonthStart},
+			Income:     item.Income.StringFixed(2),
+			Expenses:   item.Expenses.StringFixed(2),
+			Net:        item.Net.StringFixed(2),
+		}
+	}
+	writeJSON(w, http.StatusOK, gen.BaselineMonthlyCashflowResponse{Data: data})
 }
 
 func (h *Handler) PostBaselinesRecompute(w http.ResponseWriter, r *http.Request) {

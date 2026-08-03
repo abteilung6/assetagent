@@ -537,6 +537,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/baselines/monthly-cashflow:
+    get:
+      operationId: getBaselineMonthlyCashflow
+      summary: Transfer-aware monthly income/expense totals for baseline charts
+      parameters:
+        - name: months
+          in: query
+          schema:
+            type: integer
+            minimum: 2
+            maximum: 12
+            default: 6
+      responses:
+        "200":
+          description: Monthly cashflow series
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BaselineMonthlyCashflowResponse"
   /api/baselines/recompute:
     post:
       operationId: postBaselinesRecompute
@@ -1704,6 +1723,27 @@ components:
         created_at:
           type: string
           format: date-time
+    BaselineMonthlyCashflowPoint:
+      type: object
+      required: [month_start, income, expenses, net]
+      properties:
+        month_start:
+          type: string
+          format: date
+        income:
+          type: string
+        expenses:
+          type: string
+        net:
+          type: string
+    BaselineMonthlyCashflowResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BaselineMonthlyCashflowPoint"
     BaselineRecomputeRequest:
       type: object
       properties:

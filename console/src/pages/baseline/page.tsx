@@ -4,14 +4,34 @@ import { Link } from "@tanstack/react-router";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   baselineActionErrorMessage,
   isBaselineMissing,
   useBaselineAdjust,
   useBaselineConfirm,
+  useBaselineMonthlyCashflow,
   useBaselineRecompute,
   useCurrentBaseline,
   type FinancialBaseline,
 } from "@/hooks/use-baseline";
+import {
+  buildDualSeriesChartLayout,
+  chartLabelAnchor,
+  formatChartDate,
+  formatChartMoney,
+} from "@/lib/balance-chart";
+import {
+  buildBaselineComposition,
+  detectUnusualMonth,
+  formatMonthLabel,
+  type CompositionSegmentKey,
+  type MonthlyCashflowPoint,
+} from "@/lib/baseline-charts";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
 import { cn } from "@/lib/utils";
 
@@ -92,38 +112,34 @@ const BaselinePage: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 overflow-y-auto pb-10">
-      <header className="space-y-1">
-        <p className="text-sm text-muted-foreground">
-          Confirm your monthly household numbers before the Money Review.
-        </p>
-      </header>
+    <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 pb-10">
+        {actionError ? (
+          <p className="text-sm text-destructive" role="alert">
+            {actionError}
+          </p>
+        ) : null}
 
-      {actionError ? (
-        <p className="text-sm text-destructive" role="alert">
-          {actionError}
-        </p>
-      ) : null}
-
-      {query.isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : missing ? (
-        <EmptyBaseline busy={busy} onCompute={onRecompute} />
-      ) : query.isError ? (
-        <p className="text-sm text-destructive" role="alert">
-          Could not load your baseline.
-        </p>
-      ) : baseline ? (
-        <BaselineContent
-          baseline={baseline}
-          busy={busy}
-          editingKey={editingKey}
-          onEdit={setEditingKey}
-          onConfirm={onConfirm}
-          onRecompute={onRecompute}
-          onAdjust={onAdjust}
-        />
-      ) : null}
+        {query.isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : missing ? (
+          <EmptyBaseline busy={busy} onCompute={onRecompute} />
+        ) : query.isError ? (
+          <p className="text-sm text-destructive" role="alert">
+            Could not load your baseline.
+          </p>
+        ) : baseline ? (
+          <BaselineContent
+            baseline={baseline}
+            busy={busy}
+            editingKey={editingKey}
+            onEdit={setEditingKey}
+            onConfirm={onConfirm}
+            onRecompute={onRecompute}
+            onAdjust={onAdjust}
+          />
+        ) : null}
+      </div>
     </div>
   );
 };
@@ -201,6 +217,11 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
         </Link>
       </div>
 
+      <BaselineCharts
+        baseline={baseline}
+        onFocusMetric={(key) => onEdit(key)}
+      />
+
       <section className="space-y-2">
         <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           {METRIC_LABELS.sustainable_free_cashflow}
@@ -272,6 +293,385 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
     </div>
   );
 };
+
+const BaselineCharts: React.FC<{
+  baseline: FinancialBaseline;
+  onFocusMetric: (key: MetricKey) => void;
+}> = ({ baseline, onFocusMetric }) => {
+  const [view, setView] = useState<"composition" | "over-time">("composition");
+  const [monthsWindow, setMonthsWindow] = useState<3 | 6 | 12>(6);
+  const stripQuery = useBaselineMonthlyCashflow(6);
+  const trendQuery = useBaselineMonthlyCashflow(monthsWindow);
+  const composition = buildBaselineComposition({
+    income: Number.parseFloat(baseline.regular_monthly_income) || 0,
+    fixed: Number.parseFloat(baseline.monthly_fixed_costs) || 0,
+    irregular: Number.parseFloat(baseline.monthly_irregular_costs) || 0,
+    variable: Number.parseFloat(baseline.avg_variable_spend) || 0,
+    freeCashflow: Number.parseFloat(baseline.sustainable_free_cashflow) || 0,
+  });
+
+  const toPoints = (
+    rows: { month_start: string; income: string; expenses: string; net: string }[],
+  ): MonthlyCashflowPoint[] =>
+    rows.map((row) => ({
+      monthStart: row.month_start.slice(0, 10),
+      income: Number.parseFloat(row.income) || 0,
+      expenses: Number.parseFloat(row.expenses) || 0,
+      net: Number.parseFloat(row.net) || 0,
+    }));
+
+  const stripMonths = toPoints(stripQuery.data?.data ?? []);
+  const trendMonths = toPoints(trendQuery.data?.data ?? []);
+  const baselineMonth = baseline.period_from.slice(0, 10);
+  const stripInsight = detectUnusualMonth(stripMonths, baselineMonth);
+  const trendInsight = detectUnusualMonth(trendMonths, baselineMonth);
+  const maxExpense = Math.max(...stripMonths.map((m) => m.expenses), 1);
+  const dualLayout = buildDualSeriesChartLayout(
+    trendMonths.map((m) => ({
+      date: m.monthStart,
+      primary: m.income,
+      secondary: m.expenses,
+    })),
+  );
+
+  return (
+    <section className="flex flex-col gap-4">
+      <Tabs
+        value={view}
+        onValueChange={(value) => {
+          if (value === "composition" || value === "over-time") {
+            setView(value);
+          }
+        }}
+        className="gap-4"
+      >
+        <TabsList variant="line" className="w-full justify-start">
+          <TabsTrigger value="composition">Composition</TabsTrigger>
+          <TabsTrigger value="over-time">Income & expenses</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="composition" className="flex flex-col gap-6">
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <h2 className="text-sm font-semibold tracking-tight">
+                Typical month
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                How income splits into costs and free cashflow. Click Variable
+                to correct it.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
+                <span>Income</span>
+                <span className="tabular-nums text-foreground">
+                  {formatAmount(baseline.regular_monthly_income)}
+                </span>
+              </div>
+              <div
+                className="flex h-10 w-full overflow-hidden rounded-lg border bg-muted/30"
+                role="img"
+                aria-label="Baseline monthly composition"
+              >
+                {composition.segments.map((seg) => (
+                  <button
+                    key={seg.key}
+                    type="button"
+                    title={`${seg.label}: ${formatAmount(seg.amount.toFixed(2))}`}
+                    className={cn(
+                      "h-full min-w-0 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      segmentTone(seg.key),
+                      seg.key === "variable"
+                        ? "cursor-pointer"
+                        : "cursor-default",
+                    )}
+                    style={{ flexGrow: seg.share, flexBasis: 0 }}
+                    disabled={seg.key !== "variable"}
+                    onClick={() => {
+                      if (seg.key === "variable") {
+                        onFocusMetric("avg_variable_spend");
+                      }
+                    }}
+                  />
+                ))}
+              </div>
+              <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                {composition.segments.map((seg) => (
+                  <li key={seg.key} className="flex items-center gap-1.5">
+                    <span
+                      className={cn(
+                        "inline-block size-2 rounded-sm",
+                        segmentTone(seg.key),
+                      )}
+                      aria-hidden
+                    />
+                    <span>
+                      {seg.label}{" "}
+                      <span className="tabular-nums text-foreground">
+                        {formatChartMoney(seg.amount)}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <UnusualMonthsStrip
+            months={stripMonths}
+            baselineMonth={baselineMonth}
+            insight={stripInsight}
+            maxExpense={maxExpense}
+            loading={stripQuery.isLoading}
+          />
+        </TabsContent>
+
+        <TabsContent value="over-time" className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-1">
+              <h2 className="text-sm font-semibold tracking-tight">
+                Income & expenses over time
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Transfer-aware totals by month. Pick a window to zoom.
+              </p>
+            </div>
+            <div className="flex gap-1 rounded-lg border p-1">
+              {([3, 6, 12] as const).map((n) => (
+                <Button
+                  key={n}
+                  type="button"
+                  size="sm"
+                  variant={monthsWindow === n ? "default" : "ghost"}
+                  className="h-7 px-2.5"
+                  onClick={() => setMonthsWindow(n)}
+                >
+                  {n} mo
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {trendQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : !dualLayout || trendMonths.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Not enough booking history for this window yet.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <svg
+                viewBox={`0 0 ${dualLayout.width} ${dualLayout.height}`}
+                className="h-52 w-full text-foreground"
+                role="img"
+                aria-label="Monthly income and expenses over time"
+              >
+                {dualLayout.moneyLabels.map((label) => (
+                  <g key={`money-${label.value}`}>
+                    <line
+                      x1={dualLayout.padX}
+                      x2={dualLayout.width - dualLayout.padX}
+                      y1={label.y}
+                      y2={label.y}
+                      className="stroke-border/60"
+                      strokeWidth={1}
+                      strokeDasharray={label.value === 0 ? "4 4" : undefined}
+                    />
+                    <text
+                      x={dualLayout.padX - 8}
+                      y={label.y + 3}
+                      textAnchor="end"
+                      className="fill-muted-foreground"
+                      fontSize={11}
+                    >
+                      {label.text}
+                    </text>
+                  </g>
+                ))}
+                <path
+                  d={dualLayout.primaryPath}
+                  className="stroke-foreground"
+                  fill="none"
+                  strokeWidth={2}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+                <path
+                  d={dualLayout.secondaryPath}
+                  className="stroke-foreground/40"
+                  fill="none"
+                  strokeWidth={2}
+                  strokeDasharray="5 4"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+                {dualLayout.labelIndexes.map((i) => {
+                  const point = trendMonths[i]!;
+                  const x = dualLayout.xs[i]!;
+                  return (
+                    <g key={point.monthStart}>
+                      <line
+                        x1={x}
+                        x2={x}
+                        y1={dualLayout.padTop + dualLayout.innerH}
+                        y2={dualLayout.padTop + dualLayout.innerH + 4}
+                        className="stroke-muted-foreground"
+                        strokeWidth={1}
+                      />
+                      <text
+                        x={x}
+                        y={dualLayout.height - 12}
+                        textAnchor={chartLabelAnchor(i, trendMonths.length)}
+                        className="fill-muted-foreground"
+                        fontSize={11}
+                      >
+                        {formatChartDate(point.monthStart)}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+              <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <li className="flex items-center gap-1.5">
+                  <span className="inline-block h-0.5 w-3 bg-foreground" />
+                  Income
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="inline-block h-0.5 w-3 border-t-2 border-dashed border-foreground/50" />
+                  Expenses
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {trendInsight.unusual && trendInsight.message ? (
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              {trendInsight.message}{" "}
+              <Link
+                to="/review"
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                Open Needs review
+              </Link>
+            </p>
+          ) : null}
+        </TabsContent>
+      </Tabs>
+    </section>
+  );
+};
+
+const UnusualMonthsStrip: React.FC<{
+  months: MonthlyCashflowPoint[];
+  baselineMonth: string;
+  insight: ReturnType<typeof detectUnusualMonth>;
+  maxExpense: number;
+  loading: boolean;
+}> = ({ months, baselineMonth, insight, maxExpense, loading }) => {
+  return (
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <h2 className="text-sm font-semibold tracking-tight">Recent months</h2>
+        <p className="text-sm text-muted-foreground">
+          Expense height by month. Tall bars can mean one-offs.
+        </p>
+      </div>
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading months…</p>
+      ) : months.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Not enough booking history for a monthly strip yet.
+        </p>
+      ) : (
+        <div className="flex items-end gap-2 border-b pb-2">
+          {months.map((m) => {
+            const heightPct = Math.max(8, (m.expenses / maxExpense) * 100);
+            const isBaseline =
+              m.monthStart.slice(0, 7) === baselineMonth.slice(0, 7);
+            const isUnusual =
+              insight.unusual && insight.monthStart === m.monthStart;
+            const monthEnd = endOfMonthISO(m.monthStart);
+            return (
+              <Link
+                key={m.monthStart}
+                to="/transactions"
+                search={{
+                  ...defaultTransactionSearchParams,
+                  from: m.monthStart,
+                  to: monthEnd,
+                  sort: "amount",
+                  order: "asc",
+                }}
+                className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
+                title={`${formatMonthLabel(m.monthStart)} · expenses ${formatAmount(m.expenses.toFixed(2))}`}
+              >
+                <div className="flex h-24 w-full items-end justify-center">
+                  <span
+                    className={cn(
+                      "w-full max-w-[2.5rem] rounded-t-md",
+                      isUnusual
+                        ? "bg-red-700/80 dark:bg-red-400/80"
+                        : isBaseline
+                          ? "bg-foreground"
+                          : "bg-foreground/30",
+                    )}
+                    style={{ height: `${heightPct}%` }}
+                  />
+                </div>
+                <span
+                  className={cn(
+                    "text-[10px] tabular-nums",
+                    isBaseline
+                      ? "font-medium text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {formatMonthLabel(m.monthStart)}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+      {insight.unusual && insight.message ? (
+        <p className="text-sm text-amber-800 dark:text-amber-200">
+          {insight.message}{" "}
+          <Link
+            to="/review"
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            Open Needs review
+          </Link>
+        </p>
+      ) : null}
+    </div>
+  );
+};
+
+function segmentTone(key: CompositionSegmentKey): string {
+  switch (key) {
+    case "fixed":
+      return "bg-foreground/80";
+    case "irregular":
+      return "bg-foreground/55";
+    case "variable":
+      return "bg-foreground/30";
+    case "free":
+      return "bg-emerald-700/70 dark:bg-emerald-500/50";
+    case "deficit":
+      return "bg-red-700/80 dark:bg-red-400/70";
+  }
+}
+
+function endOfMonthISO(monthStart: string): string {
+  const iso = monthStart.slice(0, 10);
+  const [y, m] = iso.split("-").map(Number);
+  if (!y || !m) {
+    return iso;
+  }
+  const last = new Date(Date.UTC(y, m, 0));
+  return last.toISOString().slice(0, 10);
+}
 
 type MetricRowProps = {
   label: string;
