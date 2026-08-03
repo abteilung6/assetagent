@@ -31,55 +31,57 @@ const ReviewsPage: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 overflow-y-auto pb-10">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          Your monthly Money Reviews — findings from a confirmed baseline.
-        </p>
-        {reviews.length > 0 ? (
-          <Button type="button" disabled={busy} onClick={onCreate}>
-            {busy ? "Generating…" : "Generate review"}
-          </Button>
-        ) : null}
-      </header>
-
-      {actionError ? (
-        <p className="text-sm text-destructive" role="alert">
-          {actionError}
-        </p>
-      ) : null}
-
-      {query.isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : query.isError ? (
-        <p className="text-sm text-destructive" role="alert">
-          Could not load money reviews.
-        </p>
-      ) : reviews.length === 0 ? (
-        <div className="rounded-xl border border-dashed px-4 py-14 text-center">
-          <p className="text-sm font-medium">No reviews yet</p>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-            Confirm a baseline first, then generate this month’s Money Review.
+    <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 pb-10">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Your monthly Money Reviews — findings from a confirmed baseline.
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
-            <Link
-              to="/baseline"
-              className={cn(buttonVariants({ variant: "outline" }))}
-            >
-              Open baseline
-            </Link>
+          {reviews.length > 0 ? (
             <Button type="button" disabled={busy} onClick={onCreate}>
               {busy ? "Generating…" : "Generate review"}
             </Button>
+          ) : null}
+        </header>
+
+        {actionError ? (
+          <p className="text-sm text-destructive" role="alert">
+            {actionError}
+          </p>
+        ) : null}
+
+        {query.isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : query.isError ? (
+          <p className="text-sm text-destructive" role="alert">
+            Could not load money reviews.
+          </p>
+        ) : reviews.length === 0 ? (
+          <div className="rounded-xl border border-dashed px-4 py-14 text-center">
+            <p className="text-sm font-medium">No reviews yet</p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+              Confirm a baseline first, then generate this month’s Money Review.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              <Link
+                to="/baseline"
+                className={cn(buttonVariants({ variant: "outline" }))}
+              >
+                Open baseline
+              </Link>
+              <Button type="button" disabled={busy} onClick={onCreate}>
+                {busy ? "Generating…" : "Generate review"}
+              </Button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <ul className="divide-y border-y">
-          {reviews.map((item) => (
-            <ReviewListRow key={item.id} review={item} />
-          ))}
-        </ul>
-      )}
+        ) : (
+          <ul className="divide-y border-y">
+            {reviews.map((item) => (
+              <ReviewListRow key={item.id} review={item} />
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 };

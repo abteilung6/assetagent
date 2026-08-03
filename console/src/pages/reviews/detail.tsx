@@ -35,7 +35,8 @@ const ReviewDetailPage: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 overflow-y-auto pb-10">
+    <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 pb-10">
       <div>
         <Link
           to="/reviews"
@@ -64,6 +65,7 @@ const ReviewDetailPage: React.FC = () => {
           onConfirm={onConfirm}
         />
       ) : null}
+      </div>
     </div>
   );
 };

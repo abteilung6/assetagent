@@ -139,7 +139,8 @@ const ReviewPage: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 overflow-y-auto pb-8">
+    <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 pb-8">
       {loadError ? (
         <p className="text-sm text-destructive" role="alert">
           Could not load items that need review.
@@ -246,6 +247,7 @@ const ReviewPage: React.FC = () => {
           ) : null}
         </>
       )}
+      </div>
     </div>
   );
 };
