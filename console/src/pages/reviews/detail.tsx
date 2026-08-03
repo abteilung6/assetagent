@@ -184,6 +184,10 @@ const FindingRow: React.FC<FindingRowProps> = ({ reviewId, finding }) => {
             {confidenceLabel(finding.confidence)} confidence
           </p>
           <p className="text-sm font-medium text-foreground">{finding.title}</p>
+          <p className="text-xs text-muted-foreground">
+            Tracking puts a reminder on Plan → Actions. It does not change the
+            forecast numbers.
+          </p>
         </div>
         {finding.amount ? (
           <p
@@ -211,10 +215,10 @@ const FindingRow: React.FC<FindingRowProps> = ({ reviewId, finding }) => {
           onClick={onChoose}
         >
           {chosen
-            ? "Action chosen"
+            ? "Tracked — see Plan → Actions"
             : create.isPending
               ? "Saving…"
-              : "Choose this action"}
+              : "Track this as my action"}
         </Button>
       </div>
     </li>

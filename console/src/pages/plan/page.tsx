@@ -21,12 +21,20 @@ import {
 import {
   decisionActionErrorMessage,
   dueInDays,
+  useAllActions,
   useCreateDecision,
   useOpenActions,
   useUpdateActionStatus,
   type Action,
 } from "@/hooks/use-decisions";
+import {
+  buildBalanceChartLayout,
+  chartLabelAnchor,
+  formatChartDate,
+} from "@/lib/balance-chart";
 import { cn } from "@/lib/utils";
+
+type PlanTab = "forecast" | "what-if" | "actions";
 
 const PlanPage: React.FC = () => {
   const query = useLatestForecast();
@@ -36,7 +44,7 @@ const PlanPage: React.FC = () => {
   const [disabledIds, setDisabledIds] = useState<string[]>([]);
   const [includeVariable, setIncludeVariable] = useState(true);
   const [includeUncertain, setIncludeUncertain] = useState(true);
-  const [tab, setTab] = useState("forecast");
+  const [tab, setTab] = useState<PlanTab>("forecast");
 
   const forecast = query.data;
   const missing = !forecast && query.isError && isForecastMissing(query.error);
@@ -124,16 +132,29 @@ const PlanPage: React.FC = () => {
           <Tabs
             value={tab}
             onValueChange={(value) => {
-              if (typeof value === "string") {
+              if (
+                value === "forecast" ||
+                value === "what-if" ||
+                value === "actions"
+              ) {
                 setTab(value);
               }
             }}
             className="gap-6"
           >
+            <p className="text-sm text-muted-foreground">
+              <span className="text-foreground">1. Forecast</span> shows where
+              cash is headed ·{" "}
+              <span className="text-foreground">2. What if</span> tests one
+              change ·{" "}
+              <span className="text-foreground">3. Actions</span> tracks the
+              change you decide to make.
+            </p>
+
             <TabsList variant="line" className="w-full justify-start">
-              <TabsTrigger value="forecast">Forecast</TabsTrigger>
-              <TabsTrigger value="what-if">What if</TabsTrigger>
-              <TabsTrigger value="actions">Actions</TabsTrigger>
+              <TabsTrigger value="forecast">1. Forecast</TabsTrigger>
+              <TabsTrigger value="what-if">2. What if</TabsTrigger>
+              <TabsTrigger value="actions">3. Actions</TabsTrigger>
             </TabsList>
 
             <TabsContent value="forecast" className="flex flex-col gap-8">
@@ -174,6 +195,7 @@ const PlanPage: React.FC = () => {
               <ScenarioPanel
                 forecastId={forecast!.id}
                 assumptionsDirty={dirty}
+                onOpenActions={() => setTab("actions")}
               />
             </TabsContent>
 
@@ -402,9 +424,11 @@ const ForecastSummary: React.FC<{ forecast: Forecast }> = ({ forecast }) => {
         </p>
       ) : null}
 
+      <BalanceChart points={forecast.points} />
+
       <details className="group">
         <summary className="cursor-pointer list-none text-sm text-muted-foreground underline-offset-4 hover:underline [&::-webkit-details-marker]:hidden">
-          Week by week
+          Week by week numbers
         </summary>
         <ul className="mt-3 divide-y border-y">
           {forecast.points.map((p) => (
@@ -427,7 +451,8 @@ const ForecastSummary: React.FC<{ forecast: Forecast }> = ({ forecast }) => {
 const ScenarioPanel: React.FC<{
   forecastId: string;
   assumptionsDirty: boolean;
-}> = ({ forecastId, assumptionsDirty }) => {
+  onOpenActions: () => void;
+}> = ({ forecastId, assumptionsDirty, onOpenActions }) => {
   const scenariosQuery = useForecastScenarios(forecastId);
   const run = useRunScenario(forecastId);
   const [kind, setKind] = useState<
@@ -482,8 +507,8 @@ const ScenarioPanel: React.FC<{
   return (
     <section className="flex flex-col gap-5">
       <p className="text-sm text-muted-foreground">
-        Check whether you can afford an extra cost (or income change) on top of
-        your forecast.
+        Ask: “Can I afford X?” This only compares against the forecast — it does
+        not change it. If you want to follow through, track it as an action.
       </p>
 
       <label className="flex max-w-sm flex-col gap-1.5 text-xs text-muted-foreground">
@@ -587,7 +612,11 @@ const ScenarioPanel: React.FC<{
       {scenarios.length > 0 ? (
         <ul className="mt-2 divide-y border-y">
           {scenarios.map((s) => (
-            <ScenarioRow key={s.id} scenario={s} />
+            <ScenarioRow
+              key={s.id}
+              scenario={s}
+              onOpenActions={onOpenActions}
+            />
           ))}
         </ul>
       ) : null}
@@ -595,7 +624,10 @@ const ScenarioPanel: React.FC<{
   );
 };
 
-const ScenarioRow: React.FC<{ scenario: Scenario }> = ({ scenario }) => {
+const ScenarioRow: React.FC<{
+  scenario: Scenario;
+  onOpenActions: () => void;
+}> = ({ scenario, onOpenActions }) => {
   const r = scenario.result;
   const create = useCreateDecision();
   const [error, setError] = useState<string | null>(null);
@@ -640,35 +672,49 @@ const ScenarioRow: React.FC<{ scenario: Scenario }> = ({ scenario }) => {
             : " · Goal not feasible"
           : null}
       </p>
+      <p className="text-xs text-muted-foreground">
+        Tracking adds a reminder on the Actions tab — it does not rewrite the
+        forecast.
+      </p>
       {error ? (
         <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={create.isPending || chosen}
-          onClick={onChoose}
-        >
-          {chosen
-            ? "Action chosen"
-            : create.isPending
-              ? "Saving…"
-              : "Choose this action"}
-        </Button>
+      <div className="flex justify-end gap-2">
+        {chosen ? (
+          <Button type="button" size="sm" onClick={onOpenActions}>
+            Open Actions
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={create.isPending}
+            onClick={onChoose}
+          >
+            {create.isPending ? "Saving…" : "Track this as my action"}
+          </Button>
+        )}
       </div>
     </li>
   );
 };
 
 const OpenActionsPanel: React.FC = () => {
-  const query = useOpenActions();
+  const openQuery = useOpenActions();
+  const allQuery = useAllActions();
   const update = useUpdateActionStatus();
   const [error, setError] = useState<string | null>(null);
-  const actions = query.data?.data ?? [];
+  const openActions = openQuery.data?.data ?? [];
+  const allActions = allQuery.data?.data ?? [];
+  const doneCount = allActions.filter((a) => a.status === "done").length;
+  const skippedCount = allActions.filter((a) => a.status === "skipped").length;
+  const plannedCount = openActions.length;
+  const settled = doneCount + skippedCount;
+  const total = plannedCount + settled;
+  const progressPct = total === 0 ? 0 : Math.round((doneCount / total) * 100);
 
   const onStatus = async (action: Action, status: "done" | "skipped") => {
     setError(null);
@@ -684,22 +730,46 @@ const OpenActionsPanel: React.FC = () => {
 
   return (
     <section className="flex flex-col gap-4">
-      <p className="text-sm text-muted-foreground">
-        Open actions from reviews and what-ifs. Mark done when you followed
-        through.
-      </p>
+      <div className="space-y-1">
+        <p className="text-sm text-muted-foreground">
+          These are commitments you made from a review finding or a what-if.
+          Mark Done when you actually did it.
+        </p>
+      </div>
+
+      <div className="space-y-2 rounded-lg border px-3 py-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-sm font-medium">Progress</p>
+          <p className="text-xs text-muted-foreground">
+            {doneCount} done · {plannedCount} open
+            {skippedCount > 0 ? ` · ${skippedCount} skipped` : null}
+          </p>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-foreground transition-[width]"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {total === 0
+            ? "No actions yet — track one from What if or a Money Review."
+            : `${progressPct}% completed`}
+        </p>
+      </div>
+
       {error ? (
         <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
-      {query.isLoading ? (
+      {openQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : actions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No open actions yet.</p>
+      ) : openActions.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No open actions.</p>
       ) : (
         <ul className="divide-y border-y">
-          {actions.map((action) => (
+          {openActions.map((action) => (
             <li
               key={action.id}
               className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between"
@@ -758,6 +828,109 @@ function annualFromMonthlyDelta(delta: string): string {
   }
   return (monthly * 12).toFixed(2);
 }
+
+const BalanceChart: React.FC<{ points: Forecast["points"] }> = ({ points }) => {
+  const layout = buildBalanceChartLayout(points);
+  if (!layout) {
+    return null;
+  }
+  const {
+    width,
+    height,
+    padX,
+    padTop,
+    innerH,
+    coords,
+    linePath,
+    areaPath,
+    zeroY,
+    labelIndexes,
+    moneyLabels,
+  } = layout;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-xs font-medium text-foreground">Cash over time</p>
+        <p className="text-xs text-muted-foreground">
+          € on Y · dates on X
+        </p>
+      </div>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="h-52 w-full text-foreground"
+        role="img"
+        aria-label="Projected cash balance over time, euros on vertical axis, dates on horizontal axis"
+      >
+        {moneyLabels.map((label) => (
+          <g key={`money-${label.value}`}>
+            <line
+              x1={padX}
+              x2={width - padX}
+              y1={label.y}
+              y2={label.y}
+              className="stroke-border/60"
+              strokeWidth={1}
+              strokeDasharray={label.value === 0 ? "4 4" : undefined}
+            />
+            <text
+              x={padX - 8}
+              y={label.y + 3}
+              textAnchor="end"
+              className="fill-muted-foreground"
+              fontSize={11}
+            >
+              {label.text}
+            </text>
+          </g>
+        ))}
+        <line
+          x1={padX}
+          x2={width - padX}
+          y1={zeroY}
+          y2={zeroY}
+          className="stroke-border"
+          strokeWidth={1}
+          strokeDasharray="4 4"
+        />
+        <path d={areaPath} className="fill-muted/60" />
+        <path
+          d={linePath}
+          className="stroke-foreground"
+          fill="none"
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        {labelIndexes.map((i) => {
+          const point = points[i]!;
+          const { x } = coords[i]!;
+          return (
+            <g key={point.date}>
+              <line
+                x1={x}
+                x2={x}
+                y1={padTop + innerH}
+                y2={padTop + innerH + 4}
+                className="stroke-muted-foreground"
+                strokeWidth={1}
+              />
+              <text
+                x={x}
+                y={height - 12}
+                textAnchor={chartLabelAnchor(i, points.length)}
+                className="fill-muted-foreground"
+                fontSize={11}
+              >
+                {formatChartDate(point.date)}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+};
 
 const Stat: React.FC<{
   label: string;

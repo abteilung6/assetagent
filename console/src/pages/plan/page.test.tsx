@@ -74,6 +74,9 @@ describe("Plan page", () => {
     vi.spyOn(sdk, "getForecastScenarios").mockResolvedValue(
       mockApiResponse({ data: [] }),
     );
+    vi.spyOn(sdk, "getActions").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
 
     testRender({ route: "/plan" });
 
@@ -90,13 +93,14 @@ describe("Plan page", () => {
       expect(create).toHaveBeenCalled();
     });
 
-    expect(await screen.findByRole("tab", { name: "Forecast" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "What if" })).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /Compare new monthly cost/i }),
-    ).not.toBeInTheDocument();
+      await screen.findByRole("tab", { name: "1. Forecast" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "2. What if" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "3. Actions" })).toBeInTheDocument();
+    expect(await screen.findByText(/Cash over time/i)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("tab", { name: "What if" }));
+    await userEvent.click(screen.getByRole("tab", { name: "2. What if" }));
 
     expect(
       await screen.findByRole("button", { name: /Compare new monthly cost/i }),

@@ -16,6 +16,10 @@ export function useOpenActions(limit = 50) {
   );
 }
 
+export function useAllActions(limit = 50) {
+  return useQuery(getActionsOptions({ query: { limit } }));
+}
+
 export function useCreateDecision() {
   const queryClient = useQueryClient();
   return useMutation({
