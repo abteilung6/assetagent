@@ -258,6 +258,9 @@ describe("Needs review inbox", () => {
     testRender({ route: "/review" });
 
     expect(await screen.findByText("Recurring payments")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Confirm all \(1\)/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Example Landlord")).toBeInTheDocument();
 
     await user.click(

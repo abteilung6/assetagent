@@ -1,10 +1,17 @@
 import type React from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   classificationActionErrorMessage,
   useCategories,
+  useClassificationApplySuggestions,
   useClassificationCorrect,
   useClassificationQueue,
   type Category,
@@ -26,6 +33,25 @@ import {
 } from "@/hooks/use-transfer-candidates";
 import { cn } from "@/lib/utils";
 
+type ReviewTab = "transfers" | "categories" | "recurring";
+
+function defaultReviewTab(
+  transfers: number,
+  categories: number,
+  recurring: number,
+): ReviewTab {
+  if (categories > 0) {
+    return "categories";
+  }
+  if (recurring > 0) {
+    return "recurring";
+  }
+  if (transfers > 0) {
+    return "transfers";
+  }
+  return "categories";
+}
+
 const ReviewPage: React.FC = () => {
   const candidatesQuery = useTransferCandidates();
   const queueQuery = useClassificationQueue();
@@ -34,9 +60,12 @@ const ReviewPage: React.FC = () => {
   const confirmMutation = useTransferConfirm();
   const rejectMutation = useTransferReject();
   const correctMutation = useClassificationCorrect();
+  const applySuggestionsMutation = useClassificationApplySuggestions();
   const recurringConfirmMutation = useRecurringConfirm();
   const recurringRejectMutation = useRecurringReject();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [applySummary, setApplySummary] = useState<string | null>(null);
+  const [tabOverride, setTabOverride] = useState<ReviewTab | null>(null);
   const [pendingTransferID, setPendingTransferID] = useState<string | null>(
     null,
   );
@@ -44,6 +73,7 @@ const ReviewPage: React.FC = () => {
   const [pendingRecurringID, setPendingRecurringID] = useState<string | null>(
     null,
   );
+  const [confirmAllRecurring, setConfirmAllRecurring] = useState(false);
 
   const candidates = candidatesQuery.data?.data ?? [];
   const queue = queueQuery.data?.data ?? [];
@@ -51,9 +81,12 @@ const ReviewPage: React.FC = () => {
   const recurring = recurringQuery.data?.data ?? [];
   const transferBusy =
     confirmMutation.isPending || rejectMutation.isPending;
-  const classifyBusy = correctMutation.isPending;
+  const classifyBusy =
+    correctMutation.isPending || applySuggestionsMutation.isPending;
   const recurringBusy =
-    recurringConfirmMutation.isPending || recurringRejectMutation.isPending;
+    recurringConfirmMutation.isPending ||
+    recurringRejectMutation.isPending ||
+    confirmAllRecurring;
   const anyBusy = transferBusy || classifyBusy || recurringBusy;
   const loading =
     candidatesQuery.isLoading ||
@@ -67,6 +100,13 @@ const ReviewPage: React.FC = () => {
     recurringQuery.isError;
   const inboxEmpty =
     candidates.length === 0 && queue.length === 0 && recurring.length === 0;
+
+  const autoTab = useMemo(
+    () =>
+      defaultReviewTab(candidates.length, queue.length, recurring.length),
+    [candidates.length, queue.length, recurring.length],
+  );
+  const activeTab = tabOverride ?? autoTab;
 
   const onConfirm = async (id: string) => {
     setActionError(null);
@@ -98,6 +138,7 @@ const ReviewPage: React.FC = () => {
     applyToMerchant: boolean,
   ) => {
     setActionError(null);
+    setApplySummary(null);
     setPendingTxID(transactionId);
     try {
       await correctMutation.mutateAsync({
@@ -114,6 +155,19 @@ const ReviewPage: React.FC = () => {
     }
   };
 
+  const onApplySuggestions = async () => {
+    setActionError(null);
+    setApplySummary(null);
+    try {
+      const result = await applySuggestionsMutation.mutateAsync({});
+      setApplySummary(
+        `Applied ${result.applied} suggestion${result.applied === 1 ? "" : "s"}; skipped ${result.skipped}.`,
+      );
+    } catch (err) {
+      setActionError(classificationActionErrorMessage(err));
+    }
+  };
+
   const onRecurringConfirm = async (id: string) => {
     setActionError(null);
     setPendingRecurringID(id);
@@ -123,6 +177,24 @@ const ReviewPage: React.FC = () => {
       setActionError(recurringActionErrorMessage(err));
     } finally {
       setPendingRecurringID(null);
+    }
+  };
+
+  const onConfirmAllRecurring = async () => {
+    if (recurring.length === 0) {
+      return;
+    }
+    setActionError(null);
+    setConfirmAllRecurring(true);
+    const ids = recurring.map((series) => series.id);
+    try {
+      for (const id of ids) {
+        await recurringConfirmMutation.mutateAsync({ path: { id } });
+      }
+    } catch (err) {
+      setActionError(recurringActionErrorMessage(err));
+    } finally {
+      setConfirmAllRecurring(false);
     }
   };
 
@@ -140,32 +212,155 @@ const ReviewPage: React.FC = () => {
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 pb-8">
-      {loadError ? (
-        <p className="text-sm text-destructive" role="alert">
-          Could not load items that need review.
-        </p>
-      ) : null}
-
-      {actionError ? (
-        <p className="text-sm text-destructive" role="alert">
-          {actionError}
-        </p>
-      ) : null}
-
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : inboxEmpty ? (
-        <div className="rounded-xl border border-dashed px-4 py-12 text-center">
-          <p className="text-sm font-medium">Inbox clear</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Nothing needs your attention right now.
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 pb-8">
+        {loadError ? (
+          <p className="text-sm text-destructive" role="alert">
+            Could not load items that need review.
           </p>
-        </div>
-      ) : (
-        <>
-          {candidates.length > 0 ? (
-            <section className="flex flex-col gap-4">
+        ) : null}
+
+        {actionError ? (
+          <p className="text-sm text-destructive" role="alert">
+            {actionError}
+          </p>
+        ) : null}
+
+        {applySummary ? (
+          <p className="text-sm text-muted-foreground" role="status">
+            {applySummary}
+          </p>
+        ) : null}
+
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : inboxEmpty ? (
+          <div className="rounded-xl border border-dashed px-4 py-12 text-center">
+            <p className="text-sm font-medium">Inbox clear</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Nothing needs your attention right now.
+            </p>
+          </div>
+        ) : (
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => {
+              if (
+                value === "transfers" ||
+                value === "categories" ||
+                value === "recurring"
+              ) {
+                setTabOverride(value);
+              }
+            }}
+            className="gap-6"
+          >
+            <TabsList variant="line" className="w-full justify-start">
+              <TabsTrigger value="categories">
+                Categories
+                {queue.length > 0 ? ` (${queue.length})` : ""}
+              </TabsTrigger>
+              <TabsTrigger value="recurring">
+                Recurring payments
+                {recurring.length > 0 ? ` (${recurring.length})` : ""}
+              </TabsTrigger>
+              <TabsTrigger value="transfers">
+                Transfers
+                {candidates.length > 0 ? ` (${candidates.length})` : ""}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="categories" className="flex flex-col gap-4">
+              <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-base font-semibold tracking-tight">
+                    Categories to check
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Large or unclear bookings — pick the right category so
+                    spending stays trustworthy.
+                  </p>
+                </div>
+                {queue.length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={anyBusy}
+                    onClick={onApplySuggestions}
+                  >
+                    {applySuggestionsMutation.isPending
+                      ? "Applying…"
+                      : "Apply suggested categories"}
+                  </Button>
+                ) : null}
+              </header>
+              {queue.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No categories need review right now.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-3">
+                  {queue.map((item) => (
+                    <ClassificationQueueRow
+                      key={item.transaction_id}
+                      item={item}
+                      categories={categories}
+                      busy={
+                        classifyBusy && pendingTxID === item.transaction_id
+                      }
+                      disabled={anyBusy}
+                      onCorrect={onCorrect}
+                    />
+                  ))}
+                </ul>
+              )}
+            </TabsContent>
+
+            <TabsContent value="recurring" className="flex flex-col gap-4">
+              <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-base font-semibold tracking-tight">
+                    Recurring payments
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Confirm regular bills and income so chat can track what
+                    repeats.
+                  </p>
+                </div>
+                {recurring.length > 0 ? (
+                  <Button
+                    type="button"
+                    disabled={anyBusy}
+                    onClick={onConfirmAllRecurring}
+                  >
+                    {confirmAllRecurring
+                      ? "Confirming…"
+                      : `Confirm all (${recurring.length})`}
+                  </Button>
+                ) : null}
+              </header>
+              {recurring.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No uncertain recurring series right now.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-3">
+                  {recurring.map((series) => (
+                    <RecurringSeriesRow
+                      key={series.id}
+                      series={series}
+                      busy={
+                        recurringBusy && pendingRecurringID === series.id
+                      }
+                      disabled={anyBusy}
+                      onConfirm={() => onRecurringConfirm(series.id)}
+                      onReject={() => onRecurringReject(series.id)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </TabsContent>
+
+            <TabsContent value="transfers" className="flex flex-col gap-4">
               <header className="space-y-1">
                 <h2 className="text-base font-semibold tracking-tight">
                   Possible internal transfers
@@ -175,78 +370,29 @@ const ReviewPage: React.FC = () => {
                   counted as spending or income.
                 </p>
               </header>
-              <ul className="flex flex-col gap-3">
-                {candidates.map((candidate) => (
-                  <TransferCandidateRow
-                    key={candidate.id}
-                    candidate={candidate}
-                    busy={
-                      transferBusy && pendingTransferID === candidate.id
-                    }
-                    disabled={anyBusy}
-                    onConfirm={() => onConfirm(candidate.id)}
-                    onReject={() => onReject(candidate.id)}
-                  />
-                ))}
-              </ul>
-            </section>
-          ) : null}
-
-          {queue.length > 0 ? (
-            <section className="flex flex-col gap-4">
-              <header className="space-y-1">
-                <h2 className="text-base font-semibold tracking-tight">
-                  Categories to check
-                </h2>
+              {candidates.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Large or unclear bookings — pick the right category so
-                  spending stays trustworthy.
+                  No transfer candidates right now.
                 </p>
-              </header>
-              <ul className="flex flex-col gap-3">
-                {queue.map((item) => (
-                  <ClassificationQueueRow
-                    key={item.transaction_id}
-                    item={item}
-                    categories={categories}
-                    busy={classifyBusy && pendingTxID === item.transaction_id}
-                    disabled={anyBusy}
-                    onCorrect={onCorrect}
-                  />
-                ))}
-              </ul>
-            </section>
-          ) : null}
-
-          {recurring.length > 0 ? (
-            <section className="flex flex-col gap-4">
-              <header className="space-y-1">
-                <h2 className="text-base font-semibold tracking-tight">
-                  Recurring payments
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Confirm regular bills and income so chat can track what
-                  repeats.
-                </p>
-              </header>
-              <ul className="flex flex-col gap-3">
-                {recurring.map((series) => (
-                  <RecurringSeriesRow
-                    key={series.id}
-                    series={series}
-                    busy={
-                      recurringBusy && pendingRecurringID === series.id
-                    }
-                    disabled={anyBusy}
-                    onConfirm={() => onRecurringConfirm(series.id)}
-                    onReject={() => onRecurringReject(series.id)}
-                  />
-                ))}
-              </ul>
-            </section>
-          ) : null}
-        </>
-      )}
+              ) : (
+                <ul className="flex flex-col gap-3">
+                  {candidates.map((candidate) => (
+                    <TransferCandidateRow
+                      key={candidate.id}
+                      candidate={candidate}
+                      busy={
+                        transferBusy && pendingTransferID === candidate.id
+                      }
+                      disabled={anyBusy}
+                      onConfirm={() => onConfirm(candidate.id)}
+                      onReject={() => onReject(candidate.id)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </div>
   );
