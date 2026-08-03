@@ -323,7 +323,9 @@ describe("Needs review inbox", () => {
     expect(await screen.findByText("Example Landlord")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Show 3 payments/i }));
     expect(await screen.findByText(/Miete Maerz/i)).toBeInTheDocument();
-    expect(screen.getByText(/amount changed/i)).toBeInTheDocument();
+    expect(
+      screen.getByText((_, node) => node?.textContent === " · amount changed"),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /View all in Transactions/i }),
     ).toBeInTheDocument();
