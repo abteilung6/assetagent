@@ -35,6 +35,8 @@ function toolDisplayNameFor(name: string): string {
       return "Spending summary";
     case TOOL_NAMES.search:
       return "Transaction search";
+    case TOOL_NAMES.baseline:
+      return "Baseline";
     default:
       return name;
   }
@@ -105,5 +107,30 @@ describe("ToolResultCard", () => {
     expect(
       screen.queryByRole("link", { name: /view transactions/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders baseline card with plan link", async () => {
+    const toolCall: ChatToolCall = {
+      name: TOOL_NAMES.baseline,
+      input: {},
+      result: {
+        ok: true,
+        available: true,
+        status: "confirmed",
+        sustainable_free_cashflow: "1800.00",
+        regular_monthly_income: "3500.00",
+        currency: "EUR",
+        period: { from: "2026-03-01", to: "2026-03-31" },
+      },
+    };
+
+    await renderToolCard(toolCall);
+
+    expect(screen.getByText("Baseline")).toBeInTheDocument();
+    expect(screen.getByText(/Free cashflow/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /open baseline/i })).toHaveAttribute(
+      "href",
+      "/baseline",
+    );
   });
 });

@@ -12,6 +12,9 @@ export const TOOL_NAMES = {
   anomalies: "get_anomalies",
   counterparties: "get_top_counterparties",
   search: "search_transactions",
+  baseline: "get_baseline",
+  moneyReview: "get_money_review",
+  forecast: "get_forecast",
 } as const;
 
 export type CashflowResult = {
@@ -88,9 +91,27 @@ export function toolDisplayName(name: string): string {
       return "Top counterparties";
     case TOOL_NAMES.search:
       return "Transaction search";
+    case TOOL_NAMES.baseline:
+      return "Baseline";
+    case TOOL_NAMES.moneyReview:
+      return "Money review";
+    case TOOL_NAMES.forecast:
+      return "Forecast";
     default:
       return name.replaceAll("_", " ");
   }
+}
+
+export function isPlanArtifactTool(name: string): boolean {
+  return (
+    name === TOOL_NAMES.baseline ||
+    name === TOOL_NAMES.moneyReview ||
+    name === TOOL_NAMES.forecast
+  );
+}
+
+export function isTransactionSourceTool(name: string): boolean {
+  return !isPlanArtifactTool(name);
 }
 
 export function readOptionalString(

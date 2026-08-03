@@ -95,6 +95,9 @@ func TestRegistry_tools(t *testing.T) {
 		"get_anomalies",
 		"get_top_counterparties",
 		"search_transactions",
+		"get_baseline",
+		"get_money_review",
+		"get_forecast",
 	} {
 		if !names[want] {
 			t.Fatalf("missing tool %q", want)

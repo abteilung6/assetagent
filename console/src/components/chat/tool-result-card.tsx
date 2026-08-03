@@ -1,7 +1,19 @@
-import { AlertTriangle, RefreshCw, Search, TrendingDown, TrendingUp, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarRange,
+  LineChart,
+  RefreshCw,
+  Search,
+  TrendingDown,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
 import type React from "react";
+import { Link } from "@tanstack/react-router";
 
 import type { ChatToolCall } from "@/api/types.gen";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { SourceLink } from "./source-link";
@@ -12,6 +24,7 @@ import {
   buildTransactionSearchFromToolCall,
   formatDateRange,
   formatMoney,
+  isTransactionSourceTool,
   readOptionalString,
   TOOL_NAMES,
   toolDisplayName,
@@ -44,7 +57,9 @@ export const ToolResultCard: React.FC<ToolResultCardProps> = ({ toolCall }) => {
           <p className="text-xs font-medium text-foreground">
             {toolDisplayName(name)}
           </p>
-          <p className="text-xs text-muted-foreground">{periodLabel(name, input, period)}</p>
+          <p className="text-xs text-muted-foreground">
+            {periodLabel(name, input, result, period)}
+          </p>
         </div>
       </header>
 
@@ -52,7 +67,11 @@ export const ToolResultCard: React.FC<ToolResultCardProps> = ({ toolCall }) => {
 
       {!hasError ? (
         <footer className="mt-3 flex flex-wrap gap-2">
-          <SourceLink search={buildTransactionSearchFromToolCall(toolCall)} />
+          {isTransactionSourceTool(name) ? (
+            <SourceLink search={buildTransactionSearchFromToolCall(toolCall)} />
+          ) : (
+            <PlanSourceLink name={name} result={result} />
+          )}
         </footer>
       ) : null}
 
@@ -71,6 +90,7 @@ export const ToolResultCard: React.FC<ToolResultCardProps> = ({ toolCall }) => {
 function periodLabel(
   name: string,
   input: Record<string, unknown>,
+  result: Record<string, unknown>,
   period: string,
 ): string {
   if (name === TOOL_NAMES.search) {
@@ -78,6 +98,30 @@ function periodLabel(
     if (query) {
       return `“${query}” · ${period}`;
     }
+  }
+  if (
+    name === TOOL_NAMES.baseline ||
+    name === TOOL_NAMES.moneyReview ||
+    name === TOOL_NAMES.forecast
+  ) {
+    const resultPeriod = result.period;
+    if (
+      resultPeriod &&
+      typeof resultPeriod === "object" &&
+      resultPeriod !== null
+    ) {
+      const record = resultPeriod as Record<string, unknown>;
+      const fromDate =
+        typeof record.from === "string" ? record.from : undefined;
+      const toDate = typeof record.to === "string" ? record.to : undefined;
+      return formatDateRange(fromDate, toDate);
+    }
+    if (name === TOOL_NAMES.forecast) {
+      const days =
+        typeof result.horizon_days === "number" ? result.horizon_days : null;
+      return days != null ? `${days}-day horizon` : "Plan forecast";
+    }
+    return "Plan artifact";
   }
   return period;
 }
@@ -108,9 +152,64 @@ function ToolIcon({
       return <Users className={className} aria-hidden />;
     case TOOL_NAMES.search:
       return <Search className={className} aria-hidden />;
+    case TOOL_NAMES.baseline:
+      return <Wallet className={className} aria-hidden />;
+    case TOOL_NAMES.moneyReview:
+      return <CalendarRange className={className} aria-hidden />;
+    case TOOL_NAMES.forecast:
+      return <LineChart className={className} aria-hidden />;
     default:
       return <Search className={className} aria-hidden />;
   }
+}
+
+function PlanSourceLink({
+  name,
+  result,
+}: {
+  name: string;
+  result: Record<string, unknown>;
+}) {
+  if (name === TOOL_NAMES.baseline) {
+    return (
+      <Link
+        to="/baseline"
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+      >
+        Open Baseline
+      </Link>
+    );
+  }
+  if (name === TOOL_NAMES.moneyReview) {
+    const id = typeof result.id === "string" ? result.id : null;
+    if (id) {
+      return (
+        <Link
+          to="/reviews/$id"
+          params={{ id }}
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        >
+          Open review
+        </Link>
+      );
+    }
+    return (
+      <Link
+        to="/reviews"
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+      >
+        Open Reviews
+      </Link>
+    );
+  }
+  return (
+    <Link
+      to="/plan"
+      className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+    >
+      Open Plan
+    </Link>
+  );
 }
 
 function renderBody(toolCall: ChatToolCall, hasError: boolean) {
@@ -138,6 +237,12 @@ function renderBody(toolCall: ChatToolCall, hasError: boolean) {
       return <CounterpartiesBody toolCall={toolCall} />;
     case TOOL_NAMES.search:
       return <SearchBody result={result} />;
+    case TOOL_NAMES.baseline:
+      return <BaselineBody result={result} />;
+    case TOOL_NAMES.moneyReview:
+      return <MoneyReviewBody result={result} />;
+    case TOOL_NAMES.forecast:
+      return <ForecastBody result={result} />;
     default:
       return (
         <p className="text-sm text-muted-foreground">
@@ -145,6 +250,110 @@ function renderBody(toolCall: ChatToolCall, hasError: boolean) {
         </p>
       );
   }
+}
+
+function BaselineBody({ result }: { result: Record<string, unknown> }) {
+  if (result.available === false) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {typeof result.message === "string"
+          ? result.message
+          : "No baseline available yet."}
+      </p>
+    );
+  }
+  const currency =
+    typeof result.currency === "string" ? result.currency : "EUR";
+  const free =
+    typeof result.sustainable_free_cashflow === "string"
+      ? result.sustainable_free_cashflow
+      : undefined;
+  const income =
+    typeof result.regular_monthly_income === "string"
+      ? result.regular_monthly_income
+      : undefined;
+  return (
+    <div className="space-y-1 text-sm">
+      <p>
+        Free cashflow{" "}
+        <span className="font-medium tabular-nums">
+          {formatMoney(free, currency)}
+        </span>
+        /month
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Income {formatMoney(income, currency)} · status{" "}
+        {typeof result.status === "string" ? result.status : "—"}
+      </p>
+    </div>
+  );
+}
+
+function MoneyReviewBody({ result }: { result: Record<string, unknown> }) {
+  if (result.available === false) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {typeof result.message === "string"
+          ? result.message
+          : "No money review yet."}
+      </p>
+    );
+  }
+  const summary =
+    typeof result.summary === "string" ? result.summary : "Review ready.";
+  const findings = Array.isArray(result.findings) ? result.findings : [];
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-foreground">{summary}</p>
+      {findings.length > 0 ? (
+        <ul className="space-y-1 border-t border-border/60 pt-2 text-xs text-muted-foreground">
+          {findings.slice(0, 3).map((row, index) => {
+            const record = row as Record<string, unknown>;
+            const title =
+              typeof record.title === "string" ? record.title : "Finding";
+            return (
+              <li key={`${title}-${index}`} className="truncate text-foreground">
+                {title}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function ForecastBody({ result }: { result: Record<string, unknown> }) {
+  if (result.available === false) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {typeof result.message === "string"
+          ? result.message
+          : "No forecast available yet."}
+      </p>
+    );
+  }
+  const currency =
+    typeof result.currency === "string" ? result.currency : "EUR";
+  const min =
+    typeof result.min_balance === "string" ? result.min_balance : undefined;
+  const ending =
+    typeof result.ending_balance === "string"
+      ? result.ending_balance
+      : undefined;
+  return (
+    <div className="space-y-1 text-sm">
+      <p>
+        Low point{" "}
+        <span className="font-medium tabular-nums">
+          {formatMoney(min, currency)}
+        </span>
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Ending {formatMoney(ending, currency)}
+      </p>
+    </div>
+  );
 }
 
 function RecurringBody({ result }: { result: Record<string, unknown> }) {

@@ -27,9 +27,12 @@ type TransactionLister interface {
 }
 
 type Dependencies struct {
-	Reports   Reports
-	Lister    TransactionLister
-	Recurring recurringSeriesSource
+	Reports     Reports
+	Lister      TransactionLister
+	Recurring   recurringSeriesSource
+	Baseline    BaselineSource
+	MoneyReview MoneyReviewSource
+	Forecast    ForecastSource
 }
 
 type Registry struct {
@@ -50,6 +53,9 @@ func NewRegistry(deps Dependencies) *Registry {
 	r.register(anomaliesTool(deps.Recurring, deps.Reports, deps.Lister))
 	r.register(counterpartiesTool(deps.Reports))
 	r.register(searchTool(deps.Lister))
+	r.register(baselineTool(deps.Baseline))
+	r.register(moneyReviewTool(deps.MoneyReview))
+	r.register(forecastTool(deps.Forecast))
 	return r
 }
 

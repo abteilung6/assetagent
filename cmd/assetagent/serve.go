@@ -36,12 +36,12 @@ func newServeCmd() *cobra.Command {
 
 			ctx := context.Background()
 			shutdownTelemetry, err := telemetry.Init(ctx, telemetry.Config{
-				Enabled:       cfg.LangfuseEnabled,
-				PublicKey:     cfg.LangfusePublicKey,
-				SecretKey:     cfg.LangfuseSecretKey,
-				OTLPEndpoint:  cfg.OTLPEndpoint,
-				TraceDetail:   telemetry.ParseTraceDetail(cfg.LangfuseTraceDetail),
-				ServiceName:   "assetagent",
+				Enabled:      cfg.LangfuseEnabled,
+				PublicKey:    cfg.LangfusePublicKey,
+				SecretKey:    cfg.LangfuseSecretKey,
+				OTLPEndpoint: cfg.OTLPEndpoint,
+				TraceDetail:  telemetry.ParseTraceDetail(cfg.LangfuseTraceDetail),
+				ServiceName:  "assetagent",
 			})
 			if err != nil {
 				return err
@@ -59,10 +59,16 @@ func newServeCmd() *cobra.Command {
 			txRepo := repository.NewTransaction(pool)
 			listSvc := service.NewList(txRepo)
 			reportsRepo := repository.NewReports(pool)
+			baselineSvc := service.NewBaseline(pool)
+			moneyReviewSvc := service.NewMoneyReview(pool)
+			forecastSvc := service.NewForecast(pool)
 			toolRegistry := tools.NewRegistry(tools.Dependencies{
-				Reports:   reportsRepo,
-				Lister:    txRepo,
-				Recurring: service.NewRecurring(pool),
+				Reports:     reportsRepo,
+				Lister:      txRepo,
+				Recurring:   service.NewRecurring(pool),
+				Baseline:    baselineSvc,
+				MoneyReview: moneyReviewSvc,
+				Forecast:    forecastSvc,
 			})
 
 			llmRegistry, err := newLLMRegistry(cfg)
@@ -82,7 +88,7 @@ func newServeCmd() *cobra.Command {
 			transfers := service.NewTransfers(pool)
 			classify := service.NewClassify(pool)
 			categories := repository.NewCategories(pool)
-			gen.HandlerWithOptions(handler.New(listSvc, chatSvc, llmRegistry, importer, transfers, classify, categories, service.NewRecurring(pool), service.NewBaseline(pool), service.NewMoneyReview(pool), service.NewForecast(pool), service.NewDecision(pool)), gen.ChiServerOptions{
+			gen.HandlerWithOptions(handler.New(listSvc, chatSvc, llmRegistry, importer, transfers, classify, categories, service.NewRecurring(pool), baselineSvc, moneyReviewSvc, forecastSvc, service.NewDecision(pool)), gen.ChiServerOptions{
 				BaseRouter:       router,
 				ErrorHandlerFunc: handler.APIErrorHandler,
 			})

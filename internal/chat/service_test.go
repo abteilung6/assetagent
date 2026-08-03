@@ -214,6 +214,9 @@ func TestService_Chat_maxTurnsExceeded(t *testing.T) {
 func TestDefaultConfig_prefersTrustedMoneyTools(t *testing.T) {
 	prompt := chat.DefaultConfig().SystemPrompt
 	for _, want := range []string{
+		"get_baseline",
+		"get_money_review",
+		"get_forecast",
 		"get_cashflow_v2",
 		"get_recurring_costs",
 		"get_spending_changes",
