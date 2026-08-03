@@ -277,6 +277,18 @@ export type RecurringSeriesListResponse = {
     data: Array<RecurringSeries>;
 };
 
+export type RecurringSeriesMember = {
+    transaction_id: string;
+    booking_date: string;
+    amount: string;
+    counterparty: string;
+    purpose: string;
+};
+
+export type RecurringSeriesMembersResponse = {
+    data: Array<RecurringSeriesMember>;
+};
+
 export type BaselineMetric = {
     key: 'regular_monthly_income' | 'monthly_fixed_costs' | 'monthly_irregular_costs' | 'avg_variable_spend' | 'sustainable_free_cashflow';
     value: string;
@@ -925,6 +937,35 @@ export type GetUncertainRecurringResponses = {
 };
 
 export type GetUncertainRecurringResponse = GetUncertainRecurringResponses[keyof GetUncertainRecurringResponses];
+
+export type GetRecurringMembersData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        limit?: number;
+    };
+    url: '/api/recurring/{id}/members';
+};
+
+export type GetRecurringMembersErrors = {
+    /**
+     * Recurring series not found
+     */
+    404: Error;
+};
+
+export type GetRecurringMembersError = GetRecurringMembersErrors[keyof GetRecurringMembersErrors];
+
+export type GetRecurringMembersResponses = {
+    /**
+     * Recent member transactions
+     */
+    200: RecurringSeriesMembersResponse;
+};
+
+export type GetRecurringMembersResponse = GetRecurringMembersResponses[keyof GetRecurringMembersResponses];
 
 export type PostRecurringConfirmData = {
     body?: never;

@@ -78,3 +78,16 @@ SET
 WHERE id = $1
   AND status = 'uncertain'
 RETURNING *;
+
+-- name: ListRecurringSeriesMembers :many
+SELECT
+    m.transaction_id,
+    m.booking_date,
+    m.amount,
+    t.counterparty,
+    t.purpose
+FROM recurring_series_members m
+JOIN transactions t ON t.id = m.transaction_id
+WHERE m.series_id = sqlc.arg(series_id)
+ORDER BY m.booking_date DESC, m.transaction_id DESC
+LIMIT sqlc.arg(row_limit);

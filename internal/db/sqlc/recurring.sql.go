@@ -236,6 +236,59 @@ func (q *Queries) ListRecurringSeries(ctx context.Context) ([]RecurringSeries, e
 	return items, nil
 }
 
+const listRecurringSeriesMembers = `-- name: ListRecurringSeriesMembers :many
+SELECT
+    m.transaction_id,
+    m.booking_date,
+    m.amount,
+    t.counterparty,
+    t.purpose
+FROM recurring_series_members m
+JOIN transactions t ON t.id = m.transaction_id
+WHERE m.series_id = $1
+ORDER BY m.booking_date DESC, m.transaction_id DESC
+LIMIT $2
+`
+
+type ListRecurringSeriesMembersParams struct {
+	SeriesID uuid.UUID `json:"series_id"`
+	RowLimit int32     `json:"row_limit"`
+}
+
+type ListRecurringSeriesMembersRow struct {
+	TransactionID uuid.UUID       `json:"transaction_id"`
+	BookingDate   pgtype.Date     `json:"booking_date"`
+	Amount        decimal.Decimal `json:"amount"`
+	Counterparty  string          `json:"counterparty"`
+	Purpose       string          `json:"purpose"`
+}
+
+func (q *Queries) ListRecurringSeriesMembers(ctx context.Context, arg ListRecurringSeriesMembersParams) ([]ListRecurringSeriesMembersRow, error) {
+	rows, err := q.db.Query(ctx, listRecurringSeriesMembers, arg.SeriesID, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListRecurringSeriesMembersRow{}
+	for rows.Next() {
+		var i ListRecurringSeriesMembersRow
+		if err := rows.Scan(
+			&i.TransactionID,
+			&i.BookingDate,
+			&i.Amount,
+			&i.Counterparty,
+			&i.Purpose,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTransactionsForRecurringScan = `-- name: ListTransactionsForRecurringScan :many
 SELECT
     id,

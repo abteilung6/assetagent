@@ -1129,6 +1129,20 @@ type RecurringSeriesListResponse struct {
 	Data []RecurringSeries `json:"data"`
 }
 
+// RecurringSeriesMember defines model for RecurringSeriesMember.
+type RecurringSeriesMember struct {
+	Amount        string             `json:"amount"`
+	BookingDate   openapi_types.Date `json:"booking_date"`
+	Counterparty  string             `json:"counterparty"`
+	Purpose       string             `json:"purpose"`
+	TransactionId openapi_types.UUID `json:"transaction_id"`
+}
+
+// RecurringSeriesMembersResponse defines model for RecurringSeriesMembersResponse.
+type RecurringSeriesMembersResponse struct {
+	Data []RecurringSeriesMember `json:"data"`
+}
+
 // Scenario defines model for Scenario.
 type Scenario struct {
 	CreatedAt  time.Time              `json:"created_at"`
@@ -1296,6 +1310,11 @@ type PostImportsMultipartBody struct {
 type PostImportsPreviewMultipartBody struct {
 	// File Sparkasse CSV export
 	File openapi_types.File `json:"file"`
+}
+
+// GetRecurringMembersParams defines parameters for GetRecurringMembers.
+type GetRecurringMembersParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // GetMoneyReviewsParams defines parameters for GetMoneyReviews.
@@ -1467,6 +1486,9 @@ type ServerInterface interface {
 	// Confirm an uncertain recurring series
 	// (POST /api/recurring/{id}/confirm)
 	PostRecurringConfirm(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// List sample member transactions for a recurring series
+	// (GET /api/recurring/{id}/members)
+	GetRecurringMembers(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetRecurringMembersParams)
 	// Dismiss an uncertain recurring series
 	// (POST /api/recurring/{id}/reject)
 	PostRecurringReject(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -1671,6 +1693,12 @@ func (_ Unimplemented) GetUncertainRecurring(w http.ResponseWriter, r *http.Requ
 // Confirm an uncertain recurring series
 // (POST /api/recurring/{id}/confirm)
 func (_ Unimplemented) PostRecurringConfirm(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List sample member transactions for a recurring series
+// (GET /api/recurring/{id}/members)
+func (_ Unimplemented) GetRecurringMembers(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetRecurringMembersParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2352,6 +2380,48 @@ func (siw *ServerInterfaceWrapper) PostRecurringConfirm(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetRecurringMembers operation middleware
+func (siw *ServerInterfaceWrapper) GetRecurringMembers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetRecurringMembersParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRecurringMembers(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PostRecurringReject operation middleware
 func (siw *ServerInterfaceWrapper) PostRecurringReject(w http.ResponseWriter, r *http.Request) {
 
@@ -2905,6 +2975,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/recurring/{id}/confirm", wrapper.PostRecurringConfirm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/recurring/{id}/members", wrapper.GetRecurringMembers)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/recurring/{id}/reject", wrapper.PostRecurringReject)

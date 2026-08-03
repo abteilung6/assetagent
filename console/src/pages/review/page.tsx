@@ -1,5 +1,6 @@
 import type React from "react";
 import { useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ import {
 import {
   recurringActionErrorMessage,
   useRecurringConfirm,
+  useRecurringMembers,
   useRecurringReject,
   useUncertainRecurring,
   type RecurringSeries,
@@ -31,6 +33,7 @@ import {
   useTransferReject,
   type TransferCandidate,
 } from "@/hooks/use-transfer-candidates";
+import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
 import { cn } from "@/lib/utils";
 
 type ReviewTab = "transfers" | "categories" | "recurring";
@@ -587,6 +590,10 @@ const RecurringSeriesRow: React.FC<RecurringSeriesRowProps> = ({
   onConfirm,
   onReject,
 }) => {
+  const [expanded, setExpanded] = useState(false);
+  const membersQuery = useRecurringMembers(series.id, expanded);
+  const members = membersQuery.data?.data ?? [];
+  const sampleCount = Math.min(3, series.member_count || 3);
   const cadence =
     series.interval === "monthly"
       ? "Monthly"
@@ -597,6 +604,24 @@ const RecurringSeriesRow: React.FC<RecurringSeriesRowProps> = ({
     series.kind === "income"
       ? series.amount_typical
       : `-${series.amount_typical}`;
+  const typicalAbs = Math.abs(Number.parseFloat(series.amount_typical));
+  const transactionsSearch = useMemo(() => {
+    const dates = members
+      .map((m) => m.booking_date.slice(0, 10))
+      .filter(Boolean)
+      .sort();
+    const from = dates[0];
+    const to = dates[dates.length - 1];
+    const counterparty = members.find((m) => m.counterparty.trim())?.counterparty;
+    return {
+      ...defaultTransactionSearchParams,
+      ...(from ? { from } : {}),
+      ...(to ? { to } : {}),
+      ...(counterparty
+        ? { counterparty }
+        : { q: series.display_name }),
+    };
+  }, [members, series.display_name]);
 
   return (
     <li className="rounded-xl border bg-card px-4 py-4 shadow-xs">
@@ -614,9 +639,79 @@ const RecurringSeriesRow: React.FC<RecurringSeriesRowProps> = ({
               ? ` · Next around ${formatDate(series.next_expected)}`
               : null}
           </p>
+          <button
+            type="button"
+            className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            onClick={() => setExpanded((open) => !open)}
+          >
+            {expanded
+              ? "Hide payments"
+              : `Show ${sampleCount} payment${sampleCount === 1 ? "" : "s"}`}
+          </button>
         </div>
         <Amount value={signedAmount} />
       </div>
+
+      {expanded ? (
+        <div className="mt-3 space-y-2 border-t pt-3">
+          {membersQuery.isLoading ? (
+            <p className="text-xs text-muted-foreground">Loading payments…</p>
+          ) : membersQuery.isError ? (
+            <p className="text-xs text-destructive">
+              Could not load sample payments.
+            </p>
+          ) : members.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              No member transactions stored for this series yet.
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {members.map((member) => {
+                const amountAbs = Math.abs(Number.parseFloat(member.amount));
+                const atypical =
+                  series.amount_changed &&
+                  Number.isFinite(typicalAbs) &&
+                  Number.isFinite(amountAbs) &&
+                  Math.abs(amountAbs - typicalAbs) > 0.01;
+                const label =
+                  member.purpose.trim() ||
+                  member.counterparty.trim() ||
+                  "Payment";
+                return (
+                  <li
+                    key={member.transaction_id}
+                    className="flex items-baseline justify-between gap-3 text-xs"
+                  >
+                    <span className="min-w-0 truncate text-muted-foreground">
+                      <span className="tabular-nums text-foreground">
+                        {formatDate(member.booking_date)}
+                      </span>{" "}
+                      {label}
+                      {atypical ? (
+                        <span className="text-amber-800 dark:text-amber-200">
+                          {" "}
+                          · amount changed
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-foreground">
+                      {formatAmount(member.amount)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <Link
+            to="/transactions"
+            search={transactionsSearch}
+            className="inline-flex text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            View all in Transactions →
+          </Link>
+        </div>
+      ) : null}
+
       <div className="mt-4 flex flex-wrap justify-end gap-2 border-t pt-3">
         <Button
           type="button"

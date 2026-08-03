@@ -55,6 +55,15 @@ type RecurringSeries struct {
 	UpdatedAt     time.Time
 }
 
+// RecurringSeriesMember is one booking that belongs to a detected series.
+type RecurringSeriesMember struct {
+	TransactionID uuid.UUID
+	BookingDate   time.Time
+	Amount        decimal.Decimal
+	Counterparty  string
+	Purpose       string
+}
+
 type RecurringScanResult struct {
 	TransactionsConsidered int
 	SkippedExisting        int

@@ -156,6 +156,41 @@ func (s *Recurring) ListUncertain(ctx context.Context) ([]domain.RecurringSeries
 	return out, nil
 }
 
+func (s *Recurring) ListMembers(
+	ctx context.Context,
+	seriesID uuid.UUID,
+	limit int,
+) ([]domain.RecurringSeriesMember, error) {
+	if limit <= 0 || limit > 20 {
+		limit = 3
+	}
+	q := sqldb.New(s.pool)
+	if _, err := q.GetRecurringSeries(ctx, seriesID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrRecurringSeriesNotFound
+		}
+		return nil, err
+	}
+	rows, err := q.ListRecurringSeriesMembers(ctx, sqldb.ListRecurringSeriesMembersParams{
+		SeriesID: seriesID,
+		RowLimit: int32(limit),
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domain.RecurringSeriesMember, len(rows))
+	for i, row := range rows {
+		out[i] = domain.RecurringSeriesMember{
+			TransactionID: row.TransactionID,
+			BookingDate:   row.BookingDate.Time,
+			Amount:        row.Amount,
+			Counterparty:  row.Counterparty,
+			Purpose:       row.Purpose,
+		}
+	}
+	return out, nil
+}
+
 func (s *Recurring) Confirm(ctx context.Context, id uuid.UUID) (domain.RecurringSeries, error) {
 	row, err := sqldb.New(s.pool).ConfirmRecurringSeries(ctx, id)
 	if err != nil {

@@ -14,6 +14,7 @@ import (
 
 type RecurringService interface {
 	ListUncertain(ctx context.Context) ([]domain.RecurringSeries, error)
+	ListMembers(ctx context.Context, seriesID uuid.UUID, limit int) ([]domain.RecurringSeriesMember, error)
 	Confirm(ctx context.Context, id uuid.UUID) (domain.RecurringSeries, error)
 	Reject(ctx context.Context, id uuid.UUID) (domain.RecurringSeries, error)
 }
@@ -33,6 +34,42 @@ func (h *Handler) GetUncertainRecurring(w http.ResponseWriter, r *http.Request) 
 		data[i] = toAPIRecurringSeries(item)
 	}
 	writeJSON(w, http.StatusOK, gen.RecurringSeriesListResponse{Data: data})
+}
+
+func (h *Handler) GetRecurringMembers(
+	w http.ResponseWriter,
+	r *http.Request,
+	id openapi_types.UUID,
+	params gen.GetRecurringMembersParams,
+) {
+	if h.recurring == nil {
+		writeInternalError(w, "recurring service is not configured")
+		return
+	}
+	limit := 3
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+	items, err := h.recurring.ListMembers(r.Context(), id, limit)
+	if err != nil {
+		if errors.Is(err, service.ErrRecurringSeriesNotFound) {
+			writeNotFoundError(w, err.Error())
+			return
+		}
+		writeInternalError(w, "failed to list recurring members")
+		return
+	}
+	data := make([]gen.RecurringSeriesMember, len(items))
+	for i, item := range items {
+		data[i] = gen.RecurringSeriesMember{
+			TransactionId: item.TransactionID,
+			BookingDate:   openapi_types.Date{Time: dateOnly(item.BookingDate)},
+			Amount:        item.Amount.StringFixed(2),
+			Counterparty:  item.Counterparty,
+			Purpose:       item.Purpose,
+		}
+	}
+	writeJSON(w, http.StatusOK, gen.RecurringSeriesMembersResponse{Data: data})
 }
 
 func (h *Handler) PostRecurringConfirm(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {

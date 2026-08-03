@@ -402,6 +402,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RecurringSeriesListResponse"
+  /api/recurring/{id}/members:
+    get:
+      operationId: getRecurringMembers
+      summary: List sample member transactions for a recurring series
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 3
+      responses:
+        "200":
+          description: Recent member transactions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecurringSeriesMembersResponse"
+        "404":
+          description: Recurring series not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/recurring/{id}/confirm:
     post:
       operationId: postRecurringConfirm
@@ -1674,6 +1706,36 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RecurringSeries"
+    RecurringSeriesMember:
+      type: object
+      required:
+        - transaction_id
+        - booking_date
+        - amount
+        - counterparty
+        - purpose
+      properties:
+        transaction_id:
+          type: string
+          format: uuid
+        booking_date:
+          type: string
+          format: date
+        amount:
+          type: string
+        counterparty:
+          type: string
+        purpose:
+          type: string
+    RecurringSeriesMembersResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecurringSeriesMember"
     BaselineMetric:
       type: object
       required:

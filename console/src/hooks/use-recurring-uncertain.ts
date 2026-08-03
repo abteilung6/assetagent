@@ -1,16 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  getRecurringMembersOptions,
   getUncertainRecurringOptions,
   getUncertainRecurringQueryKey,
   postRecurringConfirmMutation,
   postRecurringRejectMutation,
 } from "@/api/@tanstack/react-query.gen";
-import type { RecurringSeries } from "@/api/types.gen";
+import type { RecurringSeries, RecurringSeriesMember } from "@/api/types.gen";
 import { apiErrorMessage } from "@/lib/api-error";
 
 export function useUncertainRecurring() {
   return useQuery(getUncertainRecurringOptions());
+}
+
+export function useRecurringMembers(seriesId: string, enabled: boolean) {
+  return useQuery({
+    ...getRecurringMembersOptions({
+      path: { id: seriesId },
+      query: { limit: 3 },
+    }),
+    enabled: enabled && Boolean(seriesId),
+  });
 }
 
 export function useRecurringConfirm() {
@@ -44,4 +55,4 @@ export function recurringActionErrorMessage(error: unknown): string {
   );
 }
 
-export type { RecurringSeries };
+export type { RecurringSeries, RecurringSeriesMember };

@@ -80,6 +80,7 @@ type Querier interface {
 	ListMonthlyCashflowV2(ctx context.Context, arg ListMonthlyCashflowV2Params) ([]ListMonthlyCashflowV2Row, error)
 	ListRecurringMemberTransactionIDs(ctx context.Context) ([]uuid.UUID, error)
 	ListRecurringSeries(ctx context.Context) ([]RecurringSeries, error)
+	ListRecurringSeriesMembers(ctx context.Context, arg ListRecurringSeriesMembersParams) ([]ListRecurringSeriesMembersRow, error)
 	ListScenariosForForecast(ctx context.Context, forecastID uuid.UUID) ([]Scenario, error)
 	ListSuggestedTransferCandidates(ctx context.Context) ([]ListSuggestedTransferCandidatesRow, error)
 	ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]Transaction, error)

@@ -275,4 +275,57 @@ describe("Needs review inbox", () => {
     });
     expect(await screen.findByText(/Inbox clear/i)).toBeInTheDocument();
   });
+
+  it("expands recurring sample payments", async () => {
+    const user = userEvent.setup();
+    const sampleSeries = {
+      id: "55555555-5555-5555-5555-555555555555",
+      display_name: "Example Landlord",
+      interval: "monthly" as const,
+      kind: "fixed" as const,
+      status: "uncertain" as const,
+      amount_typical: "1200.00",
+      amount_last: "1200.00",
+      amount_changed: true,
+      next_expected: "2026-04-01",
+      uncertainty: "low" as const,
+      member_count: 3,
+      created_at: "2026-03-01T00:00:00Z",
+    };
+    vi.spyOn(sdk, "getTransferCandidates").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
+    vi.spyOn(sdk, "getClassificationQueue").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
+    vi.spyOn(sdk, "getCategories").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
+    vi.spyOn(sdk, "getUncertainRecurring").mockResolvedValue(
+      mockApiResponse({ data: [sampleSeries] }),
+    );
+    vi.spyOn(sdk, "getRecurringMembers").mockResolvedValue(
+      mockApiResponse({
+        data: [
+          {
+            transaction_id: "66666666-6666-6666-6666-666666666666",
+            booking_date: "2026-03-01",
+            amount: "-1250.00",
+            counterparty: "Example Landlord",
+            purpose: "Miete Maerz",
+          },
+        ],
+      }),
+    );
+
+    testRender({ route: "/review" });
+
+    expect(await screen.findByText("Example Landlord")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Show 3 payments/i }));
+    expect(await screen.findByText(/Miete Maerz/i)).toBeInTheDocument();
+    expect(screen.getByText(/amount changed/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /View all in Transactions/i }),
+    ).toBeInTheDocument();
+  });
 });

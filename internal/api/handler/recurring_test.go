@@ -77,6 +77,23 @@ func TestPostRecurringRejectConflict(t *testing.T) {
 	}
 }
 
+func TestGetRecurringMembers(t *testing.T) {
+	id := uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+	router := newRecurringTestRouter(&stubRecurringService{})
+	req := httptest.NewRequest(http.MethodGet, "/api/recurring/"+id.String()+"/members?limit=3", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, want := range []string{"Example Landlord", "Miete Maerz", "-1200.00"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("body missing %q: %s", want, body)
+		}
+	}
+}
+
 func newRecurringTestRouter(recurring handler.RecurringService) chi.Router {
 	router := chi.NewRouter()
 	gen.HandlerWithOptions(handler.New(nil, nil, nil, nil, nil, nil, nil, recurring, nil, nil, nil, nil), gen.ChiServerOptions{
@@ -93,6 +110,20 @@ type stubRecurringService struct {
 
 func (s *stubRecurringService) ListUncertain(ctx context.Context) ([]domain.RecurringSeries, error) {
 	return s.uncertain, nil
+}
+
+func (s *stubRecurringService) ListMembers(
+	ctx context.Context,
+	seriesID uuid.UUID,
+	limit int,
+) ([]domain.RecurringSeriesMember, error) {
+	return []domain.RecurringSeriesMember{{
+		TransactionID: uuid.MustParse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
+		BookingDate:   time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC),
+		Amount:        decimal.RequireFromString("-1200.00"),
+		Counterparty:  "Example Landlord",
+		Purpose:       "Miete Maerz",
+	}}, nil
 }
 
 func (s *stubRecurringService) Confirm(ctx context.Context, id uuid.UUID) (domain.RecurringSeries, error) {
