@@ -168,6 +168,7 @@ JOIN categories c ON c.id = tc.category_id
 LEFT JOIN merchants m ON m.id = tc.merchant_id
 WHERE tc.source <> 'user_rule'
   AND c.slug <> 'transfer'
+  AND t.one_off = false
   AND (
     tc.source = 'unresolved'
     OR tc.confidence = 'low'

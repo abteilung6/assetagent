@@ -124,11 +124,12 @@ func (r *Reports) GetCashflowV2Evidence(
 		PeriodTo:          to,
 		AccountsIncluded:  accounts,
 		TransfersExcluded: true,
-		Calculation:       "Sum of booking amounts in the period, excluding legs of confirmed internal transfers",
+		Calculation:       "Sum of booking amounts in the period, excluding legs of confirmed internal transfers and user-marked one-offs",
 		Confidence:        confidence,
 		DataFreshness:     freshness,
 		Assumptions: []string{
 			"Only confirmed internal transfers are excluded",
+			"One-off transactions marked by the user are excluded",
 			"Suggested or rejected transfer pairs still count as income/expense",
 		},
 		EvidenceIDs: evidenceIDs,

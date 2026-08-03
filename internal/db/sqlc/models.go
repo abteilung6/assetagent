@@ -215,6 +215,7 @@ type Transaction struct {
 	Fingerprint                    string          `json:"fingerprint"`
 	AccountID                      pgtype.UUID     `json:"account_id"`
 	ImportRunID                    pgtype.UUID     `json:"import_run_id"`
+	OneOff                         bool            `json:"one_off"`
 }
 
 type TransactionClassification struct {

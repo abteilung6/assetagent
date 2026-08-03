@@ -94,7 +94,8 @@ SELECT
     info,
     fingerprint,
     account_id,
-    import_run_id
+    import_run_id,
+    one_off
 FROM transactions
 WHERE (sqlc.narg('from_date')::date IS NULL OR booking_date >= sqlc.narg('from_date')::date)
   AND (sqlc.narg('to_date')::date IS NULL OR booking_date <= sqlc.narg('to_date')::date)
@@ -116,3 +117,31 @@ ORDER BY
   CASE WHEN (sqlc.narg('sort_field') IS NULL OR sqlc.narg('sort_field') = 'booking_date') AND COALESCE(sqlc.narg('sort_asc'), false) THEN booking_date END ASC NULLS LAST,
   CASE WHEN (sqlc.narg('sort_field') IS NULL OR sqlc.narg('sort_field') = 'booking_date') AND NOT COALESCE(sqlc.narg('sort_asc'), false) THEN booking_date END DESC NULLS LAST
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
+
+-- name: SetTransactionOneOff :one
+UPDATE transactions
+SET one_off = $2
+WHERE id = $1
+RETURNING
+    id,
+    order_account,
+    booking_date,
+    value_date,
+    booking_text,
+    purpose,
+    creditor_id,
+    mandate_reference,
+    end_to_end_reference,
+    collection_reference,
+    direct_debit_original_amount,
+    chargeback_expense_reimbursement,
+    counterparty,
+    counterparty_iban,
+    counterparty_bic,
+    amount,
+    currency,
+    info,
+    fingerprint,
+    account_id,
+    import_run_id,
+    one_off;

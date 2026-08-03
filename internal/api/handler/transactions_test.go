@@ -5,26 +5,44 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/abteilung6/assetagent/internal/api/gen"
 	"github.com/abteilung6/assetagent/internal/api/handler"
 	"github.com/abteilung6/assetagent/internal/domain"
+	"github.com/abteilung6/assetagent/internal/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
 
 type stubListService struct {
-	result domain.ListResult
-	err    error
-	params domain.ListParams
+	result          domain.ListResult
+	err             error
+	params          domain.ListParams
+	oneOffID        uuid.UUID
+	oneOff          bool
+	setOneOffErr    error
+	setOneOffResult *domain.Transaction
 }
 
 func (s *stubListService) ListTransactions(ctx context.Context, params domain.ListParams) (domain.ListResult, error) {
 	s.params = params
 	return s.result, s.err
+}
+
+func (s *stubListService) SetTransactionOneOff(ctx context.Context, id uuid.UUID, oneOff bool) (domain.Transaction, error) {
+	s.oneOffID = id
+	s.oneOff = oneOff
+	if s.setOneOffErr != nil {
+		return domain.Transaction{}, s.setOneOffErr
+	}
+	if s.setOneOffResult != nil {
+		return *s.setOneOffResult, nil
+	}
+	return domain.Transaction{ID: id, OneOff: oneOff}, nil
 }
 
 func TestGetTransactions_returnsPaginatedList(t *testing.T) {
@@ -141,5 +159,75 @@ func TestGetTransactions_mapsFilterParams(t *testing.T) {
 	}
 	if list.params.MaxAmount == nil || !list.params.MaxAmount.Equal(decimal.RequireFromString("0")) {
 		t.Fatalf("max_amount = %v", list.params.MaxAmount)
+	}
+}
+
+func TestPostTransactionOneOff_ok(t *testing.T) {
+	txID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+	list := &stubListService{
+		setOneOffResult: &domain.Transaction{
+			ID:           txID,
+			OrderAccount: "DE15100500006011880043",
+			BookingDate:  time.Date(2025, 12, 30, 0, 0, 0, 0, time.UTC),
+			ValueDate:    time.Date(2025, 12, 30, 0, 0, 0, 0, time.UTC),
+			Counterparty: "AMAZON",
+			Amount:       decimal.RequireFromString("-50000.00"),
+			Currency:     "EUR",
+			OneOff:       true,
+		},
+	}
+
+	router := chi.NewRouter()
+	gen.HandlerWithOptions(handler.New(list, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
+		BaseRouter:       router,
+		ErrorHandlerFunc: handler.APIErrorHandler,
+	})
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/transactions/"+txID.String()+"/one-off",
+		strings.NewReader(`{"one_off":true}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if !list.oneOff || list.oneOffID != txID {
+		t.Fatalf("service called with id=%s oneOff=%v", list.oneOffID, list.oneOff)
+	}
+
+	var resp gen.Transaction
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !resp.OneOff {
+		t.Fatal("expected one_off true")
+	}
+}
+
+func TestPostTransactionOneOff_notFound(t *testing.T) {
+	txID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+	list := &stubListService{setOneOffErr: service.ErrTransactionNotFound}
+
+	router := chi.NewRouter()
+	gen.HandlerWithOptions(handler.New(list, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
+		BaseRouter:       router,
+		ErrorHandlerFunc: handler.APIErrorHandler,
+	})
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/transactions/"+txID.String()+"/one-off",
+		strings.NewReader(`{"one_off":true}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNotFound)
 	}
 }

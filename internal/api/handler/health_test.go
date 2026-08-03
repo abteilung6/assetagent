@@ -11,12 +11,17 @@ import (
 	"github.com/abteilung6/assetagent/internal/api/handler"
 	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type noopList struct{}
 
 func (noopList) ListTransactions(context.Context, domain.ListParams) (domain.ListResult, error) {
 	return domain.ListResult{}, nil
+}
+
+func (noopList) SetTransactionOneOff(_ context.Context, id uuid.UUID, oneOff bool) (domain.Transaction, error) {
+	return domain.Transaction{ID: id, OneOff: oneOff}, nil
 }
 
 func TestGetHealth(t *testing.T) {

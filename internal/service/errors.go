@@ -14,4 +14,5 @@ var (
 	ErrImportRunAlreadyRolledBack = errors.New("import run already rolled back")
 	ErrPreviewHashMismatch        = errors.New("preview_hash does not match uploaded file")
 	ErrAccountNotFound            = errors.New("account not found")
+	ErrTransactionNotFound        = errors.New("transaction not found")
 )

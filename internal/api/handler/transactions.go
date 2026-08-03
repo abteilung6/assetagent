@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/abteilung6/assetagent/internal/api/gen"
@@ -15,6 +17,7 @@ import (
 
 type ListService interface {
 	ListTransactions(ctx context.Context, params domain.ListParams) (domain.ListResult, error)
+	SetTransactionOneOff(ctx context.Context, id uuid.UUID, oneOff bool) (domain.Transaction, error)
 }
 
 type ImportService interface {
@@ -183,5 +186,30 @@ func toAPITransaction(tx domain.Transaction) gen.Transaction {
 		Amount:                         tx.Amount.StringFixed(2),
 		Currency:                       tx.Currency,
 		Info:                           tx.Info,
+		OneOff:                         tx.OneOff,
 	}
+}
+
+func (h *Handler) PostTransactionOneOff(
+	w http.ResponseWriter,
+	r *http.Request,
+	transactionId openapi_types.UUID,
+) {
+	var body gen.TransactionOneOffRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeValidationError(w, "invalid JSON body")
+		return
+	}
+
+	tx, err := h.list.SetTransactionOneOff(r.Context(), uuid.UUID(transactionId), body.OneOff)
+	if err != nil {
+		if errors.Is(err, service.ErrTransactionNotFound) {
+			writeNotFoundError(w, err.Error())
+			return
+		}
+		writeInternalError(w, "failed to update transaction")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, toAPITransaction(tx))
 }

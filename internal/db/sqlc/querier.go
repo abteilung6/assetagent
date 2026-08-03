@@ -94,6 +94,7 @@ type Querier interface {
 	Ping(ctx context.Context) (int32, error)
 	RejectRecurringSeries(ctx context.Context, id uuid.UUID) (RecurringSeries, error)
 	RejectTransferPair(ctx context.Context, id uuid.UUID) (TransferPair, error)
+	SetTransactionOneOff(ctx context.Context, arg SetTransactionOneOffParams) (Transaction, error)
 	SupersedeOpenFinancialBaselines(ctx context.Context) error
 	SupersedeOpenMoneyReviews(ctx context.Context) error
 	UpdateActionStatus(ctx context.Context, arg UpdateActionStatusParams) (Action, error)

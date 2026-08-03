@@ -96,6 +96,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/transactions/{transaction_id}/one-off:
+    post:
+      operationId: postTransactionOneOff
+      summary: Mark or unmark a transaction as a one-off (excluded from typical-spend math)
+      parameters:
+        - name: transaction_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionOneOffRequest"
+      responses:
+        "200":
+          description: Updated transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/chat:
     post:
       operationId: postChat
@@ -1078,6 +1114,7 @@ components:
         - amount
         - currency
         - info
+        - one_off
       properties:
         id:
           type: string
@@ -1120,6 +1157,16 @@ components:
           type: string
         info:
           type: string
+        one_off:
+          type: boolean
+          description: When true, excluded from typical-spend and cashflow charts
+    TransactionOneOffRequest:
+      type: object
+      required:
+        - one_off
+      properties:
+        one_off:
+          type: boolean
     TransactionListResponse:
       type: object
       required:

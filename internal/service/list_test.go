@@ -8,6 +8,7 @@ import (
 
 	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/abteilung6/assetagent/internal/service"
+	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
 
@@ -20,6 +21,10 @@ type fakeListRepo struct {
 func (f *fakeListRepo) List(ctx context.Context, params domain.ListParams) (domain.ListResult, error) {
 	f.params = params
 	return f.result, f.err
+}
+
+func (f *fakeListRepo) SetOneOff(ctx context.Context, id uuid.UUID, oneOff bool) (domain.Transaction, error) {
+	return domain.Transaction{ID: id, OneOff: oneOff}, f.err
 }
 
 func TestListTransactions_defaultsLimit(t *testing.T) {

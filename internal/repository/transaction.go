@@ -88,6 +88,17 @@ func (r *Transaction) List(ctx context.Context, params domain.ListParams) (domai
 	}, nil
 }
 
+func (r *Transaction) SetOneOff(ctx context.Context, id uuid.UUID, oneOff bool) (domain.Transaction, error) {
+	row, err := r.queries.SetTransactionOneOff(ctx, sqldb.SetTransactionOneOffParams{
+		ID:     id,
+		OneOff: oneOff,
+	})
+	if err != nil {
+		return domain.Transaction{}, err
+	}
+	return rowToDomain(row), nil
+}
+
 func buildFilterParams(params domain.ListParams) sqldb.CountTransactionsFilteredParams {
 	return sqldb.CountTransactionsFilteredParams{
 		FromDate:     dateFromPtr(params.FromDate),
@@ -120,6 +131,7 @@ func rowToDomain(row sqldb.Transaction) domain.Transaction {
 		Amount:                         row.Amount,
 		Currency:                       row.Currency,
 		Info:                           row.Info,
+		OneOff:                         row.OneOff,
 	}
 }
 

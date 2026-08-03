@@ -2,12 +2,16 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"github.com/abteilung6/assetagent/internal/domain"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type ListRepository interface {
 	List(ctx context.Context, params domain.ListParams) (domain.ListResult, error)
+	SetOneOff(ctx context.Context, id uuid.UUID, oneOff bool) (domain.Transaction, error)
 }
 
 type List struct {
@@ -36,6 +40,17 @@ func (s *List) ListTransactions(ctx context.Context, params domain.ListParams) (
 	}
 
 	return s.repo.List(ctx, params)
+}
+
+func (s *List) SetTransactionOneOff(ctx context.Context, id uuid.UUID, oneOff bool) (domain.Transaction, error) {
+	tx, err := s.repo.SetOneOff(ctx, id, oneOff)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Transaction{}, ErrTransactionNotFound
+	}
+	if err != nil {
+		return domain.Transaction{}, err
+	}
+	return tx, nil
 }
 
 func isValidSortField(field domain.SortField) bool {

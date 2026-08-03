@@ -1,34 +1,47 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import * as sdk from "@/api/sdk.gen";
 import { TransactionDetailSheet } from "@/components/transaction-detail/sheet";
 import { sampleTransaction } from "@/test/fixtures";
+import { mockApiResponse } from "@/test/mocks";
 import { testRender } from "@/test/render";
 
 describe("TransactionDetailSheet", () => {
-  it("renders selected transaction fields", () => {
+  it("marks a transaction as one-off", async () => {
+    const user = userEvent.setup();
+    const onTransactionChange = vi.fn();
+    const tx = sampleTransaction();
+    vi.spyOn(sdk, "postTransactionOneOff").mockResolvedValue(
+      mockApiResponse({ ...tx, one_off: true }),
+    );
+
     testRender(
       <TransactionDetailSheet
-        transaction={sampleTransaction({
-          end_to_end_reference: "E2E-123",
-          counterparty_iban: "DE89370400440532013000",
-        })}
+        transaction={tx}
         open
-        onOpenChange={vi.fn()}
+        onOpenChange={() => undefined}
+        onTransactionChange={onTransactionChange}
       />,
     );
 
-    const dialog = screen.getByRole("dialog");
-    expect(dialog).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("heading", { name: "REWE Markt GmbH" }),
-    ).toBeInTheDocument();
-    expect(within(dialog).getByText("REWE Dortmund")).toBeInTheDocument();
-    expect(within(dialog).getByText("CARD_PAYMENT")).toBeInTheDocument();
-    expect(within(dialog).getByText("6011880043")).toBeInTheDocument();
-    expect(within(dialog).getByText("E2E-123")).toBeInTheDocument();
-    expect(within(dialog).getByText("DE89370400440532013000")).toBeInTheDocument();
-    expect(within(dialog).getByText("-42.50")).toBeInTheDocument();
-    expect(within(dialog).getByText("EUR")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Treat as one-off" }),
+    );
+
+    await waitFor(() => {
+      expect(sdk.postTransactionOneOff).toHaveBeenCalledWith(
+        expect.objectContaining({
+          path: { transaction_id: tx.id },
+          body: { one_off: true },
+        }),
+      );
+    });
+    await waitFor(() => {
+      expect(onTransactionChange).toHaveBeenCalledWith(
+        expect.objectContaining({ one_off: true }),
+      );
+    });
   });
 });

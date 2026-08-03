@@ -247,7 +247,8 @@ SELECT
     info,
     fingerprint,
     account_id,
-    import_run_id
+    import_run_id,
+    one_off
 FROM transactions
 WHERE ($1::date IS NULL OR booking_date >= $1::date)
   AND ($2::date IS NULL OR booking_date <= $2::date)
@@ -328,6 +329,7 @@ func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsPara
 			&i.Fingerprint,
 			&i.AccountID,
 			&i.ImportRunID,
+			&i.OneOff,
 		); err != nil {
 			return nil, err
 		}
@@ -337,4 +339,68 @@ func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsPara
 		return nil, err
 	}
 	return items, nil
+}
+
+const setTransactionOneOff = `-- name: SetTransactionOneOff :one
+UPDATE transactions
+SET one_off = $2
+WHERE id = $1
+RETURNING
+    id,
+    order_account,
+    booking_date,
+    value_date,
+    booking_text,
+    purpose,
+    creditor_id,
+    mandate_reference,
+    end_to_end_reference,
+    collection_reference,
+    direct_debit_original_amount,
+    chargeback_expense_reimbursement,
+    counterparty,
+    counterparty_iban,
+    counterparty_bic,
+    amount,
+    currency,
+    info,
+    fingerprint,
+    account_id,
+    import_run_id,
+    one_off
+`
+
+type SetTransactionOneOffParams struct {
+	ID     uuid.UUID `json:"id"`
+	OneOff bool      `json:"one_off"`
+}
+
+func (q *Queries) SetTransactionOneOff(ctx context.Context, arg SetTransactionOneOffParams) (Transaction, error) {
+	row := q.db.QueryRow(ctx, setTransactionOneOff, arg.ID, arg.OneOff)
+	var i Transaction
+	err := row.Scan(
+		&i.ID,
+		&i.OrderAccount,
+		&i.BookingDate,
+		&i.ValueDate,
+		&i.BookingText,
+		&i.Purpose,
+		&i.CreditorID,
+		&i.MandateReference,
+		&i.EndToEndReference,
+		&i.CollectionReference,
+		&i.DirectDebitOriginalAmount,
+		&i.ChargebackExpenseReimbursement,
+		&i.Counterparty,
+		&i.CounterpartyIban,
+		&i.CounterpartyBic,
+		&i.Amount,
+		&i.Currency,
+		&i.Info,
+		&i.Fingerprint,
+		&i.AccountID,
+		&i.ImportRunID,
+		&i.OneOff,
+	)
+	return i, err
 }

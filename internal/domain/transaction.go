@@ -26,4 +26,5 @@ type Transaction struct {
 	Amount                         decimal.Decimal
 	Currency                       string
 	Info                           string
+	OneOff                         bool
 }

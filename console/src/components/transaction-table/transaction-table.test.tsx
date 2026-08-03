@@ -32,4 +32,14 @@ describe("TransactionTable", () => {
       screen.queryByRole("columnheader", { name: "Account" }),
     ).not.toBeInTheDocument();
   });
+
+  it("shows a one-off label on marked rows", () => {
+    testRender(
+      <TransactionTable
+        transactions={[sampleTransaction({ one_off: true })]}
+      />,
+    );
+
+    expect(screen.getByText("One-off")).toBeInTheDocument();
+  });
 });

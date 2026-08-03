@@ -29,11 +29,18 @@ const columns = [
   }),
   columnHelper.accessor("counterparty", {
     header: "Counterparty",
-    cell: ({ getValue }) => {
-      const value = getValue();
+    cell: ({ row }) => {
+      const value = row.original.counterparty;
       return (
-        <span className="block truncate" title={value}>
-          {value}
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="block truncate" title={value}>
+            {value}
+          </span>
+          {row.original.one_off ? (
+            <span className="shrink-0 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+              One-off
+            </span>
+          ) : null}
         </span>
       );
     },

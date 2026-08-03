@@ -1205,15 +1205,23 @@ type Transaction struct {
 	Id                             openapi_types.UUID `json:"id"`
 	Info                           string             `json:"info"`
 	MandateReference               string             `json:"mandate_reference"`
-	OrderAccount                   string             `json:"order_account"`
-	Purpose                        string             `json:"purpose"`
-	ValueDate                      openapi_types.Date `json:"value_date"`
+
+	// OneOff When true, excluded from typical-spend and cashflow charts
+	OneOff       bool               `json:"one_off"`
+	OrderAccount string             `json:"order_account"`
+	Purpose      string             `json:"purpose"`
+	ValueDate    openapi_types.Date `json:"value_date"`
 }
 
 // TransactionListResponse defines model for TransactionListResponse.
 type TransactionListResponse struct {
 	Data       []Transaction `json:"data"`
 	Pagination Pagination    `json:"pagination"`
+}
+
+// TransactionOneOffRequest defines model for TransactionOneOffRequest.
+type TransactionOneOffRequest struct {
+	OneOff bool `json:"one_off"`
 }
 
 // TransferCandidate defines model for TransferCandidate.
@@ -1397,6 +1405,9 @@ type PostImportsPreviewMultipartRequestBody PostImportsPreviewMultipartBody
 // PostMoneyReviewsJSONRequestBody defines body for PostMoneyReviews for application/json ContentType.
 type PostMoneyReviewsJSONRequestBody = MoneyReviewCreateRequest
 
+// PostTransactionOneOffJSONRequestBody defines body for PostTransactionOneOff for application/json ContentType.
+type PostTransactionOneOffJSONRequestBody = TransactionOneOffRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// List actions (optionally by status)
@@ -1507,6 +1518,9 @@ type ServerInterface interface {
 	// List transactions
 	// (GET /api/transactions)
 	GetTransactions(w http.ResponseWriter, r *http.Request, params GetTransactionsParams)
+	// Mark or unmark a transaction as a one-off (excluded from typical-spend math)
+	// (POST /api/transactions/{transaction_id}/one-off)
+	PostTransactionOneOff(w http.ResponseWriter, r *http.Request, transactionId openapi_types.UUID)
 	// List suggested internal transfer pairs awaiting review
 	// (GET /api/transfers/candidates)
 	GetTransferCandidates(w http.ResponseWriter, r *http.Request)
@@ -1735,6 +1749,12 @@ func (_ Unimplemented) PostMoneyReviewConfirm(w http.ResponseWriter, r *http.Req
 // List transactions
 // (GET /api/transactions)
 func (_ Unimplemented) GetTransactions(w http.ResponseWriter, r *http.Request, params GetTransactionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mark or unmark a transaction as a one-off (excluded from typical-spend math)
+// (POST /api/transactions/{transaction_id}/one-off)
+func (_ Unimplemented) PostTransactionOneOff(w http.ResponseWriter, r *http.Request, transactionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2710,6 +2730,32 @@ func (siw *ServerInterfaceWrapper) GetTransactions(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// PostTransactionOneOff operation middleware
+func (siw *ServerInterfaceWrapper) PostTransactionOneOff(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "transaction_id" -------------
+	var transactionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "transaction_id", chi.URLParam(r, "transaction_id"), &transactionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "transaction_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostTransactionOneOff(w, r, transactionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTransferCandidates operation middleware
 func (siw *ServerInterfaceWrapper) GetTransferCandidates(w http.ResponseWriter, r *http.Request) {
 
@@ -2996,6 +3042,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/transactions", wrapper.GetTransactions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/transactions/{transaction_id}/one-off", wrapper.PostTransactionOneOff)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/transfers/candidates", wrapper.GetTransferCandidates)

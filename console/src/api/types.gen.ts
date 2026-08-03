@@ -38,6 +38,14 @@ export type Transaction = {
     amount: string;
     currency: string;
     info: string;
+    /**
+     * When true, excluded from typical-spend and cashflow charts
+     */
+    one_off: boolean;
+};
+
+export type TransactionOneOffRequest = {
+    one_off: boolean;
 };
 
 export type TransactionListResponse = {
@@ -602,6 +610,37 @@ export type GetTransactionsResponses = {
 };
 
 export type GetTransactionsResponse = GetTransactionsResponses[keyof GetTransactionsResponses];
+
+export type PostTransactionOneOffData = {
+    body: TransactionOneOffRequest;
+    path: {
+        transaction_id: string;
+    };
+    query?: never;
+    url: '/api/transactions/{transaction_id}/one-off';
+};
+
+export type PostTransactionOneOffErrors = {
+    /**
+     * Invalid request
+     */
+    400: Error;
+    /**
+     * Transaction not found
+     */
+    404: Error;
+};
+
+export type PostTransactionOneOffError = PostTransactionOneOffErrors[keyof PostTransactionOneOffErrors];
+
+export type PostTransactionOneOffResponses = {
+    /**
+     * Updated transaction
+     */
+    200: Transaction;
+};
+
+export type PostTransactionOneOffResponse = PostTransactionOneOffResponses[keyof PostTransactionOneOffResponses];
 
 export type PostChatData = {
     body: ChatRequest;

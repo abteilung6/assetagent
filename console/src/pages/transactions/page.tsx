@@ -60,6 +60,10 @@ const TransactionsPage: React.FC = () => {
     }
   }, []);
 
+  const handleTransactionChange = useCallback((transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+  }, []);
+
   const isGloballyEmpty =
     !isPending &&
     !isError &&
@@ -120,6 +124,7 @@ const TransactionsPage: React.FC = () => {
         transaction={selectedTransaction}
         open={sheetOpen}
         onOpenChange={handleSheetOpenChange}
+        onTransactionChange={handleTransactionChange}
       />
     </div>
   );

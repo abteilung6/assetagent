@@ -238,6 +238,9 @@ func (s *MoneyReviewService) largeExpenses(
 	}
 	out := make([]review.LargeExpense, 0)
 	for _, tx := range listed.Transactions {
+		if tx.OneOff {
+			continue
+		}
 		if !tx.Amount.IsNegative() {
 			continue
 		}

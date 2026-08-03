@@ -75,6 +75,7 @@ export function sampleTransaction(
     amount: "-42.50",
     currency: "EUR",
     info: "",
+    one_off: false,
     ...overrides,
   };
 }

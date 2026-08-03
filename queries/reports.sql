@@ -15,6 +15,7 @@ SELECT
 FROM transactions t
 WHERE t.booking_date >= sqlc.arg('from_date')::date
   AND t.booking_date <= sqlc.arg('to_date')::date
+  AND t.one_off = false
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
@@ -47,6 +48,7 @@ SELECT t.id
 FROM transactions t
 WHERE t.booking_date >= sqlc.arg('from_date')::date
   AND t.booking_date <= sqlc.arg('to_date')::date
+  AND t.one_off = false
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
@@ -83,6 +85,7 @@ SELECT
 FROM transactions t
 WHERE t.booking_date >= sqlc.arg('from_date')::date
   AND t.booking_date <= sqlc.arg('to_date')::date
+  AND t.one_off = false
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
