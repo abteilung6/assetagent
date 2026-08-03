@@ -12,6 +12,7 @@ import (
 	"github.com/abteilung6/assetagent/internal/api/gen"
 	"github.com/abteilung6/assetagent/internal/api/handler"
 	"github.com/abteilung6/assetagent/internal/domain"
+	"github.com/abteilung6/assetagent/internal/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
@@ -122,6 +123,13 @@ func (s *stubClassifyService) Correct(ctx context.Context, txID uuid.UUID, opts 
 		return domain.ClassifyCorrectResult{}, s.err
 	}
 	return s.correct, nil
+}
+
+func (s *stubClassifyService) ApplySuggestions(ctx context.Context) (service.ApplySuggestionsResult, error) {
+	if s.err != nil {
+		return service.ApplySuggestionsResult{}, s.err
+	}
+	return service.ApplySuggestionsResult{}, nil
 }
 
 type stubCategoryService struct {

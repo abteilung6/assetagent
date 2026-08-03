@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   CalendarRange,
   LineChart,
+  ListChecks,
   RefreshCw,
   Search,
   TrendingDown,
@@ -102,7 +103,8 @@ function periodLabel(
   if (
     name === TOOL_NAMES.baseline ||
     name === TOOL_NAMES.moneyReview ||
-    name === TOOL_NAMES.forecast
+    name === TOOL_NAMES.forecast ||
+    name === TOOL_NAMES.suggestReviewCategories
   ) {
     const resultPeriod = result.period;
     if (
@@ -158,6 +160,8 @@ function ToolIcon({
       return <CalendarRange className={className} aria-hidden />;
     case TOOL_NAMES.forecast:
       return <LineChart className={className} aria-hidden />;
+    case TOOL_NAMES.suggestReviewCategories:
+      return <ListChecks className={className} aria-hidden />;
     default:
       return <Search className={className} aria-hidden />;
   }
@@ -202,6 +206,16 @@ function PlanSourceLink({
       </Link>
     );
   }
+  if (name === TOOL_NAMES.suggestReviewCategories) {
+    return (
+      <Link
+        to="/review"
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+      >
+        Open Needs review
+      </Link>
+    );
+  }
   return (
     <Link
       to="/plan"
@@ -243,6 +257,8 @@ function renderBody(toolCall: ChatToolCall, hasError: boolean) {
       return <MoneyReviewBody result={result} />;
     case TOOL_NAMES.forecast:
       return <ForecastBody result={result} />;
+    case TOOL_NAMES.suggestReviewCategories:
+      return <ReviewCategoriesBody result={result} />;
     default:
       return (
         <p className="text-sm text-muted-foreground">
@@ -250,6 +266,46 @@ function renderBody(toolCall: ChatToolCall, hasError: boolean) {
         </p>
       );
   }
+}
+
+function ReviewCategoriesBody({ result }: { result: Record<string, unknown> }) {
+  const count = typeof result.count === "number" ? result.count : 0;
+  const items = Array.isArray(result.items) ? result.items : [];
+  const applicable = items.filter((row) => {
+    const record = row as Record<string, unknown>;
+    return record.auto_applicable === true;
+  }).length;
+  return (
+    <div className="space-y-2 text-sm">
+      <p>
+        {count} queue item{count === 1 ? "" : "s"}
+        {applicable > 0 ? ` · ${applicable} ready to apply` : ""}
+      </p>
+      <ul className="space-y-1 border-t border-border/60 pt-2 text-xs text-muted-foreground">
+        {items.slice(0, 5).map((row, index) => {
+          const record = row as Record<string, unknown>;
+          const current =
+            typeof record.current_slug === "string"
+              ? record.current_slug
+              : "?";
+          const suggested =
+            typeof record.suggested_slug === "string"
+              ? record.suggested_slug
+              : "—";
+          const pattern =
+            typeof record.matched_pattern === "string"
+              ? record.matched_pattern
+              : "";
+          return (
+            <li key={`${current}-${index}`} className="truncate text-foreground">
+              {current} → {suggested}
+              {pattern ? ` (${pattern})` : ""}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 }
 
 function BaselineBody({ result }: { result: Record<string, unknown> }) {

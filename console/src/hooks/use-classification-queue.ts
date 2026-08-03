@@ -4,6 +4,7 @@ import {
   getCategoriesOptions,
   getClassificationQueueOptions,
   getClassificationQueueQueryKey,
+  postClassificationApplySuggestionsMutation,
   postClassificationCorrectMutation,
 } from "@/api/@tanstack/react-query.gen";
 import type {
@@ -24,6 +25,18 @@ export function useClassificationCorrect() {
   const queryClient = useQueryClient();
   return useMutation({
     ...postClassificationCorrectMutation(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: getClassificationQueueQueryKey(),
+      });
+    },
+  });
+}
+
+export function useClassificationApplySuggestions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    ...postClassificationApplySuggestionsMutation(),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: getClassificationQueueQueryKey(),

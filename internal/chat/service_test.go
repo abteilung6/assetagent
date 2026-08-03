@@ -217,6 +217,7 @@ func TestDefaultConfig_prefersTrustedMoneyTools(t *testing.T) {
 		"get_baseline",
 		"get_money_review",
 		"get_forecast",
+		"suggest_review_categories",
 		"get_cashflow_v2",
 		"get_recurring_costs",
 		"get_spending_changes",

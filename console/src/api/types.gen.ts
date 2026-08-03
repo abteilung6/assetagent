@@ -245,6 +245,19 @@ export type ClassificationCorrectResponse = {
     merchant_id?: string | null;
 };
 
+export type ClassificationApplySuggestionsResponse = {
+    applied: number;
+    skipped: number;
+    samples: Array<ClassificationApplySuggestionSample>;
+};
+
+export type ClassificationApplySuggestionSample = {
+    transaction_id: string;
+    category_slug: string;
+    pattern: string;
+    confidence: string;
+};
+
 export type RecurringSeries = {
     id: string;
     display_name: string;
@@ -1006,6 +1019,22 @@ export type GetClassificationQueueResponses = {
 };
 
 export type GetClassificationQueueResponse = GetClassificationQueueResponses[keyof GetClassificationQueueResponses];
+
+export type PostClassificationApplySuggestionsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/classifications/apply-suggestions';
+};
+
+export type PostClassificationApplySuggestionsResponses = {
+    /**
+     * Suggestions applied
+     */
+    200: ClassificationApplySuggestionsResponse;
+};
+
+export type PostClassificationApplySuggestionsResponse = PostClassificationApplySuggestionsResponses[keyof PostClassificationApplySuggestionsResponses];
 
 export type PostClassificationCorrectData = {
     body: ClassificationCorrectRequest;

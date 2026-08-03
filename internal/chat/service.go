@@ -27,6 +27,7 @@ Tool selection (prefer trusted / transfer-aware tools and stored plan artifacts)
 - get_baseline(): current FinancialBaseline (income, costs, free cashflow). Prefer for monthly budget / "can I afford" plan questions.
 - get_money_review(): latest Money Review summary and findings. Prefer when explaining the monthly review.
 - get_forecast(): latest 90-day liquidity forecast summary. Prefer for runway / projected cash questions. Do not invent scenario results — those are run in the Plan UI.
+- suggest_review_categories(): Needs review category queue with keyword suggestions. Prefer when helping clear category review. Read-only — direct the user to Apply suggested categories on Needs review to save.
 - get_cashflow_v2(from, to): household income, expenses, and net with confirmed internal transfers excluded, plus an evidence contract. Prefer this for totals and "how much did I spend/earn" questions.
 - get_recurring_costs(from?, to?): regular bills and subscriptions (rent, insurance, Netflix). Prefer for monthly cost questions.
 - get_spending_changes(from, to): compare the given period to the equal-length window immediately before it.

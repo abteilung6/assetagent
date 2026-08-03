@@ -484,6 +484,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClassificationQueueListResponse"
+  /api/classifications/apply-suggestions:
+    post:
+      operationId: postClassificationApplySuggestions
+      summary: Apply high-confidence pattern category suggestions on the Needs review queue
+      responses:
+        "200":
+          description: Suggestions applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassificationApplySuggestionsResponse"
   /api/classifications/{transaction_id}/correct:
     post:
       operationId: postClassificationCorrect
@@ -1575,6 +1586,38 @@ components:
           type: string
           format: uuid
           nullable: true
+    ClassificationApplySuggestionsResponse:
+      type: object
+      required:
+        - applied
+        - skipped
+        - samples
+      properties:
+        applied:
+          type: integer
+        skipped:
+          type: integer
+        samples:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClassificationApplySuggestionSample"
+    ClassificationApplySuggestionSample:
+      type: object
+      required:
+        - transaction_id
+        - category_slug
+        - pattern
+        - confidence
+      properties:
+        transaction_id:
+          type: string
+          format: uuid
+        category_slug:
+          type: string
+        pattern:
+          type: string
+        confidence:
+          type: string
     RecurringSeries:
       type: object
       required:

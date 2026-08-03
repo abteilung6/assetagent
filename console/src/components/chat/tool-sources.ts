@@ -15,6 +15,7 @@ export const TOOL_NAMES = {
   baseline: "get_baseline",
   moneyReview: "get_money_review",
   forecast: "get_forecast",
+  suggestReviewCategories: "suggest_review_categories",
 } as const;
 
 export type CashflowResult = {
@@ -97,6 +98,8 @@ export function toolDisplayName(name: string): string {
       return "Money review";
     case TOOL_NAMES.forecast:
       return "Forecast";
+    case TOOL_NAMES.suggestReviewCategories:
+      return "Category suggestions";
     default:
       return name.replaceAll("_", " ");
   }
@@ -106,7 +109,8 @@ export function isPlanArtifactTool(name: string): boolean {
   return (
     name === TOOL_NAMES.baseline ||
     name === TOOL_NAMES.moneyReview ||
-    name === TOOL_NAMES.forecast
+    name === TOOL_NAMES.forecast ||
+    name === TOOL_NAMES.suggestReviewCategories
   );
 }
 

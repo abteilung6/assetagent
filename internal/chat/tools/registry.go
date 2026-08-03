@@ -33,6 +33,7 @@ type Dependencies struct {
 	Baseline    BaselineSource
 	MoneyReview MoneyReviewSource
 	Forecast    ForecastSource
+	Classify    ClassificationSuggester
 }
 
 type Registry struct {
@@ -56,6 +57,7 @@ func NewRegistry(deps Dependencies) *Registry {
 	r.register(baselineTool(deps.Baseline))
 	r.register(moneyReviewTool(deps.MoneyReview))
 	r.register(forecastTool(deps.Forecast))
+	r.register(suggestReviewCategoriesTool(deps.Classify))
 	return r
 }
 

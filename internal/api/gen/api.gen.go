@@ -773,6 +773,21 @@ type ChatToolCall struct {
 	Result map[string]interface{} `json:"result"`
 }
 
+// ClassificationApplySuggestionSample defines model for ClassificationApplySuggestionSample.
+type ClassificationApplySuggestionSample struct {
+	CategorySlug  string             `json:"category_slug"`
+	Confidence    string             `json:"confidence"`
+	Pattern       string             `json:"pattern"`
+	TransactionId openapi_types.UUID `json:"transaction_id"`
+}
+
+// ClassificationApplySuggestionsResponse defines model for ClassificationApplySuggestionsResponse.
+type ClassificationApplySuggestionsResponse struct {
+	Applied int                                   `json:"applied"`
+	Samples []ClassificationApplySuggestionSample `json:"samples"`
+	Skipped int                                   `json:"skipped"`
+}
+
 // ClassificationCorrectRequest defines model for ClassificationCorrectRequest.
 type ClassificationCorrectRequest struct {
 	ApplyToMerchant *bool  `json:"apply_to_merchant,omitempty"`
@@ -1395,6 +1410,9 @@ type ServerInterface interface {
 	// Stream a grounded finance answer as server-sent events
 	// (POST /api/chat/stream)
 	PostChatStream(w http.ResponseWriter, r *http.Request)
+	// Apply high-confidence pattern category suggestions on the Needs review queue
+	// (POST /api/classifications/apply-suggestions)
+	PostClassificationApplySuggestions(w http.ResponseWriter, r *http.Request)
 	// List high-impact classifications awaiting review
 	// (GET /api/classifications/queue)
 	GetClassificationQueue(w http.ResponseWriter, r *http.Request)
@@ -1539,6 +1557,12 @@ func (_ Unimplemented) PostChat(w http.ResponseWriter, r *http.Request) {
 // Stream a grounded finance answer as server-sent events
 // (POST /api/chat/stream)
 func (_ Unimplemented) PostChatStream(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Apply high-confidence pattern category suggestions on the Needs review queue
+// (POST /api/classifications/apply-suggestions)
+func (_ Unimplemented) PostClassificationApplySuggestions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1931,6 +1955,20 @@ func (siw *ServerInterfaceWrapper) PostChatStream(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostChatStream(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostClassificationApplySuggestions operation middleware
+func (siw *ServerInterfaceWrapper) PostClassificationApplySuggestions(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostClassificationApplySuggestions(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2810,6 +2848,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/chat/stream", wrapper.PostChatStream)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/classifications/apply-suggestions", wrapper.PostClassificationApplySuggestions)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/classifications/queue", wrapper.GetClassificationQueue)

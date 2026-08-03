@@ -8,6 +8,7 @@ import (
 
 	"github.com/abteilung6/assetagent/internal/api/gen"
 	"github.com/abteilung6/assetagent/internal/domain"
+	"github.com/abteilung6/assetagent/internal/service"
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -15,6 +16,7 @@ import (
 type ClassifyService interface {
 	ListQueue(ctx context.Context) ([]domain.ClassificationQueueItem, error)
 	Correct(ctx context.Context, txID uuid.UUID, opts domain.ClassifyCorrectOptions) (domain.ClassifyCorrectResult, error)
+	ApplySuggestions(ctx context.Context) (service.ApplySuggestionsResult, error)
 }
 
 type CategoryService interface {
@@ -59,6 +61,32 @@ func (h *Handler) GetClassificationQueue(w http.ResponseWriter, r *http.Request)
 		data[i] = toAPIClassificationQueueItem(item)
 	}
 	writeJSON(w, http.StatusOK, gen.ClassificationQueueListResponse{Data: data})
+}
+
+func (h *Handler) PostClassificationApplySuggestions(w http.ResponseWriter, r *http.Request) {
+	if h.classify == nil {
+		writeInternalError(w, "classify service is not configured")
+		return
+	}
+	result, err := h.classify.ApplySuggestions(r.Context())
+	if err != nil {
+		writeInternalError(w, "failed to apply classification suggestions")
+		return
+	}
+	samples := make([]gen.ClassificationApplySuggestionSample, len(result.Samples))
+	for i, s := range result.Samples {
+		samples[i] = gen.ClassificationApplySuggestionSample{
+			TransactionId: s.TransactionID,
+			CategorySlug:  s.CategorySlug,
+			Pattern:       s.Pattern,
+			Confidence:    s.Confidence,
+		}
+	}
+	writeJSON(w, http.StatusOK, gen.ClassificationApplySuggestionsResponse{
+		Applied: result.Applied,
+		Skipped: result.Skipped,
+		Samples: samples,
+	})
 }
 
 func (h *Handler) PostClassificationCorrect(
