@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { getCategories, getClassificationQueue, getHealth, getImport, getImports, getLlmModels, getTransactions, getTransferCandidates, getUncertainRecurring, type Options, postChat, postClassificationCorrect, postImportRollback, postImports, postImportsPreview, postRecurringConfirm, postRecurringReject, postTransferConfirm, postTransferReject } from '../sdk.gen';
-import type { GetCategoriesData, GetCategoriesResponse, GetClassificationQueueData, GetClassificationQueueResponse, GetHealthData, GetHealthResponse, GetImportData, GetImportError, GetImportResponse, GetImportsData, GetImportsError, GetImportsResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, GetTransferCandidatesData, GetTransferCandidatesResponse, GetUncertainRecurringData, GetUncertainRecurringResponse, PostChatData, PostChatError, PostChatResponse, PostClassificationCorrectData, PostClassificationCorrectError, PostClassificationCorrectResponse, PostImportRollbackData, PostImportRollbackError, PostImportRollbackResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse, PostRecurringConfirmData, PostRecurringConfirmError, PostRecurringConfirmResponse, PostRecurringRejectData, PostRecurringRejectError, PostRecurringRejectResponse, PostTransferConfirmData, PostTransferConfirmError, PostTransferConfirmResponse, PostTransferRejectData, PostTransferRejectError, PostTransferRejectResponse } from '../types.gen';
+import { getCategories, getClassificationQueue, getCurrentBaseline, getForecast, getForecastScenarios, getHealth, getImport, getImports, getLatestForecast, getLlmModels, getMoneyReview, getMoneyReviews, getTransactions, getTransferCandidates, getUncertainRecurring, type Options, postBaselineAdjust, postBaselineConfirm, postBaselinesRecompute, postChat, postClassificationCorrect, postForecasts, postForecastScenario, postImportRollback, postImports, postImportsPreview, postMoneyReviewConfirm, postMoneyReviews, postRecurringConfirm, postRecurringReject, postTransferConfirm, postTransferReject } from '../sdk.gen';
+import type { GetCategoriesData, GetCategoriesResponse, GetClassificationQueueData, GetClassificationQueueResponse, GetCurrentBaselineData, GetCurrentBaselineError, GetCurrentBaselineResponse, GetForecastData, GetForecastError, GetForecastResponse, GetForecastScenariosData, GetForecastScenariosResponse, GetHealthData, GetHealthResponse, GetImportData, GetImportError, GetImportResponse, GetImportsData, GetImportsError, GetImportsResponse, GetLatestForecastData, GetLatestForecastError, GetLatestForecastResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetMoneyReviewData, GetMoneyReviewError, GetMoneyReviewResponse, GetMoneyReviewsData, GetMoneyReviewsResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, GetTransferCandidatesData, GetTransferCandidatesResponse, GetUncertainRecurringData, GetUncertainRecurringResponse, PostBaselineAdjustData, PostBaselineAdjustError, PostBaselineAdjustResponse, PostBaselineConfirmData, PostBaselineConfirmError, PostBaselineConfirmResponse, PostBaselinesRecomputeData, PostBaselinesRecomputeError, PostBaselinesRecomputeResponse, PostChatData, PostChatError, PostChatResponse, PostClassificationCorrectData, PostClassificationCorrectError, PostClassificationCorrectResponse, PostForecastScenarioData, PostForecastScenarioError, PostForecastScenarioResponse, PostForecastsData, PostForecastsError, PostForecastsResponse, PostImportRollbackData, PostImportRollbackError, PostImportRollbackResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse, PostMoneyReviewConfirmData, PostMoneyReviewConfirmError, PostMoneyReviewConfirmResponse, PostMoneyReviewsData, PostMoneyReviewsError, PostMoneyReviewsResponse, PostRecurringConfirmData, PostRecurringConfirmError, PostRecurringConfirmResponse, PostRecurringRejectData, PostRecurringRejectError, PostRecurringRejectResponse, PostTransferConfirmData, PostTransferConfirmError, PostTransferConfirmResponse, PostTransferRejectData, PostTransferRejectError, PostTransferRejectResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -403,6 +403,233 @@ export const postClassificationCorrectMutation = (options?: Partial<Options<Post
     const mutationOptions: UseMutationOptions<PostClassificationCorrectResponse, PostClassificationCorrectError, Options<PostClassificationCorrectData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await postClassificationCorrect({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getCurrentBaselineQueryKey = (options?: Options<GetCurrentBaselineData>) => createQueryKey('getCurrentBaseline', options);
+
+/**
+ * Get the current draft or confirmed FinancialBaseline
+ */
+export const getCurrentBaselineOptions = (options?: Options<GetCurrentBaselineData>) => queryOptions<GetCurrentBaselineResponse, GetCurrentBaselineError, GetCurrentBaselineResponse, ReturnType<typeof getCurrentBaselineQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getCurrentBaseline({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getCurrentBaselineQueryKey(options)
+});
+
+/**
+ * Recompute and persist a draft FinancialBaseline
+ */
+export const postBaselinesRecomputeMutation = (options?: Partial<Options<PostBaselinesRecomputeData>>): UseMutationOptions<PostBaselinesRecomputeResponse, PostBaselinesRecomputeError, Options<PostBaselinesRecomputeData>> => {
+    const mutationOptions: UseMutationOptions<PostBaselinesRecomputeResponse, PostBaselinesRecomputeError, Options<PostBaselinesRecomputeData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postBaselinesRecompute({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Confirm a draft FinancialBaseline
+ */
+export const postBaselineConfirmMutation = (options?: Partial<Options<PostBaselineConfirmData>>): UseMutationOptions<PostBaselineConfirmResponse, PostBaselineConfirmError, Options<PostBaselineConfirmData>> => {
+    const mutationOptions: UseMutationOptions<PostBaselineConfirmResponse, PostBaselineConfirmError, Options<PostBaselineConfirmData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postBaselineConfirm({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Correct one baseline metric and create a new draft version
+ */
+export const postBaselineAdjustMutation = (options?: Partial<Options<PostBaselineAdjustData>>): UseMutationOptions<PostBaselineAdjustResponse, PostBaselineAdjustError, Options<PostBaselineAdjustData>> => {
+    const mutationOptions: UseMutationOptions<PostBaselineAdjustResponse, PostBaselineAdjustError, Options<PostBaselineAdjustData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postBaselineAdjust({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getMoneyReviewsQueryKey = (options?: Options<GetMoneyReviewsData>) => createQueryKey('getMoneyReviews', options);
+
+/**
+ * List Money Reviews (newest first)
+ */
+export const getMoneyReviewsOptions = (options?: Options<GetMoneyReviewsData>) => queryOptions<GetMoneyReviewsResponse, DefaultError, GetMoneyReviewsResponse, ReturnType<typeof getMoneyReviewsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getMoneyReviews({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getMoneyReviewsQueryKey(options)
+});
+
+/**
+ * Generate a Money Review pinned to the current (or given) baseline
+ */
+export const postMoneyReviewsMutation = (options?: Partial<Options<PostMoneyReviewsData>>): UseMutationOptions<PostMoneyReviewsResponse, PostMoneyReviewsError, Options<PostMoneyReviewsData>> => {
+    const mutationOptions: UseMutationOptions<PostMoneyReviewsResponse, PostMoneyReviewsError, Options<PostMoneyReviewsData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postMoneyReviews({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getMoneyReviewQueryKey = (options: Options<GetMoneyReviewData>) => createQueryKey('getMoneyReview', options);
+
+/**
+ * Get a Money Review by id
+ */
+export const getMoneyReviewOptions = (options: Options<GetMoneyReviewData>) => queryOptions<GetMoneyReviewResponse, GetMoneyReviewError, GetMoneyReviewResponse, ReturnType<typeof getMoneyReviewQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getMoneyReview({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getMoneyReviewQueryKey(options)
+});
+
+/**
+ * Confirm a Money Review
+ */
+export const postMoneyReviewConfirmMutation = (options?: Partial<Options<PostMoneyReviewConfirmData>>): UseMutationOptions<PostMoneyReviewConfirmResponse, PostMoneyReviewConfirmError, Options<PostMoneyReviewConfirmData>> => {
+    const mutationOptions: UseMutationOptions<PostMoneyReviewConfirmResponse, PostMoneyReviewConfirmError, Options<PostMoneyReviewConfirmData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postMoneyReviewConfirm({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Create a 90-day liquidity forecast from the current baseline
+ */
+export const postForecastsMutation = (options?: Partial<Options<PostForecastsData>>): UseMutationOptions<PostForecastsResponse, PostForecastsError, Options<PostForecastsData>> => {
+    const mutationOptions: UseMutationOptions<PostForecastsResponse, PostForecastsError, Options<PostForecastsData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postForecasts({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getLatestForecastQueryKey = (options?: Options<GetLatestForecastData>) => createQueryKey('getLatestForecast', options);
+
+/**
+ * Get the latest forecast for the current baseline
+ */
+export const getLatestForecastOptions = (options?: Options<GetLatestForecastData>) => queryOptions<GetLatestForecastResponse, GetLatestForecastError, GetLatestForecastResponse, ReturnType<typeof getLatestForecastQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getLatestForecast({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getLatestForecastQueryKey(options)
+});
+
+export const getForecastQueryKey = (options: Options<GetForecastData>) => createQueryKey('getForecast', options);
+
+/**
+ * Get a forecast by id
+ */
+export const getForecastOptions = (options: Options<GetForecastData>) => queryOptions<GetForecastResponse, GetForecastError, GetForecastResponse, ReturnType<typeof getForecastQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getForecast({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getForecastQueryKey(options)
+});
+
+export const getForecastScenariosQueryKey = (options: Options<GetForecastScenariosData>) => createQueryKey('getForecastScenarios', options);
+
+/**
+ * List scenarios for a forecast
+ */
+export const getForecastScenariosOptions = (options: Options<GetForecastScenariosData>) => queryOptions<GetForecastScenariosResponse, DefaultError, GetForecastScenariosResponse, ReturnType<typeof getForecastScenariosQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getForecastScenarios({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getForecastScenariosQueryKey(options)
+});
+
+/**
+ * Run a typed scenario against a forecast
+ */
+export const postForecastScenarioMutation = (options?: Partial<Options<PostForecastScenarioData>>): UseMutationOptions<PostForecastScenarioResponse, PostForecastScenarioError, Options<PostForecastScenarioData>> => {
+    const mutationOptions: UseMutationOptions<PostForecastScenarioResponse, PostForecastScenarioError, Options<PostForecastScenarioData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postForecastScenario({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

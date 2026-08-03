@@ -264,6 +264,163 @@ export type RecurringSeriesListResponse = {
     data: Array<RecurringSeries>;
 };
 
+export type BaselineMetric = {
+    key: 'regular_monthly_income' | 'monthly_fixed_costs' | 'monthly_irregular_costs' | 'avg_variable_spend' | 'sustainable_free_cashflow';
+    value: string;
+    calculation: string;
+    confidence: 'high' | 'medium' | 'low';
+    evidence_ids: Array<string>;
+    assumptions?: Array<string>;
+};
+
+export type FinancialBaseline = {
+    id: string;
+    period_from: string;
+    period_to: string;
+    algorithm_version: string;
+    status: 'draft' | 'confirmed' | 'superseded';
+    regular_monthly_income: string;
+    monthly_fixed_costs: string;
+    monthly_irregular_costs: string;
+    avg_variable_spend: string;
+    sustainable_free_cashflow: string;
+    confidence: 'high' | 'medium' | 'low';
+    assumptions: Array<string>;
+    metrics: Array<BaselineMetric>;
+    confirmed_at?: string | null;
+    created_at: string;
+};
+
+export type BaselineRecomputeRequest = {
+    /**
+     * Inclusive period start (optional; requires to)
+     */
+    from?: string;
+    /**
+     * Inclusive period end (optional; requires from)
+     */
+    to?: string;
+};
+
+export type BaselineAdjustRequest = {
+    metric_key: 'regular_monthly_income' | 'monthly_fixed_costs' | 'monthly_irregular_costs' | 'avg_variable_spend' | 'sustainable_free_cashflow';
+    new_value: string;
+    reason: string;
+};
+
+export type MoneyReviewFinding = {
+    type: 'free_cashflow_pressure' | 'recurring_amount_change' | 'large_expense' | 'uncertain_recurring' | 'needs_review_residue';
+    title: string;
+    amount?: string | null;
+    period_from: string;
+    period_to: string;
+    confidence: 'high' | 'medium' | 'low';
+    evidence_ids: Array<string>;
+    suggested_action_key?: string;
+};
+
+export type MoneyReview = {
+    id: string;
+    baseline_id: string;
+    period_from: string;
+    period_to: string;
+    status: 'draft' | 'needs_confirmation' | 'confirmed' | 'superseded';
+    summary: string;
+    findings: Array<MoneyReviewFinding>;
+    data_freshness: string;
+    confirmed_at?: string | null;
+    created_at: string;
+};
+
+export type MoneyReviewListResponse = {
+    data: Array<MoneyReview>;
+};
+
+export type MoneyReviewCreateRequest = {
+    /**
+     * Optional; defaults to current baseline
+     */
+    baseline_id?: string;
+};
+
+export type ForecastPoint = {
+    date: string;
+    balance: string;
+};
+
+export type ForecastSeriesOption = {
+    id: string;
+    display_name: string;
+    kind: string;
+    interval: string;
+    amount: string;
+    enabled: boolean;
+};
+
+export type ForecastAssumptions = {
+    disabled_series_ids: Array<string>;
+    include_variable: boolean;
+    include_uncertain: boolean;
+};
+
+export type Forecast = {
+    id: string;
+    baseline_id: string;
+    horizon_days: number;
+    starting_balance: string;
+    assumptions: ForecastAssumptions;
+    points: Array<ForecastPoint>;
+    min_balance: string;
+    ending_balance: string;
+    algorithm_version: string;
+    series_options: Array<ForecastSeriesOption>;
+    created_at: string;
+};
+
+export type ForecastCreateRequest = {
+    baseline_id?: string;
+    starting_balance: string;
+    horizon_days?: number;
+    assumptions?: ForecastAssumptions;
+};
+
+export type Scenario = {
+    id: string;
+    forecast_id: string;
+    kind: 'new_monthly_obligation' | 'income_gap' | 'one_off_plus_goal';
+    params: {
+        [key: string]: unknown;
+    };
+    result: ScenarioResult;
+    status: 'proposed' | 'confirmed' | 'discarded';
+    created_at: string;
+};
+
+export type ScenarioResult = {
+    kind: string;
+    min_balance: string;
+    ending_balance: string;
+    free_cashflow_delta: string;
+    goal_feasible?: boolean | null;
+    projected_at_by_date?: string | null;
+    baseline_min_balance: string;
+    notes: Array<string>;
+};
+
+export type ScenarioListResponse = {
+    data: Array<Scenario>;
+};
+
+export type ScenarioCreateRequest = {
+    kind: 'new_monthly_obligation' | 'income_gap' | 'one_off_plus_goal';
+    /**
+     * Kind-specific params (amounts as strings, dates as YYYY-MM-DD)
+     */
+    params: {
+        [key: string]: unknown;
+    };
+};
+
 export type GetHealthData = {
     body?: never;
     path?: never;
@@ -803,3 +960,354 @@ export type PostClassificationCorrectResponses = {
 };
 
 export type PostClassificationCorrectResponse = PostClassificationCorrectResponses[keyof PostClassificationCorrectResponses];
+
+export type GetCurrentBaselineData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/baselines/current';
+};
+
+export type GetCurrentBaselineErrors = {
+    /**
+     * No baseline available
+     */
+    404: Error;
+};
+
+export type GetCurrentBaselineError = GetCurrentBaselineErrors[keyof GetCurrentBaselineErrors];
+
+export type GetCurrentBaselineResponses = {
+    /**
+     * Current baseline
+     */
+    200: FinancialBaseline;
+};
+
+export type GetCurrentBaselineResponse = GetCurrentBaselineResponses[keyof GetCurrentBaselineResponses];
+
+export type PostBaselinesRecomputeData = {
+    body?: BaselineRecomputeRequest;
+    path?: never;
+    query?: never;
+    url: '/api/baselines/recompute';
+};
+
+export type PostBaselinesRecomputeErrors = {
+    /**
+     * Invalid period
+     */
+    400: Error;
+};
+
+export type PostBaselinesRecomputeError = PostBaselinesRecomputeErrors[keyof PostBaselinesRecomputeErrors];
+
+export type PostBaselinesRecomputeResponses = {
+    /**
+     * Draft baseline created
+     */
+    200: FinancialBaseline;
+};
+
+export type PostBaselinesRecomputeResponse = PostBaselinesRecomputeResponses[keyof PostBaselinesRecomputeResponses];
+
+export type PostBaselineConfirmData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/baselines/{id}/confirm';
+};
+
+export type PostBaselineConfirmErrors = {
+    /**
+     * Baseline not found
+     */
+    404: Error;
+    /**
+     * Baseline is not in draft status
+     */
+    409: Error;
+};
+
+export type PostBaselineConfirmError = PostBaselineConfirmErrors[keyof PostBaselineConfirmErrors];
+
+export type PostBaselineConfirmResponses = {
+    /**
+     * Baseline confirmed
+     */
+    200: FinancialBaseline;
+};
+
+export type PostBaselineConfirmResponse = PostBaselineConfirmResponses[keyof PostBaselineConfirmResponses];
+
+export type PostBaselineAdjustData = {
+    body: BaselineAdjustRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/baselines/{id}/adjust';
+};
+
+export type PostBaselineAdjustErrors = {
+    /**
+     * Invalid adjustment
+     */
+    400: Error;
+    /**
+     * Baseline not found
+     */
+    404: Error;
+    /**
+     * Baseline cannot be adjusted
+     */
+    409: Error;
+};
+
+export type PostBaselineAdjustError = PostBaselineAdjustErrors[keyof PostBaselineAdjustErrors];
+
+export type PostBaselineAdjustResponses = {
+    /**
+     * Adjusted draft baseline
+     */
+    200: FinancialBaseline;
+};
+
+export type PostBaselineAdjustResponse = PostBaselineAdjustResponses[keyof PostBaselineAdjustResponses];
+
+export type GetMoneyReviewsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        limit?: number;
+    };
+    url: '/api/reviews';
+};
+
+export type GetMoneyReviewsResponses = {
+    /**
+     * Money Review history
+     */
+    200: MoneyReviewListResponse;
+};
+
+export type GetMoneyReviewsResponse = GetMoneyReviewsResponses[keyof GetMoneyReviewsResponses];
+
+export type PostMoneyReviewsData = {
+    body?: MoneyReviewCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/reviews';
+};
+
+export type PostMoneyReviewsErrors = {
+    /**
+     * Baseline missing or invalid request
+     */
+    400: Error;
+    /**
+     * Baseline not found
+     */
+    404: Error;
+};
+
+export type PostMoneyReviewsError = PostMoneyReviewsErrors[keyof PostMoneyReviewsErrors];
+
+export type PostMoneyReviewsResponses = {
+    /**
+     * Money Review created
+     */
+    200: MoneyReview;
+};
+
+export type PostMoneyReviewsResponse = PostMoneyReviewsResponses[keyof PostMoneyReviewsResponses];
+
+export type GetMoneyReviewData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/reviews/{id}';
+};
+
+export type GetMoneyReviewErrors = {
+    /**
+     * Review not found
+     */
+    404: Error;
+};
+
+export type GetMoneyReviewError = GetMoneyReviewErrors[keyof GetMoneyReviewErrors];
+
+export type GetMoneyReviewResponses = {
+    /**
+     * Money Review
+     */
+    200: MoneyReview;
+};
+
+export type GetMoneyReviewResponse = GetMoneyReviewResponses[keyof GetMoneyReviewResponses];
+
+export type PostMoneyReviewConfirmData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/reviews/{id}/confirm';
+};
+
+export type PostMoneyReviewConfirmErrors = {
+    /**
+     * Review not found
+     */
+    404: Error;
+    /**
+     * Review cannot be confirmed
+     */
+    409: Error;
+};
+
+export type PostMoneyReviewConfirmError = PostMoneyReviewConfirmErrors[keyof PostMoneyReviewConfirmErrors];
+
+export type PostMoneyReviewConfirmResponses = {
+    /**
+     * Review confirmed
+     */
+    200: MoneyReview;
+};
+
+export type PostMoneyReviewConfirmResponse = PostMoneyReviewConfirmResponses[keyof PostMoneyReviewConfirmResponses];
+
+export type PostForecastsData = {
+    body: ForecastCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/forecasts';
+};
+
+export type PostForecastsErrors = {
+    /**
+     * Invalid request or missing baseline
+     */
+    400: Error;
+    /**
+     * Baseline not found
+     */
+    404: Error;
+};
+
+export type PostForecastsError = PostForecastsErrors[keyof PostForecastsErrors];
+
+export type PostForecastsResponses = {
+    /**
+     * Forecast created
+     */
+    200: Forecast;
+};
+
+export type PostForecastsResponse = PostForecastsResponses[keyof PostForecastsResponses];
+
+export type GetLatestForecastData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/forecasts/latest';
+};
+
+export type GetLatestForecastErrors = {
+    /**
+     * No forecast available
+     */
+    404: Error;
+};
+
+export type GetLatestForecastError = GetLatestForecastErrors[keyof GetLatestForecastErrors];
+
+export type GetLatestForecastResponses = {
+    /**
+     * Latest forecast
+     */
+    200: Forecast;
+};
+
+export type GetLatestForecastResponse = GetLatestForecastResponses[keyof GetLatestForecastResponses];
+
+export type GetForecastData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/forecasts/{id}';
+};
+
+export type GetForecastErrors = {
+    /**
+     * Forecast not found
+     */
+    404: Error;
+};
+
+export type GetForecastError = GetForecastErrors[keyof GetForecastErrors];
+
+export type GetForecastResponses = {
+    /**
+     * Forecast
+     */
+    200: Forecast;
+};
+
+export type GetForecastResponse = GetForecastResponses[keyof GetForecastResponses];
+
+export type GetForecastScenariosData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/forecasts/{id}/scenarios';
+};
+
+export type GetForecastScenariosResponses = {
+    /**
+     * Scenarios
+     */
+    200: ScenarioListResponse;
+};
+
+export type GetForecastScenariosResponse = GetForecastScenariosResponses[keyof GetForecastScenariosResponses];
+
+export type PostForecastScenarioData = {
+    body: ScenarioCreateRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/forecasts/{id}/scenarios';
+};
+
+export type PostForecastScenarioErrors = {
+    /**
+     * Invalid scenario
+     */
+    400: Error;
+    /**
+     * Forecast not found
+     */
+    404: Error;
+};
+
+export type PostForecastScenarioError = PostForecastScenarioErrors[keyof PostForecastScenarioErrors];
+
+export type PostForecastScenarioResponses = {
+    /**
+     * Scenario result
+     */
+    200: Scenario;
+};
+
+export type PostForecastScenarioResponse = PostForecastScenarioResponses[keyof PostForecastScenarioResponses];

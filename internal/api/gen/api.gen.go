@@ -14,6 +14,81 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for BaselineAdjustRequestMetricKey.
+const (
+	BaselineAdjustRequestMetricKeyAvgVariableSpend        BaselineAdjustRequestMetricKey = "avg_variable_spend"
+	BaselineAdjustRequestMetricKeyMonthlyFixedCosts       BaselineAdjustRequestMetricKey = "monthly_fixed_costs"
+	BaselineAdjustRequestMetricKeyMonthlyIrregularCosts   BaselineAdjustRequestMetricKey = "monthly_irregular_costs"
+	BaselineAdjustRequestMetricKeyRegularMonthlyIncome    BaselineAdjustRequestMetricKey = "regular_monthly_income"
+	BaselineAdjustRequestMetricKeySustainableFreeCashflow BaselineAdjustRequestMetricKey = "sustainable_free_cashflow"
+)
+
+// Valid indicates whether the value is a known member of the BaselineAdjustRequestMetricKey enum.
+func (e BaselineAdjustRequestMetricKey) Valid() bool {
+	switch e {
+	case BaselineAdjustRequestMetricKeyAvgVariableSpend:
+		return true
+	case BaselineAdjustRequestMetricKeyMonthlyFixedCosts:
+		return true
+	case BaselineAdjustRequestMetricKeyMonthlyIrregularCosts:
+		return true
+	case BaselineAdjustRequestMetricKeyRegularMonthlyIncome:
+		return true
+	case BaselineAdjustRequestMetricKeySustainableFreeCashflow:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BaselineMetricConfidence.
+const (
+	BaselineMetricConfidenceHigh   BaselineMetricConfidence = "high"
+	BaselineMetricConfidenceLow    BaselineMetricConfidence = "low"
+	BaselineMetricConfidenceMedium BaselineMetricConfidence = "medium"
+)
+
+// Valid indicates whether the value is a known member of the BaselineMetricConfidence enum.
+func (e BaselineMetricConfidence) Valid() bool {
+	switch e {
+	case BaselineMetricConfidenceHigh:
+		return true
+	case BaselineMetricConfidenceLow:
+		return true
+	case BaselineMetricConfidenceMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BaselineMetricKey.
+const (
+	BaselineMetricKeyAvgVariableSpend        BaselineMetricKey = "avg_variable_spend"
+	BaselineMetricKeyMonthlyFixedCosts       BaselineMetricKey = "monthly_fixed_costs"
+	BaselineMetricKeyMonthlyIrregularCosts   BaselineMetricKey = "monthly_irregular_costs"
+	BaselineMetricKeyRegularMonthlyIncome    BaselineMetricKey = "regular_monthly_income"
+	BaselineMetricKeySustainableFreeCashflow BaselineMetricKey = "sustainable_free_cashflow"
+)
+
+// Valid indicates whether the value is a known member of the BaselineMetricKey enum.
+func (e BaselineMetricKey) Valid() bool {
+	switch e {
+	case BaselineMetricKeyAvgVariableSpend:
+		return true
+	case BaselineMetricKeyMonthlyFixedCosts:
+		return true
+	case BaselineMetricKeyMonthlyIrregularCosts:
+		return true
+	case BaselineMetricKeyRegularMonthlyIncome:
+		return true
+	case BaselineMetricKeySustainableFreeCashflow:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ChatMessageRole.
 const (
 	Assistant ChatMessageRole = "assistant"
@@ -47,6 +122,48 @@ func (e ChatRequestProvider) Valid() bool {
 	case ChatRequestProviderOllama:
 		return true
 	case ChatRequestProviderOpenrouter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FinancialBaselineConfidence.
+const (
+	FinancialBaselineConfidenceHigh   FinancialBaselineConfidence = "high"
+	FinancialBaselineConfidenceLow    FinancialBaselineConfidence = "low"
+	FinancialBaselineConfidenceMedium FinancialBaselineConfidence = "medium"
+)
+
+// Valid indicates whether the value is a known member of the FinancialBaselineConfidence enum.
+func (e FinancialBaselineConfidence) Valid() bool {
+	switch e {
+	case FinancialBaselineConfidenceHigh:
+		return true
+	case FinancialBaselineConfidenceLow:
+		return true
+	case FinancialBaselineConfidenceMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FinancialBaselineStatus.
+const (
+	FinancialBaselineStatusConfirmed  FinancialBaselineStatus = "confirmed"
+	FinancialBaselineStatusDraft      FinancialBaselineStatus = "draft"
+	FinancialBaselineStatusSuperseded FinancialBaselineStatus = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the FinancialBaselineStatus enum.
+func (e FinancialBaselineStatus) Valid() bool {
+	switch e {
+	case FinancialBaselineStatusConfirmed:
+		return true
+	case FinancialBaselineStatusDraft:
+		return true
+	case FinancialBaselineStatusSuperseded:
 		return true
 	default:
 		return false
@@ -104,6 +221,78 @@ func (e LLMModelSelectionProvider) Valid() bool {
 	case Ollama:
 		return true
 	case Openrouter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MoneyReviewStatus.
+const (
+	MoneyReviewStatusConfirmed         MoneyReviewStatus = "confirmed"
+	MoneyReviewStatusDraft             MoneyReviewStatus = "draft"
+	MoneyReviewStatusNeedsConfirmation MoneyReviewStatus = "needs_confirmation"
+	MoneyReviewStatusSuperseded        MoneyReviewStatus = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the MoneyReviewStatus enum.
+func (e MoneyReviewStatus) Valid() bool {
+	switch e {
+	case MoneyReviewStatusConfirmed:
+		return true
+	case MoneyReviewStatusDraft:
+		return true
+	case MoneyReviewStatusNeedsConfirmation:
+		return true
+	case MoneyReviewStatusSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MoneyReviewFindingConfidence.
+const (
+	MoneyReviewFindingConfidenceHigh   MoneyReviewFindingConfidence = "high"
+	MoneyReviewFindingConfidenceLow    MoneyReviewFindingConfidence = "low"
+	MoneyReviewFindingConfidenceMedium MoneyReviewFindingConfidence = "medium"
+)
+
+// Valid indicates whether the value is a known member of the MoneyReviewFindingConfidence enum.
+func (e MoneyReviewFindingConfidence) Valid() bool {
+	switch e {
+	case MoneyReviewFindingConfidenceHigh:
+		return true
+	case MoneyReviewFindingConfidenceLow:
+		return true
+	case MoneyReviewFindingConfidenceMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MoneyReviewFindingType.
+const (
+	FreeCashflowPressure  MoneyReviewFindingType = "free_cashflow_pressure"
+	LargeExpense          MoneyReviewFindingType = "large_expense"
+	NeedsReviewResidue    MoneyReviewFindingType = "needs_review_residue"
+	RecurringAmountChange MoneyReviewFindingType = "recurring_amount_change"
+	UncertainRecurring    MoneyReviewFindingType = "uncertain_recurring"
+)
+
+// Valid indicates whether the value is a known member of the MoneyReviewFindingType enum.
+func (e MoneyReviewFindingType) Valid() bool {
+	switch e {
+	case FreeCashflowPressure:
+		return true
+	case LargeExpense:
+		return true
+	case NeedsReviewResidue:
+		return true
+	case RecurringAmountChange:
+		return true
+	case UncertainRecurring:
 		return true
 	default:
 		return false
@@ -175,19 +364,82 @@ func (e RecurringSeriesStatus) Valid() bool {
 
 // Defines values for RecurringSeriesUncertainty.
 const (
-	High   RecurringSeriesUncertainty = "high"
-	Low    RecurringSeriesUncertainty = "low"
-	Medium RecurringSeriesUncertainty = "medium"
+	RecurringSeriesUncertaintyHigh   RecurringSeriesUncertainty = "high"
+	RecurringSeriesUncertaintyLow    RecurringSeriesUncertainty = "low"
+	RecurringSeriesUncertaintyMedium RecurringSeriesUncertainty = "medium"
 )
 
 // Valid indicates whether the value is a known member of the RecurringSeriesUncertainty enum.
 func (e RecurringSeriesUncertainty) Valid() bool {
 	switch e {
-	case High:
+	case RecurringSeriesUncertaintyHigh:
 		return true
-	case Low:
+	case RecurringSeriesUncertaintyLow:
 		return true
-	case Medium:
+	case RecurringSeriesUncertaintyMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ScenarioKind.
+const (
+	ScenarioKindIncomeGap            ScenarioKind = "income_gap"
+	ScenarioKindNewMonthlyObligation ScenarioKind = "new_monthly_obligation"
+	ScenarioKindOneOffPlusGoal       ScenarioKind = "one_off_plus_goal"
+)
+
+// Valid indicates whether the value is a known member of the ScenarioKind enum.
+func (e ScenarioKind) Valid() bool {
+	switch e {
+	case ScenarioKindIncomeGap:
+		return true
+	case ScenarioKindNewMonthlyObligation:
+		return true
+	case ScenarioKindOneOffPlusGoal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ScenarioStatus.
+const (
+	ScenarioStatusConfirmed ScenarioStatus = "confirmed"
+	ScenarioStatusDiscarded ScenarioStatus = "discarded"
+	ScenarioStatusProposed  ScenarioStatus = "proposed"
+)
+
+// Valid indicates whether the value is a known member of the ScenarioStatus enum.
+func (e ScenarioStatus) Valid() bool {
+	switch e {
+	case ScenarioStatusConfirmed:
+		return true
+	case ScenarioStatusDiscarded:
+		return true
+	case ScenarioStatusProposed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ScenarioCreateRequestKind.
+const (
+	ScenarioCreateRequestKindIncomeGap            ScenarioCreateRequestKind = "income_gap"
+	ScenarioCreateRequestKindNewMonthlyObligation ScenarioCreateRequestKind = "new_monthly_obligation"
+	ScenarioCreateRequestKindOneOffPlusGoal       ScenarioCreateRequestKind = "one_off_plus_goal"
+)
+
+// Valid indicates whether the value is a known member of the ScenarioCreateRequestKind enum.
+func (e ScenarioCreateRequestKind) Valid() bool {
+	switch e {
+	case ScenarioCreateRequestKindIncomeGap:
+		return true
+	case ScenarioCreateRequestKindNewMonthlyObligation:
+		return true
+	case ScenarioCreateRequestKindOneOffPlusGoal:
 		return true
 	default:
 		return false
@@ -253,19 +505,19 @@ func (e TransferPairConfidence) Valid() bool {
 
 // Defines values for TransferPairStatus.
 const (
-	TransferPairStatusConfirmed TransferPairStatus = "confirmed"
-	TransferPairStatusRejected  TransferPairStatus = "rejected"
-	TransferPairStatusSuggested TransferPairStatus = "suggested"
+	Confirmed TransferPairStatus = "confirmed"
+	Rejected  TransferPairStatus = "rejected"
+	Suggested TransferPairStatus = "suggested"
 )
 
 // Valid indicates whether the value is a known member of the TransferPairStatus enum.
 func (e TransferPairStatus) Valid() bool {
 	switch e {
-	case TransferPairStatusConfirmed:
+	case Confirmed:
 		return true
-	case TransferPairStatusRejected:
+	case Rejected:
 		return true
-	case TransferPairStatusSuggested:
+	case Suggested:
 		return true
 	default:
 		return false
@@ -309,6 +561,41 @@ func (e GetTransactionsParamsOrder) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// BaselineAdjustRequest defines model for BaselineAdjustRequest.
+type BaselineAdjustRequest struct {
+	MetricKey BaselineAdjustRequestMetricKey `json:"metric_key"`
+	NewValue  string                         `json:"new_value"`
+	Reason    string                         `json:"reason"`
+}
+
+// BaselineAdjustRequestMetricKey defines model for BaselineAdjustRequest.MetricKey.
+type BaselineAdjustRequestMetricKey string
+
+// BaselineMetric defines model for BaselineMetric.
+type BaselineMetric struct {
+	Assumptions *[]string                `json:"assumptions,omitempty"`
+	Calculation string                   `json:"calculation"`
+	Confidence  BaselineMetricConfidence `json:"confidence"`
+	EvidenceIds []string                 `json:"evidence_ids"`
+	Key         BaselineMetricKey        `json:"key"`
+	Value       string                   `json:"value"`
+}
+
+// BaselineMetricConfidence defines model for BaselineMetric.Confidence.
+type BaselineMetricConfidence string
+
+// BaselineMetricKey defines model for BaselineMetric.Key.
+type BaselineMetricKey string
+
+// BaselineRecomputeRequest defines model for BaselineRecomputeRequest.
+type BaselineRecomputeRequest struct {
+	// From Inclusive period start (optional; requires to)
+	From *openapi_types.Date `json:"from,omitempty"`
+
+	// To Inclusive period end (optional; requires from)
+	To *openapi_types.Date `json:"to,omitempty"`
 }
 
 // Category defines model for Category.
@@ -400,6 +687,77 @@ type ClassificationQueueListResponse struct {
 type Error struct {
 	Error   string `json:"error"`
 	Message string `json:"message"`
+}
+
+// FinancialBaseline defines model for FinancialBaseline.
+type FinancialBaseline struct {
+	AlgorithmVersion        string                      `json:"algorithm_version"`
+	Assumptions             []string                    `json:"assumptions"`
+	AvgVariableSpend        string                      `json:"avg_variable_spend"`
+	Confidence              FinancialBaselineConfidence `json:"confidence"`
+	ConfirmedAt             *time.Time                  `json:"confirmed_at,omitempty"`
+	CreatedAt               time.Time                   `json:"created_at"`
+	Id                      openapi_types.UUID          `json:"id"`
+	Metrics                 []BaselineMetric            `json:"metrics"`
+	MonthlyFixedCosts       string                      `json:"monthly_fixed_costs"`
+	MonthlyIrregularCosts   string                      `json:"monthly_irregular_costs"`
+	PeriodFrom              openapi_types.Date          `json:"period_from"`
+	PeriodTo                openapi_types.Date          `json:"period_to"`
+	RegularMonthlyIncome    string                      `json:"regular_monthly_income"`
+	Status                  FinancialBaselineStatus     `json:"status"`
+	SustainableFreeCashflow string                      `json:"sustainable_free_cashflow"`
+}
+
+// FinancialBaselineConfidence defines model for FinancialBaseline.Confidence.
+type FinancialBaselineConfidence string
+
+// FinancialBaselineStatus defines model for FinancialBaseline.Status.
+type FinancialBaselineStatus string
+
+// Forecast defines model for Forecast.
+type Forecast struct {
+	AlgorithmVersion string                 `json:"algorithm_version"`
+	Assumptions      ForecastAssumptions    `json:"assumptions"`
+	BaselineId       openapi_types.UUID     `json:"baseline_id"`
+	CreatedAt        time.Time              `json:"created_at"`
+	EndingBalance    string                 `json:"ending_balance"`
+	HorizonDays      int                    `json:"horizon_days"`
+	Id               openapi_types.UUID     `json:"id"`
+	MinBalance       string                 `json:"min_balance"`
+	Points           []ForecastPoint        `json:"points"`
+	SeriesOptions    []ForecastSeriesOption `json:"series_options"`
+	StartingBalance  string                 `json:"starting_balance"`
+}
+
+// ForecastAssumptions defines model for ForecastAssumptions.
+type ForecastAssumptions struct {
+	DisabledSeriesIds []string `json:"disabled_series_ids"`
+	IncludeUncertain  bool     `json:"include_uncertain"`
+	IncludeVariable   bool     `json:"include_variable"`
+}
+
+// ForecastCreateRequest defines model for ForecastCreateRequest.
+type ForecastCreateRequest struct {
+	Assumptions     *ForecastAssumptions `json:"assumptions,omitempty"`
+	BaselineId      *openapi_types.UUID  `json:"baseline_id,omitempty"`
+	HorizonDays     *int                 `json:"horizon_days,omitempty"`
+	StartingBalance string               `json:"starting_balance"`
+}
+
+// ForecastPoint defines model for ForecastPoint.
+type ForecastPoint struct {
+	Balance string             `json:"balance"`
+	Date    openapi_types.Date `json:"date"`
+}
+
+// ForecastSeriesOption defines model for ForecastSeriesOption.
+type ForecastSeriesOption struct {
+	Amount      string `json:"amount"`
+	DisplayName string `json:"display_name"`
+	Enabled     bool   `json:"enabled"`
+	Id          string `json:"id"`
+	Interval    string `json:"interval"`
+	Kind        string `json:"kind"`
 }
 
 // HealthResponse defines model for HealthResponse.
@@ -513,6 +871,52 @@ type LLMModelSelection struct {
 // LLMModelSelectionProvider defines model for LLMModelSelection.Provider.
 type LLMModelSelectionProvider string
 
+// MoneyReview defines model for MoneyReview.
+type MoneyReview struct {
+	BaselineId    openapi_types.UUID   `json:"baseline_id"`
+	ConfirmedAt   *time.Time           `json:"confirmed_at,omitempty"`
+	CreatedAt     time.Time            `json:"created_at"`
+	DataFreshness string               `json:"data_freshness"`
+	Findings      []MoneyReviewFinding `json:"findings"`
+	Id            openapi_types.UUID   `json:"id"`
+	PeriodFrom    openapi_types.Date   `json:"period_from"`
+	PeriodTo      openapi_types.Date   `json:"period_to"`
+	Status        MoneyReviewStatus    `json:"status"`
+	Summary       string               `json:"summary"`
+}
+
+// MoneyReviewStatus defines model for MoneyReview.Status.
+type MoneyReviewStatus string
+
+// MoneyReviewCreateRequest defines model for MoneyReviewCreateRequest.
+type MoneyReviewCreateRequest struct {
+	// BaselineId Optional; defaults to current baseline
+	BaselineId *openapi_types.UUID `json:"baseline_id,omitempty"`
+}
+
+// MoneyReviewFinding defines model for MoneyReviewFinding.
+type MoneyReviewFinding struct {
+	Amount             *string                      `json:"amount,omitempty"`
+	Confidence         MoneyReviewFindingConfidence `json:"confidence"`
+	EvidenceIds        []string                     `json:"evidence_ids"`
+	PeriodFrom         openapi_types.Date           `json:"period_from"`
+	PeriodTo           openapi_types.Date           `json:"period_to"`
+	SuggestedActionKey *string                      `json:"suggested_action_key,omitempty"`
+	Title              string                       `json:"title"`
+	Type               MoneyReviewFindingType       `json:"type"`
+}
+
+// MoneyReviewFindingConfidence defines model for MoneyReviewFinding.Confidence.
+type MoneyReviewFindingConfidence string
+
+// MoneyReviewFindingType defines model for MoneyReviewFinding.Type.
+type MoneyReviewFindingType string
+
+// MoneyReviewListResponse defines model for MoneyReviewListResponse.
+type MoneyReviewListResponse struct {
+	Data []MoneyReview `json:"data"`
+}
+
 // Pagination defines model for Pagination.
 type Pagination struct {
 	Limit  int   `json:"limit"`
@@ -551,6 +955,51 @@ type RecurringSeriesUncertainty string
 // RecurringSeriesListResponse defines model for RecurringSeriesListResponse.
 type RecurringSeriesListResponse struct {
 	Data []RecurringSeries `json:"data"`
+}
+
+// Scenario defines model for Scenario.
+type Scenario struct {
+	CreatedAt  time.Time              `json:"created_at"`
+	ForecastId openapi_types.UUID     `json:"forecast_id"`
+	Id         openapi_types.UUID     `json:"id"`
+	Kind       ScenarioKind           `json:"kind"`
+	Params     map[string]interface{} `json:"params"`
+	Result     ScenarioResult         `json:"result"`
+	Status     ScenarioStatus         `json:"status"`
+}
+
+// ScenarioKind defines model for Scenario.Kind.
+type ScenarioKind string
+
+// ScenarioStatus defines model for Scenario.Status.
+type ScenarioStatus string
+
+// ScenarioCreateRequest defines model for ScenarioCreateRequest.
+type ScenarioCreateRequest struct {
+	Kind ScenarioCreateRequestKind `json:"kind"`
+
+	// Params Kind-specific params (amounts as strings, dates as YYYY-MM-DD)
+	Params map[string]interface{} `json:"params"`
+}
+
+// ScenarioCreateRequestKind defines model for ScenarioCreateRequest.Kind.
+type ScenarioCreateRequestKind string
+
+// ScenarioListResponse defines model for ScenarioListResponse.
+type ScenarioListResponse struct {
+	Data []Scenario `json:"data"`
+}
+
+// ScenarioResult defines model for ScenarioResult.
+type ScenarioResult struct {
+	BaselineMinBalance string   `json:"baseline_min_balance"`
+	EndingBalance      string   `json:"ending_balance"`
+	FreeCashflowDelta  string   `json:"free_cashflow_delta"`
+	GoalFeasible       *bool    `json:"goal_feasible,omitempty"`
+	Kind               string   `json:"kind"`
+	MinBalance         string   `json:"min_balance"`
+	Notes              []string `json:"notes"`
+	ProjectedAtByDate  *string  `json:"projected_at_by_date,omitempty"`
 }
 
 // Transaction defines model for Transaction.
@@ -658,6 +1107,11 @@ type PostImportsPreviewMultipartBody struct {
 	File openapi_types.File `json:"file"`
 }
 
+// GetMoneyReviewsParams defines parameters for GetMoneyReviews.
+type GetMoneyReviewsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetTransactionsParams defines parameters for GetTransactions.
 type GetTransactionsParams struct {
 	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
@@ -697,6 +1151,12 @@ type GetTransactionsParamsSort string
 // GetTransactionsParamsOrder defines parameters for GetTransactions.
 type GetTransactionsParamsOrder string
 
+// PostBaselinesRecomputeJSONRequestBody defines body for PostBaselinesRecompute for application/json ContentType.
+type PostBaselinesRecomputeJSONRequestBody = BaselineRecomputeRequest
+
+// PostBaselineAdjustJSONRequestBody defines body for PostBaselineAdjust for application/json ContentType.
+type PostBaselineAdjustJSONRequestBody = BaselineAdjustRequest
+
 // PostChatJSONRequestBody defines body for PostChat for application/json ContentType.
 type PostChatJSONRequestBody = ChatRequest
 
@@ -706,14 +1166,35 @@ type PostChatStreamJSONRequestBody = ChatRequest
 // PostClassificationCorrectJSONRequestBody defines body for PostClassificationCorrect for application/json ContentType.
 type PostClassificationCorrectJSONRequestBody = ClassificationCorrectRequest
 
+// PostForecastsJSONRequestBody defines body for PostForecasts for application/json ContentType.
+type PostForecastsJSONRequestBody = ForecastCreateRequest
+
+// PostForecastScenarioJSONRequestBody defines body for PostForecastScenario for application/json ContentType.
+type PostForecastScenarioJSONRequestBody = ScenarioCreateRequest
+
 // PostImportsMultipartRequestBody defines body for PostImports for multipart/form-data ContentType.
 type PostImportsMultipartRequestBody PostImportsMultipartBody
 
 // PostImportsPreviewMultipartRequestBody defines body for PostImportsPreview for multipart/form-data ContentType.
 type PostImportsPreviewMultipartRequestBody PostImportsPreviewMultipartBody
 
+// PostMoneyReviewsJSONRequestBody defines body for PostMoneyReviews for application/json ContentType.
+type PostMoneyReviewsJSONRequestBody = MoneyReviewCreateRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Get the current draft or confirmed FinancialBaseline
+	// (GET /api/baselines/current)
+	GetCurrentBaseline(w http.ResponseWriter, r *http.Request)
+	// Recompute and persist a draft FinancialBaseline
+	// (POST /api/baselines/recompute)
+	PostBaselinesRecompute(w http.ResponseWriter, r *http.Request)
+	// Correct one baseline metric and create a new draft version
+	// (POST /api/baselines/{id}/adjust)
+	PostBaselineAdjust(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Confirm a draft FinancialBaseline
+	// (POST /api/baselines/{id}/confirm)
+	PostBaselineConfirm(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List system (and user) categories
 	// (GET /api/categories)
 	GetCategories(w http.ResponseWriter, r *http.Request)
@@ -729,6 +1210,21 @@ type ServerInterface interface {
 	// Correct a transaction category and optionally save a merchant rule
 	// (POST /api/classifications/{transaction_id}/correct)
 	PostClassificationCorrect(w http.ResponseWriter, r *http.Request, transactionId openapi_types.UUID)
+	// Create a 90-day liquidity forecast from the current baseline
+	// (POST /api/forecasts)
+	PostForecasts(w http.ResponseWriter, r *http.Request)
+	// Get the latest forecast for the current baseline
+	// (GET /api/forecasts/latest)
+	GetLatestForecast(w http.ResponseWriter, r *http.Request)
+	// Get a forecast by id
+	// (GET /api/forecasts/{id})
+	GetForecast(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// List scenarios for a forecast
+	// (GET /api/forecasts/{id}/scenarios)
+	GetForecastScenarios(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Run a typed scenario against a forecast
+	// (POST /api/forecasts/{id}/scenarios)
+	PostForecastScenario(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Health check
 	// (GET /api/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
@@ -759,6 +1255,18 @@ type ServerInterface interface {
 	// Dismiss an uncertain recurring series
 	// (POST /api/recurring/{id}/reject)
 	PostRecurringReject(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// List Money Reviews (newest first)
+	// (GET /api/reviews)
+	GetMoneyReviews(w http.ResponseWriter, r *http.Request, params GetMoneyReviewsParams)
+	// Generate a Money Review pinned to the current (or given) baseline
+	// (POST /api/reviews)
+	PostMoneyReviews(w http.ResponseWriter, r *http.Request)
+	// Get a Money Review by id
+	// (GET /api/reviews/{id})
+	GetMoneyReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Confirm a Money Review
+	// (POST /api/reviews/{id}/confirm)
+	PostMoneyReviewConfirm(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List transactions
 	// (GET /api/transactions)
 	GetTransactions(w http.ResponseWriter, r *http.Request, params GetTransactionsParams)
@@ -776,6 +1284,30 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// Get the current draft or confirmed FinancialBaseline
+// (GET /api/baselines/current)
+func (_ Unimplemented) GetCurrentBaseline(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Recompute and persist a draft FinancialBaseline
+// (POST /api/baselines/recompute)
+func (_ Unimplemented) PostBaselinesRecompute(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Correct one baseline metric and create a new draft version
+// (POST /api/baselines/{id}/adjust)
+func (_ Unimplemented) PostBaselineAdjust(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm a draft FinancialBaseline
+// (POST /api/baselines/{id}/confirm)
+func (_ Unimplemented) PostBaselineConfirm(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // List system (and user) categories
 // (GET /api/categories)
@@ -804,6 +1336,36 @@ func (_ Unimplemented) GetClassificationQueue(w http.ResponseWriter, r *http.Req
 // Correct a transaction category and optionally save a merchant rule
 // (POST /api/classifications/{transaction_id}/correct)
 func (_ Unimplemented) PostClassificationCorrect(w http.ResponseWriter, r *http.Request, transactionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a 90-day liquidity forecast from the current baseline
+// (POST /api/forecasts)
+func (_ Unimplemented) PostForecasts(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get the latest forecast for the current baseline
+// (GET /api/forecasts/latest)
+func (_ Unimplemented) GetLatestForecast(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a forecast by id
+// (GET /api/forecasts/{id})
+func (_ Unimplemented) GetForecast(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List scenarios for a forecast
+// (GET /api/forecasts/{id}/scenarios)
+func (_ Unimplemented) GetForecastScenarios(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Run a typed scenario against a forecast
+// (POST /api/forecasts/{id}/scenarios)
+func (_ Unimplemented) PostForecastScenario(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -867,6 +1429,30 @@ func (_ Unimplemented) PostRecurringReject(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List Money Reviews (newest first)
+// (GET /api/reviews)
+func (_ Unimplemented) GetMoneyReviews(w http.ResponseWriter, r *http.Request, params GetMoneyReviewsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Generate a Money Review pinned to the current (or given) baseline
+// (POST /api/reviews)
+func (_ Unimplemented) PostMoneyReviews(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a Money Review by id
+// (GET /api/reviews/{id})
+func (_ Unimplemented) GetMoneyReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm a Money Review
+// (POST /api/reviews/{id}/confirm)
+func (_ Unimplemented) PostMoneyReviewConfirm(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List transactions
 // (GET /api/transactions)
 func (_ Unimplemented) GetTransactions(w http.ResponseWriter, r *http.Request, params GetTransactionsParams) {
@@ -899,6 +1485,86 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetCurrentBaseline operation middleware
+func (siw *ServerInterfaceWrapper) GetCurrentBaseline(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCurrentBaseline(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostBaselinesRecompute operation middleware
+func (siw *ServerInterfaceWrapper) PostBaselinesRecompute(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostBaselinesRecompute(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostBaselineAdjust operation middleware
+func (siw *ServerInterfaceWrapper) PostBaselineAdjust(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostBaselineAdjust(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostBaselineConfirm operation middleware
+func (siw *ServerInterfaceWrapper) PostBaselineConfirm(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostBaselineConfirm(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetCategories operation middleware
 func (siw *ServerInterfaceWrapper) GetCategories(w http.ResponseWriter, r *http.Request) {
@@ -973,6 +1639,112 @@ func (siw *ServerInterfaceWrapper) PostClassificationCorrect(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostClassificationCorrect(w, r, transactionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostForecasts operation middleware
+func (siw *ServerInterfaceWrapper) PostForecasts(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostForecasts(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetLatestForecast operation middleware
+func (siw *ServerInterfaceWrapper) GetLatestForecast(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLatestForecast(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetForecast operation middleware
+func (siw *ServerInterfaceWrapper) GetForecast(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecast(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetForecastScenarios operation middleware
+func (siw *ServerInterfaceWrapper) GetForecastScenarios(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecastScenarios(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostForecastScenario operation middleware
+func (siw *ServerInterfaceWrapper) PostForecastScenario(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostForecastScenario(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1180,6 +1952,105 @@ func (siw *ServerInterfaceWrapper) PostRecurringReject(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostRecurringReject(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMoneyReviews operation middleware
+func (siw *ServerInterfaceWrapper) GetMoneyReviews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMoneyReviewsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMoneyReviews(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostMoneyReviews operation middleware
+func (siw *ServerInterfaceWrapper) PostMoneyReviews(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostMoneyReviews(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMoneyReview operation middleware
+func (siw *ServerInterfaceWrapper) GetMoneyReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMoneyReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostMoneyReviewConfirm operation middleware
+func (siw *ServerInterfaceWrapper) PostMoneyReviewConfirm(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostMoneyReviewConfirm(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1532,6 +2403,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/baselines/current", wrapper.GetCurrentBaseline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/baselines/recompute", wrapper.PostBaselinesRecompute)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/baselines/{id}/adjust", wrapper.PostBaselineAdjust)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/baselines/{id}/confirm", wrapper.PostBaselineConfirm)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/categories", wrapper.GetCategories)
 	})
 	r.Group(func(r chi.Router) {
@@ -1545,6 +2428,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/classifications/{transaction_id}/correct", wrapper.PostClassificationCorrect)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/forecasts", wrapper.PostForecasts)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/forecasts/latest", wrapper.GetLatestForecast)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/forecasts/{id}", wrapper.GetForecast)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/forecasts/{id}/scenarios", wrapper.GetForecastScenarios)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/forecasts/{id}/scenarios", wrapper.PostForecastScenario)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/health", wrapper.GetHealth)
@@ -1575,6 +2473,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/recurring/{id}/reject", wrapper.PostRecurringReject)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/reviews", wrapper.GetMoneyReviews)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/reviews", wrapper.PostMoneyReviews)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/reviews/{id}", wrapper.GetMoneyReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/reviews/{id}/confirm", wrapper.PostMoneyReviewConfirm)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/transactions", wrapper.GetTransactions)

@@ -21,6 +21,16 @@ type Account struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
+type BaselineAdjustment struct {
+	ID            uuid.UUID          `json:"id"`
+	BaselineID    uuid.UUID          `json:"baseline_id"`
+	MetricKey     string             `json:"metric_key"`
+	PreviousValue decimal.Decimal    `json:"previous_value"`
+	NewValue      decimal.Decimal    `json:"new_value"`
+	Reason        string             `json:"reason"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
 type Category struct {
 	ID          uuid.UUID          `json:"id"`
 	Slug        string             `json:"slug"`
@@ -39,6 +49,38 @@ type ClassificationRule struct {
 	CategoryID               uuid.UUID          `json:"category_id"`
 	CreatedFromTransactionID pgtype.UUID        `json:"created_from_transaction_id"`
 	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+}
+
+type FinancialBaseline struct {
+	ID                      uuid.UUID          `json:"id"`
+	PeriodFrom              pgtype.Date        `json:"period_from"`
+	PeriodTo                pgtype.Date        `json:"period_to"`
+	AlgorithmVersion        string             `json:"algorithm_version"`
+	Status                  string             `json:"status"`
+	RegularMonthlyIncome    decimal.Decimal    `json:"regular_monthly_income"`
+	MonthlyFixedCosts       decimal.Decimal    `json:"monthly_fixed_costs"`
+	MonthlyIrregularCosts   decimal.Decimal    `json:"monthly_irregular_costs"`
+	AvgVariableSpend        decimal.Decimal    `json:"avg_variable_spend"`
+	SustainableFreeCashflow decimal.Decimal    `json:"sustainable_free_cashflow"`
+	Confidence              string             `json:"confidence"`
+	Assumptions             []byte             `json:"assumptions"`
+	Evidence                []byte             `json:"evidence"`
+	ConfirmedAt             pgtype.Timestamptz `json:"confirmed_at"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Forecast struct {
+	ID               uuid.UUID          `json:"id"`
+	BaselineID       uuid.UUID          `json:"baseline_id"`
+	HorizonDays      int32              `json:"horizon_days"`
+	StartingBalance  decimal.Decimal    `json:"starting_balance"`
+	Assumptions      []byte             `json:"assumptions"`
+	Series           []byte             `json:"series"`
+	MinBalance       decimal.Decimal    `json:"min_balance"`
+	EndingBalance    decimal.Decimal    `json:"ending_balance"`
+	AlgorithmVersion string             `json:"algorithm_version"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 }
 
 type ImportRun struct {
@@ -77,6 +119,20 @@ type MerchantAlias struct {
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }
 
+type MoneyReview struct {
+	ID            uuid.UUID          `json:"id"`
+	BaselineID    uuid.UUID          `json:"baseline_id"`
+	PeriodFrom    pgtype.Date        `json:"period_from"`
+	PeriodTo      pgtype.Date        `json:"period_to"`
+	Status        string             `json:"status"`
+	Summary       string             `json:"summary"`
+	Findings      []byte             `json:"findings"`
+	DataFreshness string             `json:"data_freshness"`
+	ConfirmedAt   pgtype.Timestamptz `json:"confirmed_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
 type RecurringSeries struct {
 	ID            uuid.UUID          `json:"id"`
 	Fingerprint   string             `json:"fingerprint"`
@@ -99,6 +155,16 @@ type RecurringSeriesMember struct {
 	TransactionID uuid.UUID       `json:"transaction_id"`
 	BookingDate   pgtype.Date     `json:"booking_date"`
 	Amount        decimal.Decimal `json:"amount"`
+}
+
+type Scenario struct {
+	ID         uuid.UUID          `json:"id"`
+	ForecastID uuid.UUID          `json:"forecast_id"`
+	Kind       string             `json:"kind"`
+	Params     []byte             `json:"params"`
+	Result     []byte             `json:"result"`
+	Status     string             `json:"status"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }
 
 type Transaction struct {

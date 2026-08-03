@@ -55,7 +55,7 @@ func TestPostChat_returnsGroundedAnswer(t *testing.T) {
 	}
 
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(&stubListService{}, chatSvc, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(&stubListService{}, chatSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})
@@ -91,7 +91,7 @@ func TestPostChat_rejectsEmptyMessages(t *testing.T) {
 	chatSvc := &stubChatService{}
 
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(&stubListService{}, chatSvc, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(&stubListService{}, chatSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})

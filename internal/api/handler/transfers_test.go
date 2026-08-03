@@ -68,7 +68,7 @@ func TestPostTransferConfirm_ok(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if resp.Status != gen.TransferPairStatusConfirmed {
+	if resp.Status != "confirmed" {
 		t.Fatalf("status = %q", resp.Status)
 	}
 }
@@ -113,7 +113,7 @@ func TestPostTransferReject_ok(t *testing.T) {
 
 func newTransfersTestRouter(transfers handler.TransferService) chi.Router {
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(nil, nil, nil, nil, transfers, nil, nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(nil, nil, nil, nil, transfers, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})

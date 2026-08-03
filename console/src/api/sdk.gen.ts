@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type ServerSentEventsResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetCategoriesData, GetCategoriesResponses, GetClassificationQueueData, GetClassificationQueueResponses, GetHealthData, GetHealthResponses, GetImportData, GetImportErrors, GetImportResponses, GetImportsData, GetImportsErrors, GetImportsResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, GetTransferCandidatesData, GetTransferCandidatesResponses, GetUncertainRecurringData, GetUncertainRecurringResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostClassificationCorrectData, PostClassificationCorrectErrors, PostClassificationCorrectResponses, PostImportRollbackData, PostImportRollbackErrors, PostImportRollbackResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses, PostRecurringConfirmData, PostRecurringConfirmErrors, PostRecurringConfirmResponses, PostRecurringRejectData, PostRecurringRejectErrors, PostRecurringRejectResponses, PostTransferConfirmData, PostTransferConfirmErrors, PostTransferConfirmResponses, PostTransferRejectData, PostTransferRejectErrors, PostTransferRejectResponses } from './types.gen';
+import type { GetCategoriesData, GetCategoriesResponses, GetClassificationQueueData, GetClassificationQueueResponses, GetCurrentBaselineData, GetCurrentBaselineErrors, GetCurrentBaselineResponses, GetForecastData, GetForecastErrors, GetForecastResponses, GetForecastScenariosData, GetForecastScenariosResponses, GetHealthData, GetHealthResponses, GetImportData, GetImportErrors, GetImportResponses, GetImportsData, GetImportsErrors, GetImportsResponses, GetLatestForecastData, GetLatestForecastErrors, GetLatestForecastResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetMoneyReviewData, GetMoneyReviewErrors, GetMoneyReviewResponses, GetMoneyReviewsData, GetMoneyReviewsResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, GetTransferCandidatesData, GetTransferCandidatesResponses, GetUncertainRecurringData, GetUncertainRecurringResponses, PostBaselineAdjustData, PostBaselineAdjustErrors, PostBaselineAdjustResponses, PostBaselineConfirmData, PostBaselineConfirmErrors, PostBaselineConfirmResponses, PostBaselinesRecomputeData, PostBaselinesRecomputeErrors, PostBaselinesRecomputeResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostClassificationCorrectData, PostClassificationCorrectErrors, PostClassificationCorrectResponses, PostForecastScenarioData, PostForecastScenarioErrors, PostForecastScenarioResponses, PostForecastsData, PostForecastsErrors, PostForecastsResponses, PostImportRollbackData, PostImportRollbackErrors, PostImportRollbackResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses, PostMoneyReviewConfirmData, PostMoneyReviewConfirmErrors, PostMoneyReviewConfirmResponses, PostMoneyReviewsData, PostMoneyReviewsErrors, PostMoneyReviewsResponses, PostRecurringConfirmData, PostRecurringConfirmErrors, PostRecurringConfirmResponses, PostRecurringRejectData, PostRecurringRejectErrors, PostRecurringRejectResponses, PostTransferConfirmData, PostTransferConfirmErrors, PostTransferConfirmResponses, PostTransferRejectData, PostTransferRejectErrors, PostTransferRejectResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -143,6 +143,106 @@ export const getClassificationQueue = <ThrowOnError extends boolean = false>(opt
  */
 export const postClassificationCorrect = <ThrowOnError extends boolean = false>(options: Options<PostClassificationCorrectData, ThrowOnError>): RequestResult<PostClassificationCorrectResponses, PostClassificationCorrectErrors, ThrowOnError> => (options.client ?? client).post<PostClassificationCorrectResponses, PostClassificationCorrectErrors, ThrowOnError>({
     url: '/api/classifications/{transaction_id}/correct',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get the current draft or confirmed FinancialBaseline
+ */
+export const getCurrentBaseline = <ThrowOnError extends boolean = false>(options?: Options<GetCurrentBaselineData, ThrowOnError>): RequestResult<GetCurrentBaselineResponses, GetCurrentBaselineErrors, ThrowOnError> => (options?.client ?? client).get<GetCurrentBaselineResponses, GetCurrentBaselineErrors, ThrowOnError>({ url: '/api/baselines/current', ...options });
+
+/**
+ * Recompute and persist a draft FinancialBaseline
+ */
+export const postBaselinesRecompute = <ThrowOnError extends boolean = false>(options?: Options<PostBaselinesRecomputeData, ThrowOnError>): RequestResult<PostBaselinesRecomputeResponses, PostBaselinesRecomputeErrors, ThrowOnError> => (options?.client ?? client).post<PostBaselinesRecomputeResponses, PostBaselinesRecomputeErrors, ThrowOnError>({
+    url: '/api/baselines/recompute',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers
+    }
+});
+
+/**
+ * Confirm a draft FinancialBaseline
+ */
+export const postBaselineConfirm = <ThrowOnError extends boolean = false>(options: Options<PostBaselineConfirmData, ThrowOnError>): RequestResult<PostBaselineConfirmResponses, PostBaselineConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostBaselineConfirmResponses, PostBaselineConfirmErrors, ThrowOnError>({ url: '/api/baselines/{id}/confirm', ...options });
+
+/**
+ * Correct one baseline metric and create a new draft version
+ */
+export const postBaselineAdjust = <ThrowOnError extends boolean = false>(options: Options<PostBaselineAdjustData, ThrowOnError>): RequestResult<PostBaselineAdjustResponses, PostBaselineAdjustErrors, ThrowOnError> => (options.client ?? client).post<PostBaselineAdjustResponses, PostBaselineAdjustErrors, ThrowOnError>({
+    url: '/api/baselines/{id}/adjust',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List Money Reviews (newest first)
+ */
+export const getMoneyReviews = <ThrowOnError extends boolean = false>(options?: Options<GetMoneyReviewsData, ThrowOnError>): RequestResult<GetMoneyReviewsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetMoneyReviewsResponses, unknown, ThrowOnError>({ url: '/api/reviews', ...options });
+
+/**
+ * Generate a Money Review pinned to the current (or given) baseline
+ */
+export const postMoneyReviews = <ThrowOnError extends boolean = false>(options?: Options<PostMoneyReviewsData, ThrowOnError>): RequestResult<PostMoneyReviewsResponses, PostMoneyReviewsErrors, ThrowOnError> => (options?.client ?? client).post<PostMoneyReviewsResponses, PostMoneyReviewsErrors, ThrowOnError>({
+    url: '/api/reviews',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers
+    }
+});
+
+/**
+ * Get a Money Review by id
+ */
+export const getMoneyReview = <ThrowOnError extends boolean = false>(options: Options<GetMoneyReviewData, ThrowOnError>): RequestResult<GetMoneyReviewResponses, GetMoneyReviewErrors, ThrowOnError> => (options.client ?? client).get<GetMoneyReviewResponses, GetMoneyReviewErrors, ThrowOnError>({ url: '/api/reviews/{id}', ...options });
+
+/**
+ * Confirm a Money Review
+ */
+export const postMoneyReviewConfirm = <ThrowOnError extends boolean = false>(options: Options<PostMoneyReviewConfirmData, ThrowOnError>): RequestResult<PostMoneyReviewConfirmResponses, PostMoneyReviewConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostMoneyReviewConfirmResponses, PostMoneyReviewConfirmErrors, ThrowOnError>({ url: '/api/reviews/{id}/confirm', ...options });
+
+/**
+ * Create a 90-day liquidity forecast from the current baseline
+ */
+export const postForecasts = <ThrowOnError extends boolean = false>(options: Options<PostForecastsData, ThrowOnError>): RequestResult<PostForecastsResponses, PostForecastsErrors, ThrowOnError> => (options.client ?? client).post<PostForecastsResponses, PostForecastsErrors, ThrowOnError>({
+    url: '/api/forecasts',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get the latest forecast for the current baseline
+ */
+export const getLatestForecast = <ThrowOnError extends boolean = false>(options?: Options<GetLatestForecastData, ThrowOnError>): RequestResult<GetLatestForecastResponses, GetLatestForecastErrors, ThrowOnError> => (options?.client ?? client).get<GetLatestForecastResponses, GetLatestForecastErrors, ThrowOnError>({ url: '/api/forecasts/latest', ...options });
+
+/**
+ * Get a forecast by id
+ */
+export const getForecast = <ThrowOnError extends boolean = false>(options: Options<GetForecastData, ThrowOnError>): RequestResult<GetForecastResponses, GetForecastErrors, ThrowOnError> => (options.client ?? client).get<GetForecastResponses, GetForecastErrors, ThrowOnError>({ url: '/api/forecasts/{id}', ...options });
+
+/**
+ * List scenarios for a forecast
+ */
+export const getForecastScenarios = <ThrowOnError extends boolean = false>(options: Options<GetForecastScenariosData, ThrowOnError>): RequestResult<GetForecastScenariosResponses, unknown, ThrowOnError> => (options.client ?? client).get<GetForecastScenariosResponses, unknown, ThrowOnError>({ url: '/api/forecasts/{id}/scenarios', ...options });
+
+/**
+ * Run a typed scenario against a forecast
+ */
+export const postForecastScenario = <ThrowOnError extends boolean = false>(options: Options<PostForecastScenarioData, ThrowOnError>): RequestResult<PostForecastScenarioResponses, PostForecastScenarioErrors, ThrowOnError> => (options.client ?? client).post<PostForecastScenarioResponses, PostForecastScenarioErrors, ThrowOnError>({
+    url: '/api/forecasts/{id}/scenarios',
     ...options,
     headers: {
         'Content-Type': 'application/json',

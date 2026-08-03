@@ -520,6 +520,342 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/baselines/current:
+    get:
+      operationId: getCurrentBaseline
+      summary: Get the current draft or confirmed FinancialBaseline
+      responses:
+        "200":
+          description: Current baseline
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialBaseline"
+        "404":
+          description: No baseline available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/baselines/recompute:
+    post:
+      operationId: postBaselinesRecompute
+      summary: Recompute and persist a draft FinancialBaseline
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BaselineRecomputeRequest"
+      responses:
+        "200":
+          description: Draft baseline created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialBaseline"
+        "400":
+          description: Invalid period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/baselines/{id}/confirm:
+    post:
+      operationId: postBaselineConfirm
+      summary: Confirm a draft FinancialBaseline
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Baseline confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialBaseline"
+        "404":
+          description: Baseline not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Baseline is not in draft status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/baselines/{id}/adjust:
+    post:
+      operationId: postBaselineAdjust
+      summary: Correct one baseline metric and create a new draft version
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BaselineAdjustRequest"
+      responses:
+        "200":
+          description: Adjusted draft baseline
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialBaseline"
+        "400":
+          description: Invalid adjustment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Baseline not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Baseline cannot be adjusted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/reviews:
+    get:
+      operationId: getMoneyReviews
+      summary: List Money Reviews (newest first)
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: Money Review history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoneyReviewListResponse"
+    post:
+      operationId: postMoneyReviews
+      summary: Generate a Money Review pinned to the current (or given) baseline
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoneyReviewCreateRequest"
+      responses:
+        "200":
+          description: Money Review created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoneyReview"
+        "400":
+          description: Baseline missing or invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Baseline not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/reviews/{id}:
+    get:
+      operationId: getMoneyReview
+      summary: Get a Money Review by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Money Review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoneyReview"
+        "404":
+          description: Review not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/reviews/{id}/confirm:
+    post:
+      operationId: postMoneyReviewConfirm
+      summary: Confirm a Money Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Review confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoneyReview"
+        "404":
+          description: Review not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Review cannot be confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/forecasts:
+    post:
+      operationId: postForecasts
+      summary: Create a 90-day liquidity forecast from the current baseline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForecastCreateRequest"
+      responses:
+        "200":
+          description: Forecast created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Forecast"
+        "400":
+          description: Invalid request or missing baseline
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Baseline not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/forecasts/latest:
+    get:
+      operationId: getLatestForecast
+      summary: Get the latest forecast for the current baseline
+      responses:
+        "200":
+          description: Latest forecast
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Forecast"
+        "404":
+          description: No forecast available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/forecasts/{id}:
+    get:
+      operationId: getForecast
+      summary: Get a forecast by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Forecast
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Forecast"
+        "404":
+          description: Forecast not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/forecasts/{id}/scenarios:
+    get:
+      operationId: getForecastScenarios
+      summary: List scenarios for a forecast
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Scenarios
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScenarioListResponse"
+    post:
+      operationId: postForecastScenario
+      summary: Run a typed scenario against a forecast
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScenarioCreateRequest"
+      responses:
+        "200":
+          description: Scenario result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scenario"
+        "400":
+          description: Invalid scenario
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Forecast not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     Error:
@@ -1169,3 +1505,402 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RecurringSeries"
+    BaselineMetric:
+      type: object
+      required:
+        - key
+        - value
+        - calculation
+        - confidence
+        - evidence_ids
+      properties:
+        key:
+          type: string
+          enum:
+            - regular_monthly_income
+            - monthly_fixed_costs
+            - monthly_irregular_costs
+            - avg_variable_spend
+            - sustainable_free_cashflow
+        value:
+          type: string
+        calculation:
+          type: string
+        confidence:
+          type: string
+          enum: [high, medium, low]
+        evidence_ids:
+          type: array
+          items:
+            type: string
+        assumptions:
+          type: array
+          items:
+            type: string
+    FinancialBaseline:
+      type: object
+      required:
+        - id
+        - period_from
+        - period_to
+        - algorithm_version
+        - status
+        - regular_monthly_income
+        - monthly_fixed_costs
+        - monthly_irregular_costs
+        - avg_variable_spend
+        - sustainable_free_cashflow
+        - confidence
+        - assumptions
+        - metrics
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        period_from:
+          type: string
+          format: date
+        period_to:
+          type: string
+          format: date
+        algorithm_version:
+          type: string
+        status:
+          type: string
+          enum: [draft, confirmed, superseded]
+        regular_monthly_income:
+          type: string
+        monthly_fixed_costs:
+          type: string
+        monthly_irregular_costs:
+          type: string
+        avg_variable_spend:
+          type: string
+        sustainable_free_cashflow:
+          type: string
+        confidence:
+          type: string
+          enum: [high, medium, low]
+        assumptions:
+          type: array
+          items:
+            type: string
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/BaselineMetric"
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    BaselineRecomputeRequest:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date
+          description: Inclusive period start (optional; requires to)
+        to:
+          type: string
+          format: date
+          description: Inclusive period end (optional; requires from)
+    BaselineAdjustRequest:
+      type: object
+      required:
+        - metric_key
+        - new_value
+        - reason
+      properties:
+        metric_key:
+          type: string
+          enum:
+            - regular_monthly_income
+            - monthly_fixed_costs
+            - monthly_irregular_costs
+            - avg_variable_spend
+            - sustainable_free_cashflow
+        new_value:
+          type: string
+        reason:
+          type: string
+          minLength: 1
+    MoneyReviewFinding:
+      type: object
+      required:
+        - type
+        - title
+        - confidence
+        - evidence_ids
+        - period_from
+        - period_to
+      properties:
+        type:
+          type: string
+          enum:
+            - free_cashflow_pressure
+            - recurring_amount_change
+            - large_expense
+            - uncertain_recurring
+            - needs_review_residue
+        title:
+          type: string
+        amount:
+          type: string
+          nullable: true
+        period_from:
+          type: string
+          format: date
+        period_to:
+          type: string
+          format: date
+        confidence:
+          type: string
+          enum: [high, medium, low]
+        evidence_ids:
+          type: array
+          items:
+            type: string
+        suggested_action_key:
+          type: string
+    MoneyReview:
+      type: object
+      required:
+        - id
+        - baseline_id
+        - period_from
+        - period_to
+        - status
+        - summary
+        - findings
+        - data_freshness
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        baseline_id:
+          type: string
+          format: uuid
+        period_from:
+          type: string
+          format: date
+        period_to:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [draft, needs_confirmation, confirmed, superseded]
+        summary:
+          type: string
+        findings:
+          type: array
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/MoneyReviewFinding"
+        data_freshness:
+          type: string
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    MoneyReviewListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/MoneyReview"
+    MoneyReviewCreateRequest:
+      type: object
+      properties:
+        baseline_id:
+          type: string
+          format: uuid
+          description: Optional; defaults to current baseline
+    ForecastPoint:
+      type: object
+      required: [date, balance]
+      properties:
+        date:
+          type: string
+          format: date
+        balance:
+          type: string
+    ForecastSeriesOption:
+      type: object
+      required: [id, display_name, kind, interval, amount, enabled]
+      properties:
+        id:
+          type: string
+        display_name:
+          type: string
+        kind:
+          type: string
+        interval:
+          type: string
+        amount:
+          type: string
+        enabled:
+          type: boolean
+    ForecastAssumptions:
+      type: object
+      required: [disabled_series_ids, include_variable, include_uncertain]
+      properties:
+        disabled_series_ids:
+          type: array
+          items:
+            type: string
+        include_variable:
+          type: boolean
+        include_uncertain:
+          type: boolean
+    Forecast:
+      type: object
+      required:
+        - id
+        - baseline_id
+        - horizon_days
+        - starting_balance
+        - assumptions
+        - points
+        - min_balance
+        - ending_balance
+        - algorithm_version
+        - series_options
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        baseline_id:
+          type: string
+          format: uuid
+        horizon_days:
+          type: integer
+        starting_balance:
+          type: string
+        assumptions:
+          $ref: "#/components/schemas/ForecastAssumptions"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/ForecastPoint"
+        min_balance:
+          type: string
+        ending_balance:
+          type: string
+        algorithm_version:
+          type: string
+        series_options:
+          type: array
+          items:
+            $ref: "#/components/schemas/ForecastSeriesOption"
+        created_at:
+          type: string
+          format: date-time
+    ForecastCreateRequest:
+      type: object
+      required:
+        - starting_balance
+      properties:
+        baseline_id:
+          type: string
+          format: uuid
+        starting_balance:
+          type: string
+        horizon_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 90
+        assumptions:
+          $ref: "#/components/schemas/ForecastAssumptions"
+    Scenario:
+      type: object
+      required:
+        - id
+        - forecast_id
+        - kind
+        - params
+        - result
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        forecast_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [new_monthly_obligation, income_gap, one_off_plus_goal]
+        params:
+          type: object
+          additionalProperties: true
+        result:
+          $ref: "#/components/schemas/ScenarioResult"
+        status:
+          type: string
+          enum: [proposed, confirmed, discarded]
+        created_at:
+          type: string
+          format: date-time
+    ScenarioResult:
+      type: object
+      required:
+        - kind
+        - min_balance
+        - ending_balance
+        - free_cashflow_delta
+        - baseline_min_balance
+        - notes
+      properties:
+        kind:
+          type: string
+        min_balance:
+          type: string
+        ending_balance:
+          type: string
+        free_cashflow_delta:
+          type: string
+        goal_feasible:
+          type: boolean
+          nullable: true
+        projected_at_by_date:
+          type: string
+          nullable: true
+        baseline_min_balance:
+          type: string
+        notes:
+          type: array
+          items:
+            type: string
+    ScenarioListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Scenario"
+    ScenarioCreateRequest:
+      type: object
+      required: [kind, params]
+      properties:
+        kind:
+          type: string
+          enum: [new_monthly_obligation, income_gap, one_off_plus_goal]
+        params:
+          type: object
+          additionalProperties: true
+          description: Kind-specific params (amounts as strings, dates as YYYY-MM-DD)

@@ -1,9 +1,12 @@
 import type React from "react";
 import { Link } from "@tanstack/react-router";
 import {
+  ClipboardListIcon,
+  GaugeIcon,
   InboxIcon,
   MessageSquareIcon,
   Table2Icon,
+  TrendingUpIcon,
   UploadIcon,
   WalletIcon,
 } from "lucide-react";
@@ -59,6 +62,33 @@ export const AppSidebar: React.FC = () => {
               >
                 <MessageSquareIcon />
                 <span>Chat</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={<Link to="/baseline" />}
+                tooltip="Baseline"
+              >
+                <GaugeIcon />
+                <span>Baseline</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={<Link to="/reviews" />}
+                tooltip="Money Reviews"
+              >
+                <ClipboardListIcon />
+                <span>Money Reviews</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={<Link to="/plan" />}
+                tooltip="Plan"
+              >
+                <TrendingUpIcon />
+                <span>Plan</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>

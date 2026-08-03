@@ -33,6 +33,9 @@ type Handler struct {
 	classify    ClassifyService
 	categories  CategoryService
 	recurring   RecurringService
+	baseline    BaselineService
+	moneyReview MoneyReviewService
+	forecast    ForecastService
 }
 
 func New(
@@ -44,6 +47,9 @@ func New(
 	classify ClassifyService,
 	categories CategoryService,
 	recurring RecurringService,
+	baseline BaselineService,
+	moneyReview MoneyReviewService,
+	forecast ForecastService,
 ) *Handler {
 	return &Handler{
 		list:        list,
@@ -54,6 +60,9 @@ func New(
 		classify:    classify,
 		categories:  categories,
 		recurring:   recurring,
+		baseline:    baseline,
+		moneyReview: moneyReview,
+		forecast:    forecast,
 	}
 }
 

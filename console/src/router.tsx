@@ -7,9 +7,13 @@ import {
 } from "@tanstack/react-router";
 
 import { AppLayout } from "@/app/layout";
+import BaselinePage from "@/pages/baseline/page";
 import ChatPage from "@/pages/chat/page";
 import ImportsPage from "@/pages/imports/page";
+import PlanPage from "@/pages/plan/page";
 import ReviewPage from "@/pages/review/page";
+import ReviewDetailPage from "@/pages/reviews/detail";
+import ReviewsPage from "@/pages/reviews/page";
 import TransactionsPage from "@/pages/transactions/page";
 import { parseTransactionSearchParams } from "@/pages/transactions/search-params";
 
@@ -34,6 +38,15 @@ const chatRoute = createRoute({
   },
 });
 
+const baselineRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/baseline",
+  component: BaselinePage,
+  staticData: {
+    title: "Baseline",
+  },
+});
+
 const importsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/imports",
@@ -52,6 +65,33 @@ const reviewRoute = createRoute({
   },
 });
 
+const reviewsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/reviews",
+  component: ReviewsPage,
+  staticData: {
+    title: "Money Reviews",
+  },
+});
+
+const reviewDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/reviews/$id",
+  component: ReviewDetailPage,
+  staticData: {
+    title: "Money Review",
+  },
+});
+
+const planRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/plan",
+  component: PlanPage,
+  staticData: {
+    title: "Plan",
+  },
+});
+
 const transactionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/transactions",
@@ -63,14 +103,27 @@ const transactionsRoute = createRoute({
     parseTransactionSearchParams(search as Record<string, unknown>),
 });
 
-export { chatRoute, importsRoute, reviewRoute, transactionsRoute };
+export {
+  baselineRoute,
+  chatRoute,
+  importsRoute,
+  planRoute,
+  reviewDetailRoute,
+  reviewRoute,
+  reviewsRoute,
+  transactionsRoute,
+};
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
   chatRoute,
+  baselineRoute,
+  planRoute,
   transactionsRoute,
   importsRoute,
   reviewRoute,
+  reviewsRoute,
+  reviewDetailRoute,
 ]);
 
 export function createAppRouter(history?: RouterHistory) {
