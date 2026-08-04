@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildBalanceChartLayout,
   buildDualSeriesChartLayout,
+  buildExpensePaceChartLayout,
   chartDateIndexes,
   chartLabelAnchor,
   chartMoneyTicks,
@@ -142,5 +143,29 @@ describe("buildDualSeriesChartLayout", () => {
     expect(layout!.referenceLines[0]!.y).toBeLessThan(
       layout!.referenceLines[1]!.y,
     );
+  });
+});
+
+describe("buildExpensePaceChartLayout", () => {
+  it("returns null for empty input", () => {
+    expect(buildExpensePaceChartLayout([])).toBeNull();
+  });
+
+  it("builds a cumulative path and count bars", () => {
+    const layout = buildExpensePaceChartLayout([
+      { date: "2026-07-01", cumulative: 100, dailyCount: 1 },
+      { date: "2026-07-02", cumulative: 100, dailyCount: 0 },
+      { date: "2026-07-03", cumulative: 250, dailyCount: 4 },
+    ]);
+    expect(layout).not.toBeNull();
+    expect(layout!.linePath.startsWith("M ")).toBe(true);
+    expect(layout!.areaPath.endsWith("Z")).toBe(true);
+    expect(layout!.maxCount).toBe(4);
+    expect(layout!.bars).toHaveLength(3);
+    expect(layout!.bars[2]!.height).toBeGreaterThan(layout!.bars[0]!.height);
+    expect(layout!.bars[1]!.height).toBe(0);
+    // Plot starts near the left edge so it aligns with page text.
+    expect(layout!.padLeft).toBeLessThan(8);
+    expect(layout!.xs[0]).toBe(layout!.padLeft);
   });
 });

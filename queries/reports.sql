@@ -127,3 +127,21 @@ WHERE t.booking_date >= sqlc.arg('from_date')::date
 GROUP BY c.slug, c.display_name
 ORDER BY total DESC, c.display_name ASC
 LIMIT sqlc.arg('row_limit');
+
+-- name: ListDailyExpensePaceInPeriod :many
+SELECT
+  t.booking_date::date AS booking_day,
+  COALESCE(SUM(-t.amount), 0)::numeric AS expenses,
+  COUNT(*)::bigint AS transaction_count
+FROM transactions t
+WHERE t.booking_date >= sqlc.arg('from_date')::date
+  AND t.booking_date <= sqlc.arg('to_date')::date
+  AND t.amount < 0
+  AND NOT EXISTS (
+    SELECT 1
+    FROM transfer_pairs p
+    WHERE p.status = 'confirmed'
+      AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
+  )
+GROUP BY 1
+ORDER BY 1 ASC;

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   getBaselineCategorySpendOptions,
+  getBaselineDailyExpensePaceOptions,
   getBaselineMonthlyCashflowOptions,
   getBaselineOneOffImpactOptions,
   getCurrentBaselineOptions,
@@ -56,6 +57,20 @@ export function useBaselineCategorySpend(
   });
 }
 
+export function useBaselineDailyExpensePace(
+  from: string,
+  to: string,
+  enabled = true,
+) {
+  return useQuery({
+    ...getBaselineDailyExpensePaceOptions({
+      query: { from, to },
+    }),
+    enabled: enabled && Boolean(from) && Boolean(to),
+    retry: false,
+  });
+}
+
 export function useBaselineRecompute() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -76,7 +91,8 @@ export function useBaselineRecompute() {
             key !== null &&
             "_id" in key &&
             (key._id === "getBaselineOneOffImpact" ||
-              key._id === "getBaselineCategorySpend")
+              key._id === "getBaselineCategorySpend" ||
+              key._id === "getBaselineDailyExpensePace")
           );
         },
       });

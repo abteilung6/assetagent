@@ -713,6 +713,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/baselines/daily-expense-pace:
+    get:
+      operationId: getBaselineDailyExpensePace
+      summary: Daily expense totals and booking counts for month pacing charts
+      description: >
+        Transfer-aware expense outflows by booking day (includes one-offs).
+        Confirmed internal transfers are excluded. Days with no spend are omitted;
+        clients should fill the calendar range when drawing a cumulative curve.
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Daily expense pace series
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BaselineDailyExpensePaceResponse"
+        "400":
+          description: Invalid period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/baselines/recompute:
     post:
       operationId: postBaselinesRecompute
@@ -2045,6 +2079,27 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BaselineCategorySpendPoint"
+    BaselineDailyExpensePacePoint:
+      type: object
+      required: [date, expenses, transaction_count]
+      properties:
+        date:
+          type: string
+          format: date
+        expenses:
+          type: string
+          description: Absolute EUR expenses booked that day
+        transaction_count:
+          type: integer
+          format: int64
+    BaselineDailyExpensePaceResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BaselineDailyExpensePacePoint"
     BaselineRecomputeRequest:
       type: object
       properties:

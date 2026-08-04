@@ -380,6 +380,19 @@ export type BaselineCategorySpendResponse = {
     data: Array<BaselineCategorySpendPoint>;
 };
 
+export type BaselineDailyExpensePacePoint = {
+    date: string;
+    /**
+     * Absolute EUR expenses booked that day
+     */
+    expenses: string;
+    transaction_count: number;
+};
+
+export type BaselineDailyExpensePaceResponse = {
+    data: Array<BaselineDailyExpensePacePoint>;
+};
+
 export type BaselineRecomputeRequest = {
     /**
      * Inclusive period start (optional; requires to)
@@ -1307,6 +1320,34 @@ export type GetBaselineCategorySpendResponses = {
 };
 
 export type GetBaselineCategorySpendResponse = GetBaselineCategorySpendResponses[keyof GetBaselineCategorySpendResponses];
+
+export type GetBaselineDailyExpensePaceData = {
+    body?: never;
+    path?: never;
+    query: {
+        from: string;
+        to: string;
+    };
+    url: '/api/baselines/daily-expense-pace';
+};
+
+export type GetBaselineDailyExpensePaceErrors = {
+    /**
+     * Invalid period
+     */
+    400: Error;
+};
+
+export type GetBaselineDailyExpensePaceError = GetBaselineDailyExpensePaceErrors[keyof GetBaselineDailyExpensePaceErrors];
+
+export type GetBaselineDailyExpensePaceResponses = {
+    /**
+     * Daily expense pace series
+     */
+    200: BaselineDailyExpensePaceResponse;
+};
+
+export type GetBaselineDailyExpensePaceResponse = GetBaselineDailyExpensePaceResponses[keyof GetBaselineDailyExpensePaceResponses];
 
 export type PostBaselinesRecomputeData = {
     body?: BaselineRecomputeRequest;

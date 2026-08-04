@@ -250,6 +250,21 @@ func (s *stubBaselineService) CategorySpend(ctx context.Context, from, to time.T
 	}, nil
 }
 
+func (s *stubBaselineService) DailyExpensePace(ctx context.Context, from, to time.Time) ([]repository.DailyExpensePacePoint, error) {
+	return []repository.DailyExpensePacePoint{
+		{
+			Date:             time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
+			Expenses:         decimal.RequireFromString("1200.00"),
+			TransactionCount: 2,
+		},
+		{
+			Date:             time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC),
+			Expenses:         decimal.RequireFromString("85.50"),
+			TransactionCount: 3,
+		},
+	}, nil
+}
+
 func TestGetBaselineMonthlyCashflow(t *testing.T) {
 	router := newBaselineTestRouter(&stubBaselineService{})
 	req := httptest.NewRequest(http.MethodGet, "/api/baselines/monthly-cashflow?months=6", nil)
@@ -260,6 +275,22 @@ func TestGetBaselineMonthlyCashflow(t *testing.T) {
 	}
 	body := rec.Body.String()
 	for _, want := range []string{"8000.00", "2026-02-01", "income"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("body missing %q: %s", want, body)
+		}
+	}
+}
+
+func TestGetBaselineDailyExpensePace(t *testing.T) {
+	router := newBaselineTestRouter(&stubBaselineService{})
+	req := httptest.NewRequest(http.MethodGet, "/api/baselines/daily-expense-pace?from=2026-07-01&to=2026-07-31", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, want := range []string{"1200.00", "2026-07-01", "transaction_count", "85.50"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("body missing %q: %s", want, body)
 		}

@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   buildBaselineComposition,
   buildBaselineReadinessItems,
+  buildExpensePaceSeries,
   buildMonthStory,
   buildTypicalMonthLevels,
   detectUnusualMonth,
+  eachISODateInclusive,
   formatCompactMoney,
   formatMonthHeadline,
   formatMonthLabel,
@@ -209,5 +211,37 @@ describe("buildMonthStory", () => {
   it("returns null current when month is missing from series", () => {
     const story = buildMonthStory(months, "2026-01-01");
     expect(story.current).toBeNull();
+  });
+});
+
+describe("buildExpensePaceSeries", () => {
+  it("lists inclusive calendar days", () => {
+    expect(eachISODateInclusive("2026-02-27", "2026-03-01")).toEqual([
+      "2026-02-27",
+      "2026-02-28",
+      "2026-03-01",
+    ]);
+  });
+
+  it("fills empty days and accumulates expenses", () => {
+    const series = buildExpensePaceSeries("2026-07-01", "2026-07-04", [
+      { date: "2026-07-01", expenses: "100.00", transaction_count: 2 },
+      { date: "2026-07-03", expenses: "50.50", transaction_count: 1 },
+    ]);
+    expect(series).toHaveLength(4);
+    expect(series[0]).toMatchObject({
+      date: "2026-07-01",
+      dailyExpenses: 100,
+      cumulativeExpenses: 100,
+      transactionCount: 2,
+    });
+    expect(series[1]).toMatchObject({
+      date: "2026-07-02",
+      dailyExpenses: 0,
+      cumulativeExpenses: 100,
+      transactionCount: 0,
+    });
+    expect(series[2]?.cumulativeExpenses).toBeCloseTo(150.5);
+    expect(series[3]?.cumulativeExpenses).toBeCloseTo(150.5);
   });
 });

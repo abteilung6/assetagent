@@ -339,6 +339,56 @@ func (q *Queries) ListConfirmedTransferIDsInPeriod(ctx context.Context, arg List
 	return items, nil
 }
 
+const listDailyExpensePaceInPeriod = `-- name: ListDailyExpensePaceInPeriod :many
+SELECT
+  t.booking_date::date AS booking_day,
+  COALESCE(SUM(-t.amount), 0)::numeric AS expenses,
+  COUNT(*)::bigint AS transaction_count
+FROM transactions t
+WHERE t.booking_date >= $1::date
+  AND t.booking_date <= $2::date
+  AND t.amount < 0
+  AND NOT EXISTS (
+    SELECT 1
+    FROM transfer_pairs p
+    WHERE p.status = 'confirmed'
+      AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
+  )
+GROUP BY 1
+ORDER BY 1 ASC
+`
+
+type ListDailyExpensePaceInPeriodParams struct {
+	FromDate pgtype.Date `json:"from_date"`
+	ToDate   pgtype.Date `json:"to_date"`
+}
+
+type ListDailyExpensePaceInPeriodRow struct {
+	BookingDay       pgtype.Date     `json:"booking_day"`
+	Expenses         decimal.Decimal `json:"expenses"`
+	TransactionCount int64           `json:"transaction_count"`
+}
+
+func (q *Queries) ListDailyExpensePaceInPeriod(ctx context.Context, arg ListDailyExpensePaceInPeriodParams) ([]ListDailyExpensePaceInPeriodRow, error) {
+	rows, err := q.db.Query(ctx, listDailyExpensePaceInPeriod, arg.FromDate, arg.ToDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDailyExpensePaceInPeriodRow{}
+	for rows.Next() {
+		var i ListDailyExpensePaceInPeriodRow
+		if err := rows.Scan(&i.BookingDay, &i.Expenses, &i.TransactionCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMonthlyCashflowV2 = `-- name: ListMonthlyCashflowV2 :many
 SELECT
   date_trunc('month', t.booking_date)::date AS month_start,

@@ -345,6 +345,62 @@ export function endOfMonthISO(monthStart: string): string {
   return last.toISOString().slice(0, 10);
 }
 
+/** Inclusive list of ISO dates from `from` through `to` (UTC date-only). */
+export function eachISODateInclusive(from: string, to: string): string[] {
+  const start = from.slice(0, 10);
+  const end = to.slice(0, 10);
+  const out: string[] = [];
+  const cursor = new Date(`${start}T00:00:00.000Z`);
+  const last = new Date(`${end}T00:00:00.000Z`);
+  if (Number.isNaN(cursor.getTime()) || Number.isNaN(last.getTime())) {
+    return out;
+  }
+  while (cursor.getTime() <= last.getTime()) {
+    out.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return out;
+}
+
+export type ExpensePaceSeriesDay = {
+  date: string;
+  dailyExpenses: number;
+  cumulativeExpenses: number;
+  transactionCount: number;
+};
+
+/** Fill omitted calendar days and compute a running expense total. */
+export function buildExpensePaceSeries(
+  from: string,
+  to: string,
+  rows: Array<{
+    date: string;
+    expenses: string;
+    transaction_count: number;
+  }>,
+): ExpensePaceSeriesDay[] {
+  const byDate = new Map<string, { expenses: number; count: number }>();
+  for (const row of rows) {
+    const date = row.date.slice(0, 10);
+    const expenses = Number.parseFloat(row.expenses);
+    byDate.set(date, {
+      expenses: Number.isNaN(expenses) ? 0 : Math.max(0, expenses),
+      count: row.transaction_count,
+    });
+  }
+  let cumulative = 0;
+  return eachISODateInclusive(from, to).map((date) => {
+    const day = byDate.get(date) ?? { expenses: 0, count: 0 };
+    cumulative += day.expenses;
+    return {
+      date,
+      dailyExpenses: day.expenses,
+      cumulativeExpenses: cumulative,
+      transactionCount: day.count,
+    };
+  });
+}
+
 export function shiftYyyyMm(yyyyMm: string, deltaMonths: number): string {
   const [y, m] = yyyyMm.split("-").map(Number);
   if (!y || !m) {

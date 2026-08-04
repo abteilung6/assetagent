@@ -74,6 +74,7 @@ type Querier interface {
 	ListClassificationRules(ctx context.Context) ([]ClassificationRule, error)
 	ListConfirmedTransferIDsInPeriod(ctx context.Context, arg ListConfirmedTransferIDsInPeriodParams) ([]uuid.UUID, error)
 	ListConfirmedTransferTransactionIDs(ctx context.Context) ([]uuid.UUID, error)
+	ListDailyExpensePaceInPeriod(ctx context.Context, arg ListDailyExpensePaceInPeriodParams) ([]ListDailyExpensePaceInPeriodRow, error)
 	ListDecisions(ctx context.Context, rowLimit int32) ([]Decision, error)
 	ListImportRuns(ctx context.Context, limit int32) ([]ImportRun, error)
 	ListMerchantSourceLabels(ctx context.Context) ([]ListMerchantSourceLabelsRow, error)

@@ -42,6 +42,22 @@ describe("Baseline month page", () => {
         ],
       }),
     );
+    vi.spyOn(sdk, "getBaselineDailyExpensePace").mockResolvedValue(
+      mockApiResponse({
+        data: [
+          {
+            date: "2026-03-01",
+            expenses: "1200.00",
+            transaction_count: 1,
+          },
+          {
+            date: "2026-03-10",
+            expenses: "85.00",
+            transaction_count: 2,
+          },
+        ],
+      }),
+    );
     vi.spyOn(sdk, "getBaselineMonthlyCashflow").mockResolvedValue(
       mockApiResponse({
         data: [
@@ -113,6 +129,14 @@ describe("Baseline month page", () => {
 
     expect(
       await screen.findByRole("heading", { name: "March 2026" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Spending pace/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: /Cumulative expenses over the month/i,
+      }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Expenses above typical/i)).toBeInTheDocument();
     expect(screen.getByText(/Why this month/i)).toBeInTheDocument();

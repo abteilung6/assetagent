@@ -301,3 +301,140 @@ export function buildDualSeriesChartLayout(
     })),
   };
 }
+
+export type ExpensePaceChartPoint = {
+  date: string;
+  cumulative: number;
+  dailyCount: number;
+};
+
+export type ExpensePaceBar = {
+  x: number;
+  width: number;
+  y: number;
+  height: number;
+  count: number;
+};
+
+export type ExpensePaceChartLayout = {
+  width: number;
+  height: number;
+  /** @deprecated Prefer padLeft; kept as alias for left gutter. */
+  padX: number;
+  padLeft: number;
+  padRight: number;
+  padTop: number;
+  padBottom: number;
+  innerH: number;
+  linePath: string;
+  areaPath: string;
+  bars: ExpensePaceBar[];
+  xs: number[];
+  cumulativeYs: number[];
+  moneyLabels: BalanceChartAxisLabel[];
+  labelIndexes: number[];
+  maxCount: number;
+};
+
+/** Edge-aligned plot: euro labels sit on the right so the series meets page text. */
+const PACE_PAD_LEFT = 0;
+const PACE_PAD_RIGHT = 4;
+
+/**
+ * Cumulative expense curve (primary) with daily booking-count bars (secondary).
+ * Count bars share the plot but use an independent scale capped to ~28% of height.
+ * Defaults to nearly full-bleed horizontal alignment with surrounding page text.
+ */
+export function buildExpensePaceChartLayout(
+  points: ExpensePaceChartPoint[],
+  options?: {
+    width?: number;
+    height?: number;
+    padX?: number;
+    padLeft?: number;
+    padRight?: number;
+    padTop?: number;
+    padBottom?: number;
+  },
+): ExpensePaceChartLayout | null {
+  if (!points.length) {
+    return null;
+  }
+  if (points.some((p) => Number.isNaN(p.cumulative) || Number.isNaN(p.dailyCount))) {
+    return null;
+  }
+
+  const width = options?.width ?? DEFAULT_WIDTH;
+  const height = options?.height ?? DEFAULT_HEIGHT;
+  const padLeft =
+    options?.padLeft ?? options?.padX ?? PACE_PAD_LEFT;
+  const padRight = options?.padRight ?? options?.padX ?? PACE_PAD_RIGHT;
+  const padTop = options?.padTop ?? DEFAULT_PAD_TOP;
+  const padBottom = options?.padBottom ?? DEFAULT_PAD_BOTTOM;
+  const innerW = width - padLeft - padRight;
+  const innerH = height - padTop - padBottom;
+
+  const values = points.map((p) => p.cumulative);
+  const min = 0;
+  const max = Math.max(...values, 0);
+  const span = max - min || 1;
+
+  const xs = points.map((_, i) =>
+    padLeft +
+    (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW),
+  );
+  const cumulativeYs = points.map((p) =>
+    yForValue(p.cumulative, min, span, padTop, innerH),
+  );
+  const coords = xs.map((x, i) => ({ x, y: cumulativeYs[i]! }));
+  const linePath = coords
+    .map((c, i) => `${i === 0 ? "M" : "L"} ${c.x} ${c.y}`)
+    .join(" ");
+  const last = coords[coords.length - 1]!;
+  const first = coords[0]!;
+  const baselineY = padTop + innerH;
+  const areaPath = `${linePath} L ${last.x} ${baselineY} L ${first.x} ${baselineY} Z`;
+
+  const maxCount = Math.max(...points.map((p) => p.dailyCount), 0);
+  const barBand = innerH * 0.28;
+  const step =
+    points.length <= 1 ? innerW : innerW / (points.length - 1);
+  const barWidth = Math.max(1.5, Math.min(6, step * 0.55));
+  const bars: ExpensePaceBar[] = points.map((p, i) => {
+    const heightPx =
+      maxCount > 0 && p.dailyCount > 0
+        ? (p.dailyCount / maxCount) * barBand
+        : 0;
+    const rawX = xs[i]! - barWidth / 2;
+    return {
+      x: Math.max(0, Math.min(rawX, width - barWidth)),
+      width: barWidth,
+      y: baselineY - heightPx,
+      height: heightPx,
+      count: p.dailyCount,
+    };
+  });
+
+  return {
+    width,
+    height,
+    padX: padLeft,
+    padLeft,
+    padRight,
+    padTop,
+    padBottom,
+    innerH,
+    linePath,
+    areaPath,
+    bars,
+    xs,
+    cumulativeYs,
+    moneyLabels: chartMoneyTicks(min, max).map((value) => ({
+      value,
+      y: yForValue(value, min, span, padTop, innerH),
+      text: formatChartMoney(value),
+    })),
+    labelIndexes: chartDateIndexes(points.length),
+    maxCount,
+  };
+}

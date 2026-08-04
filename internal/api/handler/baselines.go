@@ -23,6 +23,7 @@ type BaselineService interface {
 	MonthlyCashflow(ctx context.Context, months int) ([]service.MonthlyCashflowPoint, error)
 	OneOffImpact(ctx context.Context, from, to time.Time) (repository.OneOffExpenseImpact, error)
 	CategorySpend(ctx context.Context, from, to time.Time, limit int) ([]repository.CategorySpendPoint, error)
+	DailyExpensePace(ctx context.Context, from, to time.Time) ([]repository.DailyExpensePacePoint, error)
 }
 
 func (h *Handler) GetCurrentBaseline(w http.ResponseWriter, r *http.Request) {
@@ -116,6 +117,31 @@ func (h *Handler) GetBaselineCategorySpend(w http.ResponseWriter, r *http.Reques
 		}
 	}
 	writeJSON(w, http.StatusOK, gen.BaselineCategorySpendResponse{Data: data})
+}
+
+func (h *Handler) GetBaselineDailyExpensePace(w http.ResponseWriter, r *http.Request, params gen.GetBaselineDailyExpensePaceParams) {
+	if h.baseline == nil {
+		writeInternalError(w, "baseline service is not configured")
+		return
+	}
+	items, err := h.baseline.DailyExpensePace(r.Context(), params.From.Time, params.To.Time)
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidBaselinePeriod) {
+			writeValidationError(w, err.Error())
+			return
+		}
+		writeInternalError(w, "failed to load daily expense pace")
+		return
+	}
+	data := make([]gen.BaselineDailyExpensePacePoint, len(items))
+	for i, item := range items {
+		data[i] = gen.BaselineDailyExpensePacePoint{
+			Date:             openapi_types.Date{Time: item.Date},
+			Expenses:         item.Expenses.StringFixed(2),
+			TransactionCount: item.TransactionCount,
+		}
+	}
+	writeJSON(w, http.StatusOK, gen.BaselineDailyExpensePaceResponse{Data: data})
 }
 
 func (h *Handler) PostBaselinesRecompute(w http.ResponseWriter, r *http.Request) {

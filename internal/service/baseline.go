@@ -580,3 +580,14 @@ func (s *BaselineService) CategorySpend(ctx context.Context, from, to time.Time,
 	}
 	return s.reports.ListCategorySpend(ctx, from, to, limit)
 }
+
+// DailyExpensePace returns transfer-aware daily expense totals and booking counts.
+// Days with no spend are omitted; callers fill the calendar when drawing curves.
+func (s *BaselineService) DailyExpensePace(ctx context.Context, from, to time.Time) ([]repository.DailyExpensePacePoint, error) {
+	from = dateOnlyUTC(from)
+	to = dateOnlyUTC(to)
+	if to.Before(from) {
+		return nil, ErrInvalidBaselinePeriod
+	}
+	return s.reports.ListDailyExpensePace(ctx, from, to)
+}

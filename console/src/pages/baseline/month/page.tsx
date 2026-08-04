@@ -6,9 +6,14 @@ import type { Transaction } from "@/api/types.gen";
 import { AskAboutThis } from "@/components/chat/ask-about-this";
 import { TransactionDetailSheet } from "@/components/transaction-detail/sheet";
 import { buttonVariants } from "@/components/ui/button";
-import { useBaselineCategorySpend, useBaselineMonthlyCashflow } from "@/hooks/use-baseline";
+import {
+  useBaselineCategorySpend,
+  useBaselineDailyExpensePace,
+  useBaselineMonthlyCashflow,
+} from "@/hooks/use-baseline";
 import { useTransactions } from "@/hooks/use-transactions";
 import {
+  buildExpensePaceSeries,
   buildMonthStory,
   endOfMonthISO,
   formatCompactMoney,
@@ -19,6 +24,12 @@ import {
   shiftYyyyMm,
   type MonthlyCashflowPoint,
 } from "@/lib/baseline-charts";
+import {
+  buildExpensePaceChartLayout,
+  chartLabelAnchor,
+  formatChartDate,
+  formatChartMoney,
+} from "@/lib/balance-chart";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +44,11 @@ const BaselineMonthPage: React.FC = () => {
     monthStart ?? "",
     monthEnd,
     8,
+    Boolean(monthStart),
+  );
+  const paceQuery = useBaselineDailyExpensePace(
+    monthStart ?? "",
+    monthEnd,
     Boolean(monthStart),
   );
 
@@ -118,6 +134,40 @@ const BaselineMonthPage: React.FC = () => {
 
   const prevYyyyMm = shiftYyyyMm(yyyyMm, -1);
   const nextYyyyMm = shiftYyyyMm(yyyyMm, 1);
+
+  const paceSeries = useMemo(() => {
+    if (!monthStart) {
+      return [];
+    }
+    return buildExpensePaceSeries(
+      monthStart,
+      monthEnd,
+      paceQuery.data?.data ?? [],
+    );
+  }, [monthStart, monthEnd, paceQuery.data]);
+
+  const paceLayout = useMemo(
+    () =>
+      buildExpensePaceChartLayout(
+        paceSeries.map((day) => ({
+          date: day.date,
+          cumulative: day.cumulativeExpenses,
+          dailyCount: day.transactionCount,
+        })),
+        { height: 220 },
+      ),
+    [paceSeries],
+  );
+
+  const paceTotals = useMemo(() => {
+    const last = paceSeries[paceSeries.length - 1];
+    const txCount = paceSeries.reduce((sum, day) => sum + day.transactionCount, 0);
+    return {
+      cumulative: last?.cumulativeExpenses ?? 0,
+      txCount,
+    };
+  }, [paceSeries]);
+
   const hasPrev = months.some(
     (m) => m.monthStart.slice(0, 7) === prevYyyyMm,
   );
@@ -266,6 +316,13 @@ const BaselineMonthPage: React.FC = () => {
               ) : null}
             </header>
 
+            <ExpensePaceSection
+              loading={paceQuery.isLoading}
+              layout={paceLayout}
+              series={paceSeries}
+              totals={paceTotals}
+            />
+
             {story.whyBullets.length > 0 ? (
               <section className="space-y-2">
                 <h3 className="text-sm font-semibold tracking-tight">
@@ -380,6 +437,189 @@ const BaselineMonthPage: React.FC = () => {
         />
       </div>
     </div>
+  );
+};
+
+const ExpensePaceSection: React.FC<{
+  loading: boolean;
+  layout: ReturnType<typeof buildExpensePaceChartLayout>;
+  series: ReturnType<typeof buildExpensePaceSeries>;
+  totals: { cumulative: number; txCount: number };
+}> = ({ loading, layout, series, totals }) => {
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  if (loading) {
+    return (
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold tracking-tight">Spending pace</h3>
+        <p className="text-sm text-muted-foreground">Loading pace…</p>
+      </section>
+    );
+  }
+  if (!layout || series.length === 0 || totals.cumulative <= 0) {
+    return (
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold tracking-tight">Spending pace</h3>
+        <p className="text-sm text-muted-foreground">
+          No expenses booked in this month yet.
+        </p>
+      </section>
+    );
+  }
+
+  const hoverDay = hovered != null ? series[hovered] : null;
+
+  return (
+    <section className="space-y-3">
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold tracking-tight">Spending pace</h3>
+        <p className="text-sm text-muted-foreground">
+          Cumulative expenses day by day
+          {totals.txCount > 0
+            ? ` · ${totals.txCount} expense bookings`
+            : null}
+          . Bars show how busy each day was.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <svg
+          viewBox={`0 0 ${layout.width} ${layout.height}`}
+          className="w-full text-foreground"
+          style={{ aspectRatio: `${layout.width} / ${layout.height}` }}
+          role="img"
+          aria-label="Cumulative expenses over the month with daily booking counts"
+        >
+          {layout.moneyLabels.map((label) => (
+            <g key={`money-${label.value}`}>
+              <line
+                x1={layout.padLeft}
+                x2={layout.width - layout.padRight}
+                y1={label.y}
+                y2={label.y}
+                className="stroke-border/60"
+                strokeWidth={1}
+                strokeDasharray={label.value === 0 ? "4 4" : undefined}
+              />
+              <text
+                x={layout.width - layout.padRight}
+                y={label.y - 4}
+                textAnchor="end"
+                className="fill-muted-foreground"
+                fontSize={11}
+              >
+                {label.text}
+              </text>
+            </g>
+          ))}
+          {layout.bars.map((bar, i) =>
+            bar.height > 0 ? (
+              <rect
+                key={`bar-${series[i]!.date}`}
+                x={bar.x}
+                y={bar.y}
+                width={bar.width}
+                height={bar.height}
+                className="fill-muted-foreground/35 pointer-events-none"
+              />
+            ) : null,
+          )}
+          <path
+            d={layout.areaPath}
+            className="fill-red-700/10 dark:fill-red-400/10 pointer-events-none"
+          />
+          <path
+            d={layout.linePath}
+            className="stroke-red-700 dark:stroke-red-400 pointer-events-none"
+            fill="none"
+            strokeWidth={2}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+          {layout.labelIndexes.map((i) => {
+            const point = series[i]!;
+            const x = layout.xs[i]!;
+            return (
+              <g key={`label-${point.date}`}>
+                <line
+                  x1={x}
+                  x2={x}
+                  y1={layout.padTop + layout.innerH}
+                  y2={layout.padTop + layout.innerH + 4}
+                  className="stroke-muted-foreground"
+                  strokeWidth={1}
+                />
+                <text
+                  x={x}
+                  y={layout.height - 12}
+                  textAnchor={chartLabelAnchor(i, series.length)}
+                  className="fill-muted-foreground"
+                  fontSize={11}
+                >
+                  {formatChartDate(point.date)}
+                </text>
+              </g>
+            );
+          })}
+          {series.map((point, i) => {
+            const x = layout.xs[i]!;
+            const y = layout.cumulativeYs[i]!;
+            const isHovered = hovered === i;
+            return (
+              <g key={`hit-${point.date}`}>
+                <rect
+                  x={x - 8}
+                  y={layout.padTop}
+                  width={16}
+                  height={layout.innerH}
+                  className="fill-transparent cursor-crosshair"
+                  onMouseEnter={() => setHovered(i)}
+                  onMouseLeave={() => setHovered(null)}
+                  onFocus={() => setHovered(i)}
+                  onBlur={() => setHovered(null)}
+                />
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={isHovered ? 4 : 0}
+                  className="fill-red-700 pointer-events-none dark:fill-red-400"
+                />
+              </g>
+            );
+          })}
+          {hoverDay && hovered != null ? (
+            <text
+              x={layout.xs[hovered]!}
+              y={Math.max(layout.padTop + 12, layout.cumulativeYs[hovered]! - 10)}
+              textAnchor="middle"
+              className="fill-foreground pointer-events-none"
+              fontSize={11}
+            >
+              {formatChartDate(hoverDay.date)} ·{" "}
+              {formatChartMoney(hoverDay.cumulativeExpenses)}
+              {hoverDay.transactionCount > 0
+                ? ` · ${hoverDay.transactionCount} tx`
+                : ""}
+            </text>
+          ) : null}
+        </svg>
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <li className="flex items-center gap-1.5">
+            <span className="inline-block h-0.5 w-3 bg-red-700 dark:bg-red-400" />
+            Cumulative expenses
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="inline-block h-2 w-1.5 bg-muted-foreground/40" />
+            Daily expense bookings
+          </li>
+          <li className="tabular-nums">
+            Month total {formatChartMoney(totals.cumulative)}
+          </li>
+        </ul>
+        <p className="text-xs text-muted-foreground">
+          Based on booking dates · transfers excluded · one-offs included
+        </p>
+      </div>
+    </section>
   );
 };
 

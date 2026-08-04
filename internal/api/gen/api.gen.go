@@ -700,6 +700,20 @@ type BaselineCategorySpendResponse struct {
 	Data []BaselineCategorySpendPoint `json:"data"`
 }
 
+// BaselineDailyExpensePacePoint defines model for BaselineDailyExpensePacePoint.
+type BaselineDailyExpensePacePoint struct {
+	Date openapi_types.Date `json:"date"`
+
+	// Expenses Absolute EUR expenses booked that day
+	Expenses         string `json:"expenses"`
+	TransactionCount int64  `json:"transaction_count"`
+}
+
+// BaselineDailyExpensePaceResponse defines model for BaselineDailyExpensePaceResponse.
+type BaselineDailyExpensePaceResponse struct {
+	Data []BaselineDailyExpensePacePoint `json:"data"`
+}
+
 // BaselineMetric defines model for BaselineMetric.
 type BaselineMetric struct {
 	Assumptions *[]string                `json:"assumptions,omitempty"`
@@ -1334,6 +1348,12 @@ type GetBaselineCategorySpendParams struct {
 	Limit *int               `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// GetBaselineDailyExpensePaceParams defines parameters for GetBaselineDailyExpensePace.
+type GetBaselineDailyExpensePaceParams struct {
+	From openapi_types.Date `form:"from" json:"from"`
+	To   openapi_types.Date `form:"to" json:"to"`
+}
+
 // GetBaselineMonthlyCashflowParams defines parameters for GetBaselineMonthlyCashflow.
 type GetBaselineMonthlyCashflowParams struct {
 	Months *int `form:"months,omitempty" json:"months,omitempty"`
@@ -1478,6 +1498,9 @@ type ServerInterface interface {
 	// Get the current draft or confirmed FinancialBaseline
 	// (GET /api/baselines/current)
 	GetCurrentBaseline(w http.ResponseWriter, r *http.Request)
+	// Daily expense totals and booking counts for month pacing charts
+	// (GET /api/baselines/daily-expense-pace)
+	GetBaselineDailyExpensePace(w http.ResponseWriter, r *http.Request, params GetBaselineDailyExpensePaceParams)
 	// Transfer-aware monthly income/expense totals for baseline charts
 	// (GET /api/baselines/monthly-cashflow)
 	GetBaselineMonthlyCashflow(w http.ResponseWriter, r *http.Request, params GetBaselineMonthlyCashflowParams)
@@ -1622,6 +1645,12 @@ func (_ Unimplemented) GetBaselineCategorySpend(w http.ResponseWriter, r *http.R
 // Get the current draft or confirmed FinancialBaseline
 // (GET /api/baselines/current)
 func (_ Unimplemented) GetCurrentBaseline(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Daily expense totals and booking counts for month pacing charts
+// (GET /api/baselines/daily-expense-pace)
+func (_ Unimplemented) GetBaselineDailyExpensePace(w http.ResponseWriter, r *http.Request, params GetBaselineDailyExpensePaceParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2004,6 +2033,52 @@ func (siw *ServerInterfaceWrapper) GetCurrentBaseline(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCurrentBaseline(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBaselineDailyExpensePace operation middleware
+func (siw *ServerInterfaceWrapper) GetBaselineDailyExpensePace(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetBaselineDailyExpensePaceParams
+
+	// ------------- Required query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBaselineDailyExpensePace(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3148,6 +3223,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/baselines/current", wrapper.GetCurrentBaseline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/baselines/daily-expense-pace", wrapper.GetBaselineDailyExpensePace)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/baselines/monthly-cashflow", wrapper.GetBaselineMonthlyCashflow)

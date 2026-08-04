@@ -257,3 +257,35 @@ func (r *Reports) ListCategorySpend(
 	}
 	return out, nil
 }
+
+// DailyExpensePacePoint is expense total and booking count for one day.
+type DailyExpensePacePoint struct {
+	Date             time.Time
+	Expenses         decimal.Decimal
+	TransactionCount int64
+}
+
+func (r *Reports) ListDailyExpensePace(
+	ctx context.Context,
+	from, to time.Time,
+) ([]DailyExpensePacePoint, error) {
+	rows, err := r.queries.ListDailyExpensePaceInPeriod(ctx, sqldb.ListDailyExpensePaceInPeriodParams{
+		FromDate: pgtype.Date{Time: from, Valid: true},
+		ToDate:   pgtype.Date{Time: to, Valid: true},
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]DailyExpensePacePoint, 0, len(rows))
+	for _, row := range rows {
+		if !row.BookingDay.Valid {
+			continue
+		}
+		out = append(out, DailyExpensePacePoint{
+			Date:             row.BookingDay.Time,
+			Expenses:         row.Expenses,
+			TransactionCount: row.TransactionCount,
+		})
+	}
+	return out, nil
+}
