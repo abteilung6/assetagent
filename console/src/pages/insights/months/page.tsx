@@ -17,6 +17,7 @@ import {
   formatChartMoney,
 } from "@/lib/balance-chart";
 import {
+  buildExpenseDevelopmentCallouts,
   buildTypicalMonthLevels,
   detectUnusualMonth,
   formatCompactMoney,
@@ -112,6 +113,11 @@ const BaselineHistoryPage: React.FC = () => {
         variable: Number.parseFloat(baseline.avg_variable_spend) || 0,
       })
     : { income: 0, expenses: 0 };
+
+  const expensiveMonths = useMemo(
+    () => buildExpenseDevelopmentCallouts(trendMonths, typical.expenses).high,
+    [trendMonths, typical.expenses],
+  );
 
   const dualLayout = buildDualSeriesChartLayout(
     trendMonths.map((m) => ({
@@ -315,6 +321,7 @@ const BaselineHistoryPage: React.FC = () => {
                             params: {
                               yyyyMm: yyyyMmFromMonthStart(point.monthStart),
                             },
+                            search: { tab: "activity" },
                           });
                         }}
                       />
@@ -370,15 +377,43 @@ const BaselineHistoryPage: React.FC = () => {
             </div>
           )}
 
+          {expensiveMonths.length > 0 ? (
+            <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              {expensiveMonths.slice(0, 3).map((m) => (
+                <li key={`expensive-${m.monthStart}`}>
+                  <Link
+                    to="/insights/months/$yyyyMm"
+                    params={{
+                      yyyyMm: yyyyMmFromMonthStart(m.monthStart),
+                    }}
+                    search={{ tab: "activity" }}
+                    className="text-foreground underline-offset-4 hover:underline"
+                  >
+                    {formatMonthHeadline(m.monthStart)}
+                  </Link>{" "}
+                  booked well above the Cashflow cost norm (
+                  {formatChartMoney(m.expenses)}) — open Activity for top
+                  payments.
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
           {trendInsight.unusual && trendInsight.message ? (
             <p className="text-sm text-amber-800 dark:text-amber-200">
               {trendInsight.message}{" "}
-              <Link
-                to="/review"
-                className="underline underline-offset-4 hover:text-foreground"
-              >
-                Open Needs review
-              </Link>
+              {trendInsight.monthStart ? (
+                <Link
+                  to="/insights/months/$yyyyMm"
+                  params={{
+                    yyyyMm: yyyyMmFromMonthStart(trendInsight.monthStart),
+                  }}
+                  search={{ tab: "activity" }}
+                  className="underline underline-offset-4 hover:text-foreground"
+                >
+                  Open Activity
+                </Link>
+              ) : null}
             </p>
           ) : null}
         </section>
@@ -432,6 +467,7 @@ const BaselineHistoryPage: React.FC = () => {
           <Link
             to="/insights/months/$yyyyMm"
             params={{ yyyyMm: driverWindow.yyyyMm }}
+            search={{ tab: "activity" }}
             className="text-sm text-foreground underline-offset-4 hover:underline"
           >
             Open {driverWindow.label}
@@ -477,6 +513,7 @@ const UnusualMonthsStrip: React.FC<{
                 key={m.monthStart}
                 to="/insights/months/$yyyyMm"
                 params={{ yyyyMm: yyyyMmFromMonthStart(m.monthStart) }}
+                search={{ tab: "activity" }}
                 className="group flex min-w-0 flex-1 flex-col items-center gap-1.5 underline-offset-4 hover:underline"
                 title={`${formatMonthLabel(m.monthStart)} · expenses ${formatEuro(m.expenses)}`}
               >

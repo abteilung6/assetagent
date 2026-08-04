@@ -213,15 +213,20 @@ func monthlyEquivalent(amount decimal.Decimal, interval string) decimal.Decimal 
 }
 
 func inclusiveMonthSpan(from, to time.Time) decimal.Decimal {
+	from = dateOnly(from)
+	to = dateOnly(to)
 	if to.Before(from) {
 		return decimal.NewFromInt(1)
 	}
-	// Exact calendar month → 1.00
+	// Full calendar-month windows (1st → last day of same or later month).
 	if from.Day() == 1 {
-		next := from.AddDate(0, 1, 0)
-		monthEnd := next.AddDate(0, 0, -1)
-		if dateOnly(to).Equal(monthEnd) {
-			return decimal.NewFromInt(1)
+		nextAfterTo := time.Date(to.Year(), to.Month()+1, 1, 0, 0, 0, 0, time.UTC)
+		monthEnd := nextAfterTo.AddDate(0, 0, -1)
+		if to.Equal(monthEnd) {
+			months := (to.Year()-from.Year())*12 + int(to.Month()-from.Month()) + 1
+			if months >= 1 {
+				return decimal.NewFromInt(int64(months))
+			}
 		}
 	}
 	days := int(to.Sub(from).Hours()/24) + 1

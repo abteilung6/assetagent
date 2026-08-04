@@ -20,7 +20,7 @@ import {
 } from "@/lib/baseline-charts";
 import { cn } from "@/lib/utils";
 
-const BaselinePerformancePage: React.FC = () => {
+const BaselineTrackingPage: React.FC = () => {
   const baselineQuery = useCurrentBaseline();
   const monthsQuery = useBaselineMonthlyCashflow(6);
   const missing = isBaselineMissing(baselineQuery.error);
@@ -66,16 +66,11 @@ const BaselinePerformancePage: React.FC = () => {
               Recent months versus your Cashflow norm — are you beating or
               missing the bar?
             </p>
-            <Link
-              to="/baseline"
-              className="text-sm text-foreground underline-offset-4 hover:underline"
-            >
-              Open Cashflow
-            </Link>
           </div>
           <AskAboutThis
             prompt="How am I tracking against my baseline?"
-            context={{ route: "/baseline/performance" }}
+            context={{ route: "/baseline/tracking" }}
+            className="-my-1 h-auto px-0 py-0"
           />
         </div>
 
@@ -121,14 +116,9 @@ const BaselinePerformancePage: React.FC = () => {
                 </div>
               </dl>
               <p className="text-xs text-muted-foreground">
-                From your {baseline.status === "confirmed" ? "confirmed" : "draft"}{" "}
-                Cashflow ·{" "}
-                <Link
-                  to="/insights/months"
-                  className="underline underline-offset-4 hover:text-foreground"
-                >
-                  Browse months in Insights
-                </Link>
+                From your{" "}
+                {baseline.status === "confirmed" ? "confirmed" : "draft"}{" "}
+                Cashflow.
               </p>
             </section>
 
@@ -136,8 +126,7 @@ const BaselinePerformancePage: React.FC = () => {
               <p className="text-sm text-amber-800 dark:text-amber-200">
                 {overspent.length === 1
                   ? `${formatMonthHeadline(overspent[0]!.monthStart)} spent well above the Cashflow norm.`
-                  : `${overspent.length} months spent well above the Cashflow norm.`}{" "}
-                Open them in Insights to see drivers.
+                  : `${overspent.length} months spent well above the Cashflow norm.`}
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">
@@ -163,6 +152,7 @@ const BaselinePerformancePage: React.FC = () => {
                         params={{
                           yyyyMm: yyyyMmFromMonthStart(row.monthStart),
                         }}
+                        search={{ tab: "activity" }}
                         className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 hover:bg-muted/40"
                       >
                         <div className="min-w-0 space-y-0.5">
@@ -211,4 +201,4 @@ function formatEuro(value: number): string {
   }).format(value);
 }
 
-export default BaselinePerformancePage;
+export default BaselineTrackingPage;

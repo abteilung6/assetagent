@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as sdk from "@/api/sdk.gen";
+import { sampleTransaction } from "@/test/fixtures";
 import { mockApiResponse } from "@/test/mocks";
 import { testRender } from "@/test/render";
 
@@ -264,5 +265,48 @@ describe("Baseline expenses page", () => {
       await screen.findByText(/No quarterly or yearly recurring costs/i),
     ).toBeInTheDocument();
     expect(screen.queryByText("Streaming monthly")).not.toBeInTheDocument();
+  });
+
+  it("expands a development month to show top expenses", async () => {
+    vi.spyOn(sdk, "getTransactions").mockResolvedValue(
+      mockApiResponse({
+        data: [
+          sampleTransaction({
+            id: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+            counterparty: "WEG Example",
+            purpose: "Hausgeld",
+            amount: "-900.00",
+            booking_date: "2026-03-15",
+            recurring: false,
+          }),
+          sampleTransaction({
+            id: "dddddddd-dddd-dddd-dddd-dddddddddddd",
+            counterparty: "ROLAND Rechtsschutz",
+            purpose: "Versicherung",
+            amount: "-350.00",
+            booking_date: "2026-03-10",
+            one_off: true,
+            recurring: false,
+          }),
+        ],
+        pagination: { limit: 5, offset: 0, total: 2 },
+      }),
+    );
+
+    testRender({ route: "/baseline/expenses" });
+
+    const monthButton = await screen.findByRole("button", {
+      name: /March 2026/i,
+    });
+    await userEvent.click(monthButton);
+    expect(await screen.findByText("WEG Example")).toBeInTheDocument();
+    expect(screen.getByText("ROLAND Rechtsschutz")).toBeInTheDocument();
+    expect(screen.getByText(/· one-off/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Open March 2026 in Insights/i }),
+    ).toHaveAttribute(
+      "href",
+      expect.stringContaining("/insights/months/2026-03"),
+    );
   });
 });

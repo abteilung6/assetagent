@@ -10,7 +10,7 @@ import { AppLayout } from "@/app/layout";
 import BaselinePage from "@/pages/baseline/page";
 import BaselineExpensesPage from "@/pages/baseline/expenses/page";
 import BaselineIncomePage from "@/pages/baseline/income/page";
-import BaselinePerformancePage from "@/pages/baseline/performance/page";
+import BaselineTrackingPage from "@/pages/baseline/tracking/page";
 import ChatPage from "@/pages/chat/page";
 import ImportsPage from "@/pages/imports/page";
 import InsightsMonthPage from "@/pages/insights/month/page";
@@ -65,12 +65,20 @@ const baselineRoute = createRoute({
   },
 });
 
-const baselinePerformanceRoute = createRoute({
+const baselineTrackingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/baseline/tracking",
+  component: BaselineTrackingPage,
+  staticData: {
+    title: "Tracking",
+  },
+});
+
+const legacyBaselinePerformanceRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/baseline/performance",
-  component: BaselinePerformancePage,
-  staticData: {
-    title: "Performance",
+  beforeLoad: () => {
+    throw redirect({ to: "/baseline/tracking" });
   },
 });
 
@@ -204,7 +212,7 @@ const transactionsRoute = createRoute({
 export {
   baselineExpensesRoute,
   baselineIncomeRoute,
-  baselinePerformanceRoute,
+  baselineTrackingRoute,
   baselineRoute,
   chatRoute,
   importsRoute,
@@ -223,7 +231,8 @@ const routeTree = rootRoute.addChildren([
   baselineRoute,
   baselineIncomeRoute,
   baselineExpensesRoute,
-  baselinePerformanceRoute,
+  baselineTrackingRoute,
+  legacyBaselinePerformanceRoute,
   insightsRoute,
   insightsMonthsRoute,
   insightsMonthRoute,

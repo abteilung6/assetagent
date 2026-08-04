@@ -62,9 +62,61 @@ func canonicalizePattern(pattern string) string {
 		return "REWE"
 	case strings.Contains(pattern, "NETFLIX"):
 		return "NETFLIX"
+	case isHousingPattern(pattern):
+		return canonicalizeHousingPattern(pattern)
 	default:
 		return pattern
 	}
+}
+
+func isHousingPattern(pattern string) bool {
+	return strings.Contains(pattern, "HAUSGELD") ||
+		strings.Contains(pattern, "WOHNUNGSEIGENTUM") ||
+		strings.HasPrefix(pattern, "WEG ") ||
+		strings.Contains(pattern, " WEG ")
+}
+
+// canonicalizeHousingPattern collapses noisy WEG / Hausgeld booking text so
+// monthly Hausgeld SEPA stays one recurring series.
+func canonicalizeHousingPattern(pattern string) string {
+	fields := strings.Fields(pattern)
+	start := -1
+	for i, f := range fields {
+		if f == "WEG" {
+			start = i
+			break
+		}
+	}
+	if start >= 0 {
+		out := []string{"WEG"}
+		for _, f := range fields[start+1:] {
+			if len(out) >= 5 {
+				break
+			}
+			// Skip long numeric invoice / account tokens.
+			if isMostlyDigits(f) && len(f) >= 4 {
+				continue
+			}
+			out = append(out, f)
+		}
+		if len(out) >= 2 {
+			return strings.Join(out, " ")
+		}
+	}
+	if strings.Contains(pattern, "HAUSGELD") {
+		return "HAUSGELD"
+	}
+	return pattern
+}
+
+func isMostlyDigits(value string) bool {
+	digits := 0
+	for _, r := range value {
+		if unicode.IsDigit(r) {
+			digits++
+		}
+	}
+	return digits > 0 && digits*2 >= len([]rune(value))
 }
 
 func displayNameForPattern(pattern, original string) string {
@@ -77,6 +129,8 @@ func displayNameForPattern(pattern, original string) string {
 		return "REWE"
 	case "NETFLIX":
 		return "Netflix"
+	case "HAUSGELD":
+		return "Hausgeld"
 	default:
 		// Prefer a cleaned title-ish form of the original counterparty/purpose.
 		words := strings.Fields(strings.ToLower(normalizeKey(original)))
@@ -92,6 +146,22 @@ func displayNameForPattern(pattern, original string) string {
 		if name == "" {
 			return pattern
 		}
+		// Keep short WEG display names readable.
+		if strings.HasPrefix(pattern, "WEG ") {
+			return titleCaseWords(strings.Fields(strings.ToLower(pattern)))
+		}
 		return name
 	}
+}
+
+func titleCaseWords(words []string) string {
+	for i, w := range words {
+		if w == "" {
+			continue
+		}
+		runes := []rune(w)
+		runes[0] = unicode.ToUpper(runes[0])
+		words[i] = string(runes)
+	}
+	return strings.Join(words, " ")
 }

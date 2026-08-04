@@ -51,9 +51,11 @@ export const AppSidebar: React.FC = () => {
   const cashflowActive = pathActive(pathname, "/baseline", true);
   const incomeActive = pathActive(pathname, "/baseline/income", true);
   const expensesActive = pathActive(pathname, "/baseline/expenses", true);
-  const performanceActive = pathActive(pathname, "/baseline/performance", true);
+  const trackingActive =
+    pathActive(pathname, "/baseline/tracking", true) ||
+    pathActive(pathname, "/baseline/performance", true);
   const baselineActive =
-    cashflowActive || incomeActive || expensesActive || performanceActive;
+    cashflowActive || incomeActive || expensesActive || trackingActive;
   const monthsActive =
     pathActive(pathname, "/insights/months") ||
     pathActive(pathname, "/baseline/history") ||
@@ -126,10 +128,10 @@ export const AppSidebar: React.FC = () => {
                 </SidebarMenuSubItem>
                 <SidebarMenuSubItem>
                   <SidebarMenuSubButton
-                    render={<Link to="/baseline/performance" />}
-                    isActive={performanceActive}
+                    render={<Link to="/baseline/tracking" />}
+                    isActive={trackingActive}
                   >
-                    Performance
+                    Tracking
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               </SidebarMenuSub>

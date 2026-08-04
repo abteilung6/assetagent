@@ -208,7 +208,7 @@ export type BaselinePerformanceRow = {
   overspent: boolean;
 };
 
-/** Score recent months against Cashflow typical levels (Baseline → Performance). */
+/** Score recent months against Cashflow typical levels (Baseline → Tracking). */
 export function buildBaselinePerformanceRows(
   months: MonthlyCashflowPoint[],
   typical: TypicalMonthLevels,

@@ -2,7 +2,6 @@ import type React from "react";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 
-import { CompositionEvidenceSheet } from "@/components/baseline-composition-evidence/sheet";
 import { AskAboutThis } from "@/components/chat/ask-about-this";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -16,15 +15,10 @@ import {
   useCurrentBaseline,
   type FinancialBaseline,
 } from "@/hooks/use-baseline";
-import { formatChartMoney } from "@/lib/balance-chart";
 import {
-  buildBaselineComposition,
   buildBaselineReadinessItems,
   detectUnusualMonth,
-  formatMonthLabel,
   formatOneOffImpactLine,
-  type CompositionEvidenceKey,
-  type CompositionSegmentKey,
   type MonthlyCashflowPoint,
 } from "@/lib/baseline-charts";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
@@ -186,9 +180,6 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
   onRecompute,
   onAdjust,
 }) => {
-  const freeMetric = baseline.metrics.find(
-    (m) => m.key === "sustainable_free_cashflow",
-  );
   const periodLabel = `${formatDate(baseline.period_from)} – ${formatDate(baseline.period_to)}`;
   const confirmed = baseline.status === "confirmed";
   const periodFrom = baseline.period_from.slice(0, 10);
@@ -232,35 +223,6 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
         />
       </div>
 
-      <TypicalMonthSplit
-        baseline={baseline}
-        onFocusMetric={(key) => onEdit(key)}
-      />
-
-      <p className="text-sm text-muted-foreground">
-        Want calendar months and who drove spend?{" "}
-        <Link
-          to="/insights/months"
-          className="text-foreground underline-offset-4 hover:underline"
-        >
-          Open Insights
-        </Link>
-        {" · "}
-        <Link
-          to="/baseline/income"
-          className="text-foreground underline-offset-4 hover:underline"
-        >
-          Understand income
-        </Link>
-        {" · "}
-        <Link
-          to="/baseline/expenses"
-          className="text-foreground underline-offset-4 hover:underline"
-        >
-          Understand expenses
-        </Link>
-      </p>
-
       <section className="space-y-2">
         <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           {METRIC_LABELS.sustainable_free_cashflow}
@@ -278,11 +240,6 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
         </p>
         {oneOffLine ? (
           <p className="max-w-xl text-sm text-muted-foreground">{oneOffLine}</p>
-        ) : null}
-        {freeMetric?.calculation ? (
-          <p className="max-w-xl text-sm text-muted-foreground">
-            {freeMetric.calculation}
-          </p>
         ) : null}
       </section>
 
@@ -335,127 +292,6 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
         )}
       </div>
     </div>
-  );
-};
-
-const TypicalMonthSplit: React.FC<{
-  baseline: FinancialBaseline;
-  onFocusMetric: (key: MetricKey) => void;
-}> = ({ baseline, onFocusMetric }) => {
-  const [evidenceKey, setEvidenceKey] =
-    useState<CompositionEvidenceKey | null>(null);
-  const [evidenceOpen, setEvidenceOpen] = useState(false);
-  const composition = buildBaselineComposition({
-    income: Number.parseFloat(baseline.regular_monthly_income) || 0,
-    fixed: Number.parseFloat(baseline.monthly_fixed_costs) || 0,
-    irregular: Number.parseFloat(baseline.monthly_irregular_costs) || 0,
-    variable: Number.parseFloat(baseline.avg_variable_spend) || 0,
-    freeCashflow: Number.parseFloat(baseline.sustainable_free_cashflow) || 0,
-  });
-
-  const openEvidence = (key: CompositionEvidenceKey) => {
-    setEvidenceKey(key);
-    setEvidenceOpen(true);
-  };
-
-  return (
-    <section className="flex flex-col gap-4">
-      <div className="space-y-3">
-        <div className="space-y-1">
-          <h2 className="text-sm font-semibold tracking-tight">
-            Income split
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            How a normal month allocates income into cost types and free
-            cashflow. Click a segment to see what builds the model — not who you
-            paid last month.
-          </p>
-        </div>
-        <div className="space-y-2">
-          <button
-            type="button"
-            className="flex w-full items-baseline justify-between gap-3 text-left text-xs text-muted-foreground underline-offset-4 hover:underline"
-            onClick={() => openEvidence("income")}
-          >
-            <span>Income</span>
-            <span className="tabular-nums text-foreground">
-              {formatAmount(baseline.regular_monthly_income)}
-            </span>
-          </button>
-          <div
-            className="flex h-10 w-full overflow-hidden rounded-lg border bg-muted/30"
-            role="img"
-            aria-label="Cashflow income split by cost type"
-          >
-            {composition.segments.map((seg) => (
-              <button
-                key={seg.key}
-                type="button"
-                title={`${seg.label}: ${formatAmount(seg.amount.toFixed(2))}`}
-                className={cn(
-                  "h-full min-w-0 cursor-pointer transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  segmentTone(seg.key),
-                )}
-                style={{ flexGrow: seg.share, flexBasis: 0 }}
-                onClick={() => openEvidence(seg.key)}
-              />
-            ))}
-          </div>
-          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            {composition.segments.map((seg) => (
-              <li key={seg.key}>
-                <button
-                  type="button"
-                  className="flex items-center gap-1.5 underline-offset-4 hover:underline"
-                  onClick={() => openEvidence(seg.key)}
-                >
-                  <span
-                    className={cn(
-                      "inline-block size-2 rounded-sm",
-                      segmentTone(seg.key),
-                    )}
-                    aria-hidden
-                  />
-                  <span>
-                    {seg.label}{" "}
-                    <span className="tabular-nums text-foreground">
-                      {formatChartMoney(seg.amount)}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-          <p className="text-xs text-muted-foreground">
-            Variable is a residual after Fixed and Irregular recurring costs —
-            not a merchant list. For who you paid, open Insights → Months.
-          </p>
-        </div>
-      </div>
-
-      <CompositionEvidenceSheet
-        baseline={baseline}
-        evidenceKey={evidenceKey}
-        open={evidenceOpen}
-        onOpenChange={(open) => {
-          setEvidenceOpen(open);
-          if (!open) {
-            setEvidenceKey(null);
-          }
-        }}
-        onCorrectMetric={(key) => {
-          if (key === "variable") {
-            onFocusMetric("avg_variable_spend");
-          } else if (key === "income") {
-            onFocusMetric("regular_monthly_income");
-          } else if (key === "fixed") {
-            onFocusMetric("monthly_fixed_costs");
-          } else if (key === "irregular") {
-            onFocusMetric("monthly_irregular_costs");
-          }
-        }}
-      />
-    </section>
   );
 };
 
@@ -541,6 +377,7 @@ const BaselineReadiness: React.FC<{
               <Link
                 to="/insights/months/$yyyyMm"
                 params={{ yyyyMm: item.href.yyyyMm }}
+                search={{ tab: "activity" }}
                 className="flex items-center justify-between gap-3 py-2.5 text-sm underline-offset-4 hover:underline"
               >
                 <span>{item.label}</span>
@@ -555,21 +392,6 @@ const BaselineReadiness: React.FC<{
     </section>
   );
 };
-
-function segmentTone(key: CompositionSegmentKey): string {
-  switch (key) {
-    case "fixed":
-      return "bg-foreground/80";
-    case "irregular":
-      return "bg-foreground/55";
-    case "variable":
-      return "bg-foreground/30";
-    case "free":
-      return "bg-emerald-700/70 dark:bg-emerald-500/50";
-    case "deficit":
-      return "bg-red-700/80 dark:bg-red-400/70";
-  }
-}
 
 type MetricRowProps = {
   label: string;

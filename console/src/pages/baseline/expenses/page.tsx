@@ -35,15 +35,18 @@ import {
   buildExpenseDevelopmentCallouts,
   buildExpenseDevelopmentRows,
   buildTypicalMonthLevels,
+  endOfMonthISO,
   formatExpenseOneOffLine,
   formatMonthHeadline,
   formatSignedPercent,
   monthlyEquivalentAmount,
   resolveEvidenceSeries,
   yyyyMmFromMonthStart,
+  type ExpenseDevelopmentRow,
   type MonthlyCashflowPoint,
 } from "@/lib/baseline-charts";
 import { cn } from "@/lib/utils";
+import { useTransactions } from "@/hooks/use-transactions";
 
 const BaselineExpensesPage: React.FC = () => {
   const baselineQuery = useCurrentBaseline();
@@ -542,52 +545,7 @@ const BaselineExpensesPage: React.FC = () => {
                     </TableHeader>
                     <TableBody>
                       {[...developmentRows].reverse().map((row) => (
-                        <TableRow key={row.monthStart}>
-                          <TableCell className="pl-0 py-2.5">
-                            <Link
-                              to="/insights/months/$yyyyMm"
-                              params={{
-                                yyyyMm: yyyyMmFromMonthStart(row.monthStart),
-                              }}
-                              className="text-sm font-medium underline-offset-4 hover:underline"
-                            >
-                              {formatMonthHeadline(row.monthStart)}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="py-2.5 text-right text-sm tabular-nums tracking-tight">
-                            {formatEuro(row.expenses)}
-                          </TableCell>
-                          <TableCell className="py-2.5 text-right">
-                            {row.vsNorm === null || row.vsNormPct === null ? (
-                              <span className="text-sm text-muted-foreground">
-                                —
-                              </span>
-                            ) : (
-                              <div className="space-y-0.5">
-                                <p
-                                  className={cn(
-                                    "text-sm tabular-nums tracking-tight",
-                                    expenseDeltaTone(row.vsNorm),
-                                  )}
-                                >
-                                  {formatSignedEuro(row.vsNorm)}
-                                </p>
-                                <p className="text-[11px] tabular-nums text-muted-foreground">
-                                  {formatSignedPercent(row.vsNormPct)}
-                                </p>
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell className="pr-0 py-2.5 text-right text-sm tabular-nums tracking-tight">
-                            {row.vsPriorPct === null ? (
-                              <span className="text-muted-foreground">—</span>
-                            ) : (
-                              <span className={expenseDeltaTone(row.vsPriorPct)}>
-                                {formatSignedPercent(row.vsPriorPct)}
-                              </span>
-                            )}
-                          </TableCell>
-                        </TableRow>
+                        <DevelopmentMonthRow key={row.monthStart} row={row} />
                       ))}
                     </TableBody>
                   </Table>
@@ -637,6 +595,143 @@ const BaselineExpensesPage: React.FC = () => {
         )}
       </div>
     </div>
+  );
+};
+
+const DevelopmentMonthRow: React.FC<{ row: ExpenseDevelopmentRow }> = ({
+  row,
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const monthEnd = endOfMonthISO(row.monthStart);
+  const yyyyMm = yyyyMmFromMonthStart(row.monthStart);
+  const topQuery = useTransactions(
+    {
+      limit: 5,
+      offset: 0,
+      from: row.monthStart.slice(0, 10),
+      to: monthEnd,
+      sort: "amount",
+      order: "asc",
+    },
+    { enabled: expanded },
+  );
+  const topExpenses = (topQuery.data?.data ?? [])
+    .filter((tx) => Number.parseFloat(tx.amount) < 0)
+    .slice(0, 5);
+
+  return (
+    <>
+      <TableRow
+        className={cn(expanded && "border-b-0 hover:bg-transparent")}
+        data-state={expanded ? "selected" : undefined}
+      >
+        <TableCell className="pl-0 py-2.5">
+          <button
+            type="button"
+            className="flex max-w-full items-center gap-1.5 text-left"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((open) => !open)}
+          >
+            <ChevronRight
+              className={cn(
+                "size-3.5 shrink-0 text-muted-foreground/80 transition-transform",
+                expanded && "rotate-90",
+              )}
+              aria-hidden
+            />
+            <span className="truncate text-sm font-medium">
+              {formatMonthHeadline(row.monthStart)}
+            </span>
+          </button>
+        </TableCell>
+        <TableCell className="py-2.5 text-right text-sm tabular-nums tracking-tight">
+          {formatEuro(row.expenses)}
+        </TableCell>
+        <TableCell className="py-2.5 text-right">
+          {row.vsNorm === null || row.vsNormPct === null ? (
+            <span className="text-sm text-muted-foreground">—</span>
+          ) : (
+            <div className="space-y-0.5">
+              <p
+                className={cn(
+                  "text-sm tabular-nums tracking-tight",
+                  expenseDeltaTone(row.vsNorm),
+                )}
+              >
+                {formatSignedEuro(row.vsNorm)}
+              </p>
+              <p className="text-[11px] tabular-nums text-muted-foreground">
+                {formatSignedPercent(row.vsNormPct)}
+              </p>
+            </div>
+          )}
+        </TableCell>
+        <TableCell className="pr-0 py-2.5 text-right text-sm tabular-nums tracking-tight">
+          {row.vsPriorPct === null ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <span className={expenseDeltaTone(row.vsPriorPct)}>
+              {formatSignedPercent(row.vsPriorPct)}
+            </span>
+          )}
+        </TableCell>
+      </TableRow>
+      {expanded ? (
+        <TableRow className="hover:bg-transparent">
+          <TableCell colSpan={4} className="pb-3 pl-6 pt-0">
+            <div className="space-y-2 border-t border-border/50 pt-3">
+              <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                Top expenses
+              </p>
+              {topQuery.isLoading ? (
+                <p className="text-xs text-muted-foreground">Loading…</p>
+              ) : topExpenses.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No expense bookings in this month.
+                </p>
+              ) : (
+                <ul className="space-y-2.5">
+                  {topExpenses.map((tx) => (
+                    <li
+                      key={tx.id}
+                      className="flex items-baseline justify-between gap-4"
+                    >
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="truncate text-sm leading-snug">
+                          {tx.counterparty || tx.purpose || "Payment"}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {formatDate(tx.booking_date)}
+                          {tx.purpose &&
+                          tx.counterparty &&
+                          tx.purpose !== tx.counterparty
+                            ? ` · ${tx.purpose}`
+                            : null}
+                          {tx.one_off ? " · one-off" : null}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-sm tabular-nums tracking-tight text-muted-foreground">
+                        {formatEuro(Number.parseFloat(tx.amount) || 0)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="pt-1 text-xs text-muted-foreground">
+                <Link
+                  to="/insights/months/$yyyyMm"
+                  params={{ yyyyMm }}
+                  search={{ tab: "activity" }}
+                  className="text-foreground underline-offset-4 hover:underline"
+                >
+                  Open {formatMonthHeadline(row.monthStart)} in Insights
+                </Link>
+              </p>
+            </div>
+          </TableCell>
+        </TableRow>
+      ) : null}
+    </>
   );
 };
 

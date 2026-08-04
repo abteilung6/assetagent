@@ -117,6 +117,50 @@ func TestDetectRecurringSeries_skipsExistingMembers(t *testing.T) {
 	}
 }
 
+func TestDetectRecurringSeries_wegHausgeldMonthly(t *testing.T) {
+	now := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+	acc := uuid.New()
+	cp := "WEG Hermann-Hesse-Str. 13-15, Guellweg 2"
+	txs := []domain.RecurringScanTx{
+		{
+			ID: uuid.New(), AccountID: acc,
+			BookingDate:  time.Date(2026, 5, 6, 0, 0, 0, 0, time.UTC),
+			Amount:       decimal.RequireFromString("-341.00"),
+			Counterparty: cp,
+			Purpose:      "50203.1700 Kathleen Moeller Hausgeld 05.2026",
+		},
+		{
+			ID: uuid.New(), AccountID: acc,
+			BookingDate:  time.Date(2026, 6, 6, 0, 0, 0, 0, time.UTC),
+			Amount:       decimal.RequireFromString("-341.00"),
+			Counterparty: cp,
+			Purpose:      "50203.1700 Kathleen Moeller Hausgeld 06.2026",
+		},
+		{
+			ID: uuid.New(), AccountID: acc,
+			BookingDate:  time.Date(2026, 7, 6, 0, 0, 0, 0, time.UTC),
+			Amount:       decimal.RequireFromString("-341.00"),
+			Counterparty: cp,
+			Purpose:      "50203.1700 Kathleen Moeller Hausgeld 07.2026",
+		},
+	}
+
+	series := classify.DetectRecurringSeries(txs, nil, now)
+	if len(series) != 1 {
+		t.Fatalf("len = %d, want 1", len(series))
+	}
+	s := series[0]
+	if s.Interval != domain.RecurringIntervalMonthly {
+		t.Fatalf("interval = %q", s.Interval)
+	}
+	if s.Kind != domain.RecurringKindFixed {
+		t.Fatalf("kind = %q, want fixed", s.Kind)
+	}
+	if s.MemberCount != 3 {
+		t.Fatalf("members = %d", s.MemberCount)
+	}
+}
+
 func monthlySeries(acc uuid.UUID, counterparty, amount string, dates ...time.Time) []domain.RecurringScanTx {
 	out := make([]domain.RecurringScanTx, len(dates))
 	for i, d := range dates {

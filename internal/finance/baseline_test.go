@@ -184,17 +184,17 @@ func TestCompute_deterministicEvidenceOrder(t *testing.T) {
 	}
 }
 
-func TestDefaultPeriod_lastCompleteMonth(t *testing.T) {
+func TestDefaultPeriod_lastCompleteMonths(t *testing.T) {
 	now := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
 	latest := time.Date(2026, 4, 10, 0, 0, 0, 0, time.UTC)
 	from, to, assumption := finance.DefaultPeriod(latest, now)
-	if !from.Equal(time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)) {
+	if !from.Equal(time.Date(2025, 4, 1, 0, 0, 0, 0, time.UTC)) {
 		t.Fatalf("from = %v", from)
 	}
 	if !to.Equal(time.Date(2026, 3, 31, 0, 0, 0, 0, time.UTC)) {
 		t.Fatalf("to = %v", to)
 	}
-	if assumption != "period=last_complete_calendar_month" {
+	if assumption != "period=last_12_complete_calendar_months" {
 		t.Fatalf("assumption = %q", assumption)
 	}
 }

@@ -201,8 +201,8 @@ describe("Baseline page", () => {
     expect(
       await screen.findByText(/Sustainable free cashflow/i),
     ).toBeInTheDocument();
-    expect(await screen.findByText(/Income split/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /^Open Insights$/i })).toBeInTheDocument();
+    expect(screen.getByText(/Monthly fixed costs/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Income split/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Recent months/i)).not.toBeInTheDocument();
     expect(screen.getByText(/1\.800,00/)).toBeInTheDocument();
 
@@ -283,41 +283,6 @@ describe("Baseline page", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Top cost drivers/i)).toBeInTheDocument();
-  });
-
-  it("opens Months history from typical month", async () => {
-    vi.spyOn(sdk, "getCurrentBaseline").mockResolvedValue(
-      mockApiResponse(sampleBaseline),
-    );
-
-    testRender({ route: "/baseline" });
-
-    expect(await screen.findByText(/Income split/i)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("link", { name: /^Open Insights$/i }));
-    expect(
-      await screen.findByText(/Income & expenses over time/i),
-    ).toBeInTheDocument();
-  });
-
-  it("opens fixed composition evidence with recurring series", async () => {
-    vi.spyOn(sdk, "getCurrentBaseline").mockResolvedValue(
-      mockApiResponse(sampleBaseline),
-    );
-
-    testRender({ route: "/baseline" });
-
-    expect(await screen.findByText(/Income split/i)).toBeInTheDocument();
-    await userEvent.click(
-      screen.getByRole("button", { name: /Fixed\s+1\.2k/i }),
-    );
-
-    expect(
-      await screen.findByRole("heading", { name: /Monthly fixed costs/i }),
-    ).toBeInTheDocument();
-    expect(await screen.findByText("Example Landlord")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Show sample payments/i }),
-    ).toBeInTheDocument();
   });
 
   it("shows one-off impact and soft confirm nudge when queues are clear", async () => {
@@ -403,33 +368,5 @@ describe("Baseline page", () => {
     expect(
       screen.getByRole("link", { name: /1 category to check/i }),
     ).toHaveAttribute("href", "/review?tab=categories");
-  });
-
-  it("opens variable evidence with residual copy and correct CTA", async () => {
-    vi.spyOn(sdk, "getCurrentBaseline").mockResolvedValue(
-      mockApiResponse(sampleBaseline),
-    );
-
-    testRender({ route: "/baseline" });
-
-    expect(await screen.findByText(/Income split/i)).toBeInTheDocument();
-    await userEvent.click(
-      screen.getByRole("button", { name: /Variable\s+450/i }),
-    );
-
-    expect(
-      await screen.findByRole("heading", { name: /Average variable spend/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/How this is built/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Already counted as Fixed \/ Irregular/i),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Example Landlord")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Correct variable spend/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /Period transactions/i }),
-    ).toBeInTheDocument();
   });
 });
