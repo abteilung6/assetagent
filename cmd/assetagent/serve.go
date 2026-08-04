@@ -74,6 +74,8 @@ func newServeCmd() *cobra.Command {
 				MoneyReview: moneyReviewSvc,
 				Forecast:    forecastSvc,
 				Classify:    classifySvc,
+				Transfers:   transfers,
+				Queue:       classifySvc,
 			})
 
 			llmRegistry, err := newLLMRegistry(cfg)

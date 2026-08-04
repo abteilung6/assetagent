@@ -35,6 +35,8 @@ type Dependencies struct {
 	MoneyReview MoneyReviewSource
 	Forecast    ForecastSource
 	Classify    ClassificationSuggester
+	Transfers   TransferCandidatesSource
+	Queue       ClassificationQueueSource
 }
 
 type Registry struct {
@@ -62,6 +64,17 @@ func NewRegistry(deps Dependencies) *Registry {
 	r.register(moneyReviewTool(deps.MoneyReview))
 	r.register(forecastTool(deps.Forecast))
 	r.register(suggestReviewCategoriesTool(deps.Classify))
+	queue := deps.Queue
+	if queue == nil {
+		if q, ok := deps.Classify.(ClassificationQueueSource); ok {
+			queue = q
+		}
+	}
+	var uncertain UncertainRecurringSource
+	if u, ok := any(deps.Recurring).(UncertainRecurringSource); ok {
+		uncertain = u
+	}
+	r.register(needsReviewSummaryTool(deps.Transfers, queue, uncertain))
 	return r
 }
 

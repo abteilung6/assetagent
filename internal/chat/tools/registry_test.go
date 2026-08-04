@@ -102,6 +102,7 @@ func TestRegistry_tools(t *testing.T) {
 		"get_money_review",
 		"get_forecast",
 		"suggest_review_categories",
+		"get_needs_review_summary",
 	} {
 		if !names[want] {
 			t.Fatalf("missing tool %q", want)
