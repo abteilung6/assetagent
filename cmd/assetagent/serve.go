@@ -63,11 +63,14 @@ func newServeCmd() *cobra.Command {
 			moneyReviewSvc := service.NewMoneyReview(pool)
 			forecastSvc := service.NewForecast(pool)
 			classifySvc := service.NewClassify(pool)
+			transfers := service.NewTransfers(pool)
+			recurringSvc := service.NewRecurring(pool)
 			toolRegistry := tools.NewRegistry(tools.Dependencies{
 				Reports:     reportsRepo,
 				Lister:      txRepo,
-				Recurring:   service.NewRecurring(pool),
+				Recurring:   recurringSvc,
 				Baseline:    baselineSvc,
+				Insights:    baselineSvc,
 				MoneyReview: moneyReviewSvc,
 				Forecast:    forecastSvc,
 				Classify:    classifySvc,
@@ -87,9 +90,8 @@ func newServeCmd() *cobra.Command {
 
 			router := chi.NewRouter()
 			importer := service.NewImport(pool)
-			transfers := service.NewTransfers(pool)
 			categories := repository.NewCategories(pool)
-			gen.HandlerWithOptions(handler.New(listSvc, chatSvc, llmRegistry, importer, transfers, classifySvc, categories, service.NewRecurring(pool), baselineSvc, moneyReviewSvc, forecastSvc, service.NewDecision(pool)), gen.ChiServerOptions{
+			gen.HandlerWithOptions(handler.New(listSvc, chatSvc, llmRegistry, importer, transfers, classifySvc, categories, recurringSvc, baselineSvc, moneyReviewSvc, forecastSvc, service.NewDecision(pool)), gen.ChiServerOptions{
 				BaseRouter:       router,
 				ErrorHandlerFunc: handler.APIErrorHandler,
 			})

@@ -90,6 +90,9 @@ func TestRegistry_tools(t *testing.T) {
 	for _, want := range []string{
 		"get_cashflow",
 		"get_cashflow_v2",
+		"get_month_cashflow",
+		"get_category_spend",
+		"get_one_off_impact",
 		"get_recurring_costs",
 		"get_spending_changes",
 		"get_anomalies",

@@ -16,6 +16,7 @@ import { Link } from "@tanstack/react-router";
 import type { ChatToolCall } from "@/api/types.gen";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
 
 import { SourceLink } from "./source-link";
 import {
@@ -25,6 +26,7 @@ import {
   buildTransactionSearchFromToolCall,
   formatDateRange,
   formatMoney,
+  isMonthSourceTool,
   isTransactionSourceTool,
   readOptionalString,
   TOOL_NAMES,
@@ -70,6 +72,8 @@ export const ToolResultCard: React.FC<ToolResultCardProps> = ({ toolCall }) => {
         <footer className="mt-3 flex flex-wrap gap-2">
           {isTransactionSourceTool(name) ? (
             <SourceLink search={buildTransactionSearchFromToolCall(toolCall)} />
+          ) : isMonthSourceTool(name) ? (
+            <MonthSourceLink result={result} from={from} to={to} />
           ) : (
             <PlanSourceLink name={name} result={result} />
           )}
@@ -104,7 +108,8 @@ function periodLabel(
     name === TOOL_NAMES.baseline ||
     name === TOOL_NAMES.moneyReview ||
     name === TOOL_NAMES.forecast ||
-    name === TOOL_NAMES.suggestReviewCategories
+    name === TOOL_NAMES.suggestReviewCategories ||
+    name === TOOL_NAMES.needsReviewSummary
   ) {
     const resultPeriod = result.period;
     if (
@@ -123,7 +128,16 @@ function periodLabel(
         typeof result.horizon_days === "number" ? result.horizon_days : null;
       return days != null ? `${days}-day horizon` : "Plan forecast";
     }
+    if (name === TOOL_NAMES.needsReviewSummary) {
+      return "Review queues";
+    }
     return "Plan artifact";
+  }
+  if (name === TOOL_NAMES.monthCashflow) {
+    const yyyyMm = readOptionalString(input, "yyyy_mm") ?? readOptionalString(result, "yyyy_mm");
+    if (yyyyMm) {
+      return yyyyMm;
+    }
   }
   return period;
 }
@@ -143,7 +157,12 @@ function ToolIcon({
   switch (name) {
     case TOOL_NAMES.cashflow:
     case TOOL_NAMES.cashflowV2:
+    case TOOL_NAMES.monthCashflow:
       return <TrendingDown className={className} aria-hidden />;
+    case TOOL_NAMES.categorySpend:
+      return <Wallet className={className} aria-hidden />;
+    case TOOL_NAMES.oneOffImpact:
+      return <AlertTriangle className={className} aria-hidden />;
     case TOOL_NAMES.recurring:
       return <RefreshCw className={className} aria-hidden />;
     case TOOL_NAMES.spendingChanges:
@@ -161,6 +180,7 @@ function ToolIcon({
     case TOOL_NAMES.forecast:
       return <LineChart className={className} aria-hidden />;
     case TOOL_NAMES.suggestReviewCategories:
+    case TOOL_NAMES.needsReviewSummary:
       return <ListChecks className={className} aria-hidden />;
     default:
       return <Search className={className} aria-hidden />;
@@ -206,7 +226,7 @@ function PlanSourceLink({
       </Link>
     );
   }
-  if (name === TOOL_NAMES.suggestReviewCategories) {
+  if (name === TOOL_NAMES.suggestReviewCategories || name === TOOL_NAMES.needsReviewSummary) {
     return (
       <Link
         to="/review"
@@ -226,6 +246,42 @@ function PlanSourceLink({
   );
 }
 
+function MonthSourceLink({
+  result,
+  from,
+  to,
+}: {
+  result: Record<string, unknown>;
+  from?: string;
+  to?: string;
+}) {
+  const deepLink =
+    typeof result.deep_link === "string" ? result.deep_link : null;
+  if (deepLink?.startsWith("/baseline/months/")) {
+    const yyyyMm = deepLink.slice("/baseline/months/".length);
+    if (yyyyMm) {
+      return (
+        <Link
+          to="/baseline/months/$yyyyMm"
+          params={{ yyyyMm }}
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        >
+          Open month
+        </Link>
+      );
+    }
+  }
+  return (
+    <SourceLink
+      search={{
+        ...defaultTransactionSearchParams,
+        ...(from ? { from } : {}),
+        ...(to ? { to } : {}),
+      }}
+    />
+  );
+}
+
 function renderBody(toolCall: ChatToolCall, hasError: boolean) {
   const { name, result } = toolCall;
 
@@ -240,7 +296,12 @@ function renderBody(toolCall: ChatToolCall, hasError: boolean) {
   switch (name) {
     case TOOL_NAMES.cashflow:
     case TOOL_NAMES.cashflowV2:
+    case TOOL_NAMES.monthCashflow:
       return <CashflowBody result={result} />;
+    case TOOL_NAMES.categorySpend:
+      return <CategorySpendBody result={result} />;
+    case TOOL_NAMES.oneOffImpact:
+      return <OneOffImpactBody result={result} />;
     case TOOL_NAMES.recurring:
       return <RecurringBody result={result} />;
     case TOOL_NAMES.spendingChanges:
@@ -259,6 +320,8 @@ function renderBody(toolCall: ChatToolCall, hasError: boolean) {
       return <ForecastBody result={result} />;
     case TOOL_NAMES.suggestReviewCategories:
       return <ReviewCategoriesBody result={result} />;
+    case TOOL_NAMES.needsReviewSummary:
+      return <NeedsReviewSummaryBody result={result} />;
     default:
       return (
         <p className="text-sm text-muted-foreground">
@@ -266,6 +329,91 @@ function renderBody(toolCall: ChatToolCall, hasError: boolean) {
         </p>
       );
   }
+}
+
+function CategorySpendBody({ result }: { result: Record<string, unknown> }) {
+  const items = Array.isArray(result.items) ? result.items : [];
+  const currency =
+    typeof result.currency === "string" ? result.currency : "EUR";
+  if (items.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">No category spend in this period.</p>
+    );
+  }
+  return (
+    <ol className="space-y-2">
+      {items.slice(0, 8).map((row, index) => {
+        const record = row as Record<string, unknown>;
+        const name =
+          typeof record.category_name === "string"
+            ? record.category_name
+            : typeof record.category_slug === "string"
+              ? record.category_slug
+              : `Category ${index + 1}`;
+        const total =
+          typeof record.total === "string" ? record.total : undefined;
+        const count =
+          typeof record.transaction_count === "number"
+            ? record.transaction_count
+            : 0;
+        return (
+          <li
+            key={`${name}-${index}`}
+            className="flex items-center justify-between gap-3 text-sm"
+          >
+            <div className="min-w-0">
+              <p className="truncate font-medium">{name}</p>
+              <p className="text-xs text-muted-foreground">
+                {count} transaction{count === 1 ? "" : "s"}
+              </p>
+            </div>
+            <span className="shrink-0 tabular-nums">
+              {formatMoney(total, currency)}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function OneOffImpactBody({ result }: { result: Record<string, unknown> }) {
+  const count = typeof result.count === "number" ? result.count : 0;
+  const total =
+    typeof result.expense_total === "string" ? result.expense_total : undefined;
+  const currency =
+    typeof result.currency === "string" ? result.currency : "EUR";
+  return (
+    <p className="text-sm">
+      {count} one-off expense{count === 1 ? "" : "s"} totaling{" "}
+      <span className="font-medium tabular-nums">
+        {formatMoney(total, currency)}
+      </span>
+    </p>
+  );
+}
+
+function NeedsReviewSummaryBody({ result }: { result: Record<string, unknown> }) {
+  const transfers = typeof result.transfers === "number" ? result.transfers : 0;
+  const categories =
+    typeof result.categories === "number" ? result.categories : 0;
+  const recurring =
+    typeof result.uncertain_recurring === "number"
+      ? result.uncertain_recurring
+      : 0;
+  const total = typeof result.total === "number" ? result.total : 0;
+  return (
+    <div className="space-y-1 text-sm">
+      <p className="font-medium">
+        {total === 0
+          ? "Nothing waiting in Needs review"
+          : `${total} item${total === 1 ? "" : "s"} waiting`}
+      </p>
+      <p className="text-muted-foreground">
+        {transfers} transfers · {categories} categories · {recurring} recurring
+      </p>
+    </div>
+  );
 }
 
 function ReviewCategoriesBody({ result }: { result: Record<string, unknown> }) {

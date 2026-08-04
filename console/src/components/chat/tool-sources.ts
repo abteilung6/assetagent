@@ -7,6 +7,9 @@ import {
 export const TOOL_NAMES = {
   cashflow: "get_cashflow",
   cashflowV2: "get_cashflow_v2",
+  monthCashflow: "get_month_cashflow",
+  categorySpend: "get_category_spend",
+  oneOffImpact: "get_one_off_impact",
   recurring: "get_recurring_costs",
   spendingChanges: "get_spending_changes",
   anomalies: "get_anomalies",
@@ -16,6 +19,7 @@ export const TOOL_NAMES = {
   moneyReview: "get_money_review",
   forecast: "get_forecast",
   suggestReviewCategories: "suggest_review_categories",
+  needsReviewSummary: "get_needs_review_summary",
 } as const;
 
 export type CashflowResult = {
@@ -81,7 +85,12 @@ export function toolDisplayName(name: string): string {
   switch (name) {
     case TOOL_NAMES.cashflow:
     case TOOL_NAMES.cashflowV2:
+    case TOOL_NAMES.monthCashflow:
       return "Spending summary";
+    case TOOL_NAMES.categorySpend:
+      return "Category spend";
+    case TOOL_NAMES.oneOffImpact:
+      return "One-off impact";
     case TOOL_NAMES.recurring:
       return "Recurring costs";
     case TOOL_NAMES.spendingChanges:
@@ -100,6 +109,8 @@ export function toolDisplayName(name: string): string {
       return "Forecast";
     case TOOL_NAMES.suggestReviewCategories:
       return "Category suggestions";
+    case TOOL_NAMES.needsReviewSummary:
+      return "Needs review";
     default:
       return name.replaceAll("_", " ");
   }
@@ -110,12 +121,21 @@ export function isPlanArtifactTool(name: string): boolean {
     name === TOOL_NAMES.baseline ||
     name === TOOL_NAMES.moneyReview ||
     name === TOOL_NAMES.forecast ||
-    name === TOOL_NAMES.suggestReviewCategories
+    name === TOOL_NAMES.suggestReviewCategories ||
+    name === TOOL_NAMES.needsReviewSummary
+  );
+}
+
+export function isMonthSourceTool(name: string): boolean {
+  return (
+    name === TOOL_NAMES.monthCashflow ||
+    name === TOOL_NAMES.categorySpend ||
+    name === TOOL_NAMES.oneOffImpact
   );
 }
 
 export function isTransactionSourceTool(name: string): boolean {
-  return !isPlanArtifactTool(name);
+  return !isPlanArtifactTool(name) && !isMonthSourceTool(name);
 }
 
 export function readOptionalString(

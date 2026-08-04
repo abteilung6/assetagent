@@ -31,6 +31,7 @@ type Dependencies struct {
 	Lister      TransactionLister
 	Recurring   recurringSeriesSource
 	Baseline    BaselineSource
+	Insights    BaselineInsights
 	MoneyReview MoneyReviewSource
 	Forecast    ForecastSource
 	Classify    ClassificationSuggester
@@ -49,6 +50,9 @@ func NewRegistry(deps Dependencies) *Registry {
 	r := &Registry{tools: make(map[string]toolEntry)}
 	r.register(cashflowTool(deps.Reports))
 	r.register(cashflowV2Tool(deps.Reports))
+	r.register(monthCashflowTool(deps.Reports))
+	r.register(categorySpendTool(deps.Insights))
+	r.register(oneOffImpactTool(deps.Insights))
 	r.register(recurringCostsTool(deps.Recurring, deps.Reports))
 	r.register(spendingChangesTool(deps.Reports))
 	r.register(anomaliesTool(deps.Recurring, deps.Reports, deps.Lister))
