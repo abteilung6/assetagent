@@ -83,7 +83,7 @@ type Querier interface {
 	ListRecurringSeriesMembers(ctx context.Context, arg ListRecurringSeriesMembersParams) ([]ListRecurringSeriesMembersRow, error)
 	ListScenariosForForecast(ctx context.Context, forecastID uuid.UUID) ([]Scenario, error)
 	ListSuggestedTransferCandidates(ctx context.Context) ([]ListSuggestedTransferCandidatesRow, error)
-	ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]Transaction, error)
+	ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]ListTransactionsRow, error)
 	ListTransactionsForClassify(ctx context.Context) ([]ListTransactionsForClassifyRow, error)
 	ListTransactionsForRecurringScan(ctx context.Context) ([]ListTransactionsForRecurringScanRow, error)
 	ListTransactionsForTransferScan(ctx context.Context) ([]ListTransactionsForTransferScanRow, error)
@@ -94,7 +94,7 @@ type Querier interface {
 	Ping(ctx context.Context) (int32, error)
 	RejectRecurringSeries(ctx context.Context, id uuid.UUID) (RecurringSeries, error)
 	RejectTransferPair(ctx context.Context, id uuid.UUID) (TransferPair, error)
-	SetTransactionOneOff(ctx context.Context, arg SetTransactionOneOffParams) (Transaction, error)
+	SetTransactionOneOff(ctx context.Context, arg SetTransactionOneOffParams) (SetTransactionOneOffRow, error)
 	SupersedeOpenFinancialBaselines(ctx context.Context) error
 	SupersedeOpenMoneyReviews(ctx context.Context) error
 	UpdateActionStatus(ctx context.Context, arg UpdateActionStatusParams) (Action, error)

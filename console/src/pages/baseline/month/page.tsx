@@ -14,6 +14,7 @@ import {
   formatMonthHeadline,
   formatMonthLabel,
   monthStartFromYyyyMm,
+  partitionMonthSpend,
   shiftYyyyMm,
   type MonthlyCashflowPoint,
 } from "@/lib/baseline-charts";
@@ -100,7 +101,8 @@ const BaselineMonthPage: React.FC = () => {
 
   const topOutflows = expenseRows
     .filter((tx) => Number.parseFloat(tx.amount) < 0)
-    .slice(0, 8);
+    .slice(0, 16);
+  const spendPartition = partitionMonthSpend(topOutflows, 8);
   const topInflows = incomeRows
     .filter((tx) => Number.parseFloat(tx.amount) > 0)
     .slice(0, 8);
@@ -265,18 +267,50 @@ const BaselineMonthPage: React.FC = () => {
               </section>
             ) : null}
 
-            <TxSection
-              title="What drove spend"
-              empty="No expenses in this month."
-              transactions={topOutflows}
-              onOpen={openTx}
-            />
+            <section className="space-y-5">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold tracking-tight">
+                  What drove spend
+                </h3>
+                {topOutflows.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No expenses in this month.
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Recurring bills versus one-time payments.
+                  </p>
+                )}
+              </div>
+              {topOutflows.length > 0 ? (
+                <>
+                  {spendPartition.recurring.length > 0 ? (
+                    <TxSection
+                      title="Recurring"
+                      empty="No recurring payments in the top expenses."
+                      transactions={spendPartition.recurring}
+                      onOpen={openTx}
+                      tag="Recurring"
+                    />
+                  ) : null}
+                  {spendPartition.oneTime.length > 0 ? (
+                    <TxSection
+                      title="One-time"
+                      empty="No one-time expenses in the top list."
+                      transactions={spendPartition.oneTime}
+                      onOpen={openTx}
+                    />
+                  ) : null}
+                </>
+              ) : null}
+            </section>
 
             <TxSection
               title="Income sources"
               empty="No income in this month."
               transactions={topInflows}
               onOpen={openTx}
+              headingLevel="h3"
             />
 
             <section className="flex flex-col gap-3">
@@ -337,10 +371,21 @@ const TxSection: React.FC<{
   empty: string;
   transactions: Transaction[];
   onOpen: (tx: Transaction) => void;
-}> = ({ title, empty, transactions, onOpen }) => {
+  tag?: string;
+  headingLevel?: "h3" | "h4";
+}> = ({ title, empty, transactions, onOpen, tag, headingLevel = "h4" }) => {
+  const Heading = headingLevel;
   return (
     <section className="space-y-3">
-      <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+      <Heading
+        className={
+          headingLevel === "h3"
+            ? "text-sm font-semibold tracking-tight"
+            : "text-xs font-medium uppercase tracking-wide text-muted-foreground"
+        }
+      >
+        {title}
+      </Heading>
       {transactions.length === 0 ? (
         <p className="text-sm text-muted-foreground">{empty}</p>
       ) : (
@@ -358,6 +403,7 @@ const TxSection: React.FC<{
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
                     {tx.booking_date}
+                    {tag ? ` · ${tag}` : null}
                     {tx.one_off ? " · One-off" : null}
                   </p>
                 </div>

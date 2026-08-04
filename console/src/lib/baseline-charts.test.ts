@@ -10,6 +10,7 @@ import {
   formatMonthHeadline,
   formatMonthLabel,
   monthlyEquivalentAmount,
+  partitionMonthSpend,
   resolveEvidenceSeries,
 } from "@/lib/baseline-charts";
 
@@ -109,6 +110,28 @@ describe("buildBaselineReadinessItems", () => {
         unusualMonthStart: null,
       }),
     ).toEqual([]);
+  });
+});
+
+describe("partitionMonthSpend", () => {
+  it("splits recurring members from one-time expenses", () => {
+    const rent = { id: "1", recurring: true };
+    const shop = { id: "2", recurring: false };
+    const netflix = { id: "3", recurring: true };
+    expect(partitionMonthSpend([rent, shop, netflix])).toEqual({
+      recurring: [rent, netflix],
+      oneTime: [shop],
+    });
+  });
+
+  it("respects per-group limits", () => {
+    const txs = Array.from({ length: 5 }, (_, i) => ({
+      id: String(i),
+      recurring: i % 2 === 0,
+    }));
+    const result = partitionMonthSpend(txs, 1);
+    expect(result.recurring).toHaveLength(1);
+    expect(result.oneTime).toHaveLength(1);
   });
 });
 

@@ -1207,10 +1207,13 @@ type Transaction struct {
 	MandateReference               string             `json:"mandate_reference"`
 
 	// OneOff When true, excluded from typical-spend and cashflow charts
-	OneOff       bool               `json:"one_off"`
-	OrderAccount string             `json:"order_account"`
-	Purpose      string             `json:"purpose"`
-	ValueDate    openapi_types.Date `json:"value_date"`
+	OneOff       bool   `json:"one_off"`
+	OrderAccount string `json:"order_account"`
+	Purpose      string `json:"purpose"`
+
+	// Recurring True when this transaction belongs to a recurring series
+	Recurring bool               `json:"recurring"`
+	ValueDate openapi_types.Date `json:"value_date"`
 }
 
 // TransactionListResponse defines model for TransactionListResponse.

@@ -27,4 +27,5 @@ type Transaction struct {
 	Currency                       string
 	Info                           string
 	OneOff                         bool
+	Recurring                      bool
 }

@@ -187,6 +187,7 @@ func toAPITransaction(tx domain.Transaction) gen.Transaction {
 		Currency:                       tx.Currency,
 		Info:                           tx.Info,
 		OneOff:                         tx.OneOff,
+		Recurring:                      tx.Recurring,
 	}
 }
 

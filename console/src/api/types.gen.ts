@@ -42,6 +42,10 @@ export type Transaction = {
      * When true, excluded from typical-spend and cashflow charts
      */
     one_off: boolean;
+    /**
+     * True when this transaction belongs to a recurring series
+     */
+    recurring: boolean;
 };
 
 export type TransactionOneOffRequest = {

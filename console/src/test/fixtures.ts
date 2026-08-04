@@ -76,6 +76,7 @@ export function sampleTransaction(
     currency: "EUR",
     info: "",
     one_off: false,
+    recurring: false,
     ...overrides,
   };
 }

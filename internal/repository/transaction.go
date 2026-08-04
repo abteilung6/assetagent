@@ -79,7 +79,7 @@ func (r *Transaction) List(ctx context.Context, params domain.ListParams) (domai
 
 	transactions := make([]domain.Transaction, len(rows))
 	for i, row := range rows {
-		transactions[i] = rowToDomain(row)
+		transactions[i] = listRowToDomain(row)
 	}
 
 	return domain.ListResult{
@@ -96,7 +96,7 @@ func (r *Transaction) SetOneOff(ctx context.Context, id uuid.UUID, oneOff bool) 
 	if err != nil {
 		return domain.Transaction{}, err
 	}
-	return rowToDomain(row), nil
+	return setOneOffRowToDomain(row), nil
 }
 
 func buildFilterParams(params domain.ListParams) sqldb.CountTransactionsFilteredParams {
@@ -111,7 +111,7 @@ func buildFilterParams(params domain.ListParams) sqldb.CountTransactionsFiltered
 	}
 }
 
-func rowToDomain(row sqldb.Transaction) domain.Transaction {
+func listRowToDomain(row sqldb.ListTransactionsRow) domain.Transaction {
 	return domain.Transaction{
 		ID:                             row.ID,
 		OrderAccount:                   row.OrderAccount,
@@ -132,6 +132,32 @@ func rowToDomain(row sqldb.Transaction) domain.Transaction {
 		Currency:                       row.Currency,
 		Info:                           row.Info,
 		OneOff:                         row.OneOff,
+		Recurring:                      row.Recurring,
+	}
+}
+
+func setOneOffRowToDomain(row sqldb.SetTransactionOneOffRow) domain.Transaction {
+	return domain.Transaction{
+		ID:                             row.ID,
+		OrderAccount:                   row.OrderAccount,
+		BookingDate:                    row.BookingDate.Time,
+		ValueDate:                      row.ValueDate.Time,
+		BookingText:                    row.BookingText,
+		Purpose:                        row.Purpose,
+		CreditorID:                     row.CreditorID,
+		MandateReference:               row.MandateReference,
+		EndToEndReference:              row.EndToEndReference,
+		CollectionReference:            row.CollectionReference,
+		DirectDebitOriginalAmount:      row.DirectDebitOriginalAmount,
+		ChargebackExpenseReimbursement: row.ChargebackExpenseReimbursement,
+		Counterparty:                   row.Counterparty,
+		CounterpartyIBAN:               ptrFromText(row.CounterpartyIban),
+		CounterpartyBIC:                ptrFromText(row.CounterpartyBic),
+		Amount:                         row.Amount,
+		Currency:                       row.Currency,
+		Info:                           row.Info,
+		OneOff:                         row.OneOff,
+		Recurring:                      row.Recurring,
 	}
 }
 

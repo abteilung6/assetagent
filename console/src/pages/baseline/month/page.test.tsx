@@ -57,18 +57,21 @@ describe("Baseline month page", () => {
       counterparty: "REWE",
       amount: "-85.00",
       booking_date: "2026-03-10",
+      recurring: false,
     });
     const rent = sampleTransaction({
       id: "22222222-2222-2222-2222-222222222222",
       counterparty: "Landlord GmbH",
       amount: "-1200.00",
       booking_date: "2026-03-01",
+      recurring: true,
     });
     const salary = sampleTransaction({
       id: "33333333-3333-3333-3333-333333333333",
       counterparty: "Employer GmbH",
       amount: "3500.00",
       booking_date: "2026-03-28",
+      recurring: true,
     });
 
     vi.spyOn(sdk, "getTransactions").mockImplementation(async (options) => {
@@ -93,8 +96,11 @@ describe("Baseline month page", () => {
     expect(screen.getByText(/Expenses above typical/i)).toBeInTheDocument();
     expect(screen.getByText(/Why this month/i)).toBeInTheDocument();
     expect(screen.getByText(/What drove spend/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^Recurring$/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^One-time$/i })).toBeInTheDocument();
     expect(screen.getByText("Landlord GmbH")).toBeInTheDocument();
     expect(screen.getByText("REWE")).toBeInTheDocument();
+    expect(screen.getByText(/Recurring bills versus one-time/i)).toBeInTheDocument();
     expect(screen.getByText(/Income sources/i)).toBeInTheDocument();
     expect(screen.getByText("Employer GmbH")).toBeInTheDocument();
     expect(

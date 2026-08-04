@@ -227,48 +227,53 @@ func (q *Queries) InsertTransactionIfNew(ctx context.Context, arg InsertTransact
 
 const listTransactions = `-- name: ListTransactions :many
 SELECT
-    id,
-    order_account,
-    booking_date,
-    value_date,
-    booking_text,
-    purpose,
-    creditor_id,
-    mandate_reference,
-    end_to_end_reference,
-    collection_reference,
-    direct_debit_original_amount,
-    chargeback_expense_reimbursement,
-    counterparty,
-    counterparty_iban,
-    counterparty_bic,
-    amount,
-    currency,
-    info,
-    fingerprint,
-    account_id,
-    import_run_id,
-    one_off
-FROM transactions
-WHERE ($1::date IS NULL OR booking_date >= $1::date)
-  AND ($2::date IS NULL OR booking_date <= $2::date)
-  AND ($3::text IS NULL OR order_account = $3)
-  AND ($4::text IS NULL OR counterparty ILIKE $4 || '%')
-  AND ($5::numeric IS NULL OR amount >= $5::numeric)
-  AND ($6::numeric IS NULL OR amount <= $6::numeric)
+    t.id,
+    t.order_account,
+    t.booking_date,
+    t.value_date,
+    t.booking_text,
+    t.purpose,
+    t.creditor_id,
+    t.mandate_reference,
+    t.end_to_end_reference,
+    t.collection_reference,
+    t.direct_debit_original_amount,
+    t.chargeback_expense_reimbursement,
+    t.counterparty,
+    t.counterparty_iban,
+    t.counterparty_bic,
+    t.amount,
+    t.currency,
+    t.info,
+    t.fingerprint,
+    t.account_id,
+    t.import_run_id,
+    t.one_off,
+    EXISTS (
+        SELECT 1
+        FROM recurring_series_members m
+        WHERE m.transaction_id = t.id
+    ) AS recurring
+FROM transactions t
+WHERE ($1::date IS NULL OR t.booking_date >= $1::date)
+  AND ($2::date IS NULL OR t.booking_date <= $2::date)
+  AND ($3::text IS NULL OR t.order_account = $3)
+  AND ($4::text IS NULL OR t.counterparty ILIKE $4 || '%')
+  AND ($5::numeric IS NULL OR t.amount >= $5::numeric)
+  AND ($6::numeric IS NULL OR t.amount <= $6::numeric)
   AND (
     $7::text IS NULL
-    OR purpose ILIKE '%' || $7 || '%'
-    OR counterparty ILIKE '%' || $7 || '%'
-    OR booking_text ILIKE '%' || $7 || '%'
+    OR t.purpose ILIKE '%' || $7 || '%'
+    OR t.counterparty ILIKE '%' || $7 || '%'
+    OR t.booking_text ILIKE '%' || $7 || '%'
   )
 ORDER BY
-  CASE WHEN $8 = 'amount' AND COALESCE($9, false) THEN amount END ASC NULLS LAST,
-  CASE WHEN $8 = 'amount' AND NOT COALESCE($9, false) THEN amount END DESC NULLS LAST,
-  CASE WHEN $8 = 'counterparty' AND COALESCE($9, false) THEN counterparty END ASC NULLS LAST,
-  CASE WHEN $8 = 'counterparty' AND NOT COALESCE($9, false) THEN counterparty END DESC NULLS LAST,
-  CASE WHEN ($8 IS NULL OR $8 = 'booking_date') AND COALESCE($9, false) THEN booking_date END ASC NULLS LAST,
-  CASE WHEN ($8 IS NULL OR $8 = 'booking_date') AND NOT COALESCE($9, false) THEN booking_date END DESC NULLS LAST
+  CASE WHEN $8 = 'amount' AND COALESCE($9, false) THEN t.amount END ASC NULLS LAST,
+  CASE WHEN $8 = 'amount' AND NOT COALESCE($9, false) THEN t.amount END DESC NULLS LAST,
+  CASE WHEN $8 = 'counterparty' AND COALESCE($9, false) THEN t.counterparty END ASC NULLS LAST,
+  CASE WHEN $8 = 'counterparty' AND NOT COALESCE($9, false) THEN t.counterparty END DESC NULLS LAST,
+  CASE WHEN ($8 IS NULL OR $8 = 'booking_date') AND COALESCE($9, false) THEN t.booking_date END ASC NULLS LAST,
+  CASE WHEN ($8 IS NULL OR $8 = 'booking_date') AND NOT COALESCE($9, false) THEN t.booking_date END DESC NULLS LAST
 LIMIT $11 OFFSET $10
 `
 
@@ -286,7 +291,33 @@ type ListTransactionsParams struct {
 	Limit        int32          `json:"limit"`
 }
 
-func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]Transaction, error) {
+type ListTransactionsRow struct {
+	ID                             uuid.UUID       `json:"id"`
+	OrderAccount                   string          `json:"order_account"`
+	BookingDate                    pgtype.Date     `json:"booking_date"`
+	ValueDate                      pgtype.Date     `json:"value_date"`
+	BookingText                    string          `json:"booking_text"`
+	Purpose                        string          `json:"purpose"`
+	CreditorID                     string          `json:"creditor_id"`
+	MandateReference               string          `json:"mandate_reference"`
+	EndToEndReference              string          `json:"end_to_end_reference"`
+	CollectionReference            string          `json:"collection_reference"`
+	DirectDebitOriginalAmount      string          `json:"direct_debit_original_amount"`
+	ChargebackExpenseReimbursement string          `json:"chargeback_expense_reimbursement"`
+	Counterparty                   string          `json:"counterparty"`
+	CounterpartyIban               pgtype.Text     `json:"counterparty_iban"`
+	CounterpartyBic                pgtype.Text     `json:"counterparty_bic"`
+	Amount                         decimal.Decimal `json:"amount"`
+	Currency                       string          `json:"currency"`
+	Info                           string          `json:"info"`
+	Fingerprint                    string          `json:"fingerprint"`
+	AccountID                      pgtype.UUID     `json:"account_id"`
+	ImportRunID                    pgtype.UUID     `json:"import_run_id"`
+	OneOff                         bool            `json:"one_off"`
+	Recurring                      bool            `json:"recurring"`
+}
+
+func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]ListTransactionsRow, error) {
 	rows, err := q.db.Query(ctx, listTransactions,
 		arg.FromDate,
 		arg.ToDate,
@@ -304,9 +335,9 @@ func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsPara
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Transaction{}
+	items := []ListTransactionsRow{}
 	for rows.Next() {
-		var i Transaction
+		var i ListTransactionsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrderAccount,
@@ -330,6 +361,7 @@ func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsPara
 			&i.AccountID,
 			&i.ImportRunID,
 			&i.OneOff,
+			&i.Recurring,
 		); err != nil {
 			return nil, err
 		}
@@ -342,32 +374,63 @@ func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsPara
 }
 
 const setTransactionOneOff = `-- name: SetTransactionOneOff :one
-UPDATE transactions
-SET one_off = $2
-WHERE id = $1
-RETURNING
-    id,
-    order_account,
-    booking_date,
-    value_date,
-    booking_text,
-    purpose,
-    creditor_id,
-    mandate_reference,
-    end_to_end_reference,
-    collection_reference,
-    direct_debit_original_amount,
-    chargeback_expense_reimbursement,
-    counterparty,
-    counterparty_iban,
-    counterparty_bic,
-    amount,
-    currency,
-    info,
-    fingerprint,
-    account_id,
-    import_run_id,
-    one_off
+WITH updated AS (
+    UPDATE transactions
+    SET one_off = $2
+    WHERE id = $1
+    RETURNING
+        id,
+        order_account,
+        booking_date,
+        value_date,
+        booking_text,
+        purpose,
+        creditor_id,
+        mandate_reference,
+        end_to_end_reference,
+        collection_reference,
+        direct_debit_original_amount,
+        chargeback_expense_reimbursement,
+        counterparty,
+        counterparty_iban,
+        counterparty_bic,
+        amount,
+        currency,
+        info,
+        fingerprint,
+        account_id,
+        import_run_id,
+        one_off
+)
+SELECT
+    updated.id,
+    updated.order_account,
+    updated.booking_date,
+    updated.value_date,
+    updated.booking_text,
+    updated.purpose,
+    updated.creditor_id,
+    updated.mandate_reference,
+    updated.end_to_end_reference,
+    updated.collection_reference,
+    updated.direct_debit_original_amount,
+    updated.chargeback_expense_reimbursement,
+    updated.counterparty,
+    updated.counterparty_iban,
+    updated.counterparty_bic,
+    updated.amount,
+    updated.currency,
+    updated.info,
+    updated.fingerprint,
+    updated.account_id,
+    updated.import_run_id,
+    updated.one_off,
+    EXISTS (
+        SELECT 1
+        FROM recurring_series_members m
+        WHERE m.transaction_id = updated.id
+    ) AS recurring
+FROM updated
 `
 
 type SetTransactionOneOffParams struct {
@@ -375,9 +438,35 @@ type SetTransactionOneOffParams struct {
 	OneOff bool      `json:"one_off"`
 }
 
-func (q *Queries) SetTransactionOneOff(ctx context.Context, arg SetTransactionOneOffParams) (Transaction, error) {
+type SetTransactionOneOffRow struct {
+	ID                             uuid.UUID       `json:"id"`
+	OrderAccount                   string          `json:"order_account"`
+	BookingDate                    pgtype.Date     `json:"booking_date"`
+	ValueDate                      pgtype.Date     `json:"value_date"`
+	BookingText                    string          `json:"booking_text"`
+	Purpose                        string          `json:"purpose"`
+	CreditorID                     string          `json:"creditor_id"`
+	MandateReference               string          `json:"mandate_reference"`
+	EndToEndReference              string          `json:"end_to_end_reference"`
+	CollectionReference            string          `json:"collection_reference"`
+	DirectDebitOriginalAmount      string          `json:"direct_debit_original_amount"`
+	ChargebackExpenseReimbursement string          `json:"chargeback_expense_reimbursement"`
+	Counterparty                   string          `json:"counterparty"`
+	CounterpartyIban               pgtype.Text     `json:"counterparty_iban"`
+	CounterpartyBic                pgtype.Text     `json:"counterparty_bic"`
+	Amount                         decimal.Decimal `json:"amount"`
+	Currency                       string          `json:"currency"`
+	Info                           string          `json:"info"`
+	Fingerprint                    string          `json:"fingerprint"`
+	AccountID                      pgtype.UUID     `json:"account_id"`
+	ImportRunID                    pgtype.UUID     `json:"import_run_id"`
+	OneOff                         bool            `json:"one_off"`
+	Recurring                      bool            `json:"recurring"`
+}
+
+func (q *Queries) SetTransactionOneOff(ctx context.Context, arg SetTransactionOneOffParams) (SetTransactionOneOffRow, error) {
 	row := q.db.QueryRow(ctx, setTransactionOneOff, arg.ID, arg.OneOff)
-	var i Transaction
+	var i SetTransactionOneOffRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrderAccount,
@@ -401,6 +490,7 @@ func (q *Queries) SetTransactionOneOff(ctx context.Context, arg SetTransactionOn
 		&i.AccountID,
 		&i.ImportRunID,
 		&i.OneOff,
+		&i.Recurring,
 	)
 	return i, err
 }

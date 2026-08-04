@@ -1126,6 +1126,7 @@ components:
         - currency
         - info
         - one_off
+        - recurring
       properties:
         id:
           type: string
@@ -1171,6 +1172,9 @@ components:
         one_off:
           type: boolean
           description: When true, excluded from typical-spend and cashflow charts
+        recurring:
+          type: boolean
+          description: True when this transaction belongs to a recurring series
     TransactionOneOffRequest:
       type: object
       required:

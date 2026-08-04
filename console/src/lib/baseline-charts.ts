@@ -371,6 +371,30 @@ export type MonthStoryOptions = {
   oneOffExpenseTotal?: number;
 };
 
+export type MonthSpendPartition<T extends { recurring: boolean }> = {
+  recurring: T[];
+  oneTime: T[];
+};
+
+/** Split expense drivers into recurring series members vs everything else. */
+export function partitionMonthSpend<T extends { recurring: boolean }>(
+  transactions: T[],
+  limitPerGroup = 8,
+): MonthSpendPartition<T> {
+  const recurring: T[] = [];
+  const oneTime: T[] = [];
+  for (const tx of transactions) {
+    if (tx.recurring) {
+      if (recurring.length < limitPerGroup) {
+        recurring.push(tx);
+      }
+    } else if (oneTime.length < limitPerGroup) {
+      oneTime.push(tx);
+    }
+  }
+  return { recurring, oneTime };
+}
+
 /** Build headline copy and why-bullets for a selected month. */
 export function buildMonthStory(
   months: MonthlyCashflowPoint[],
