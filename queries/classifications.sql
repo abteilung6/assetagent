@@ -174,4 +174,4 @@ WHERE tc.source <> 'user_rule'
     OR tc.confidence = 'low'
   )
 ORDER BY ABS(t.amount) DESC, t.booking_date DESC, t.id ASC
-LIMIT 50;
+LIMIT 100;

@@ -7,24 +7,42 @@ WEG ,housing,50,high
 MIETE,housing,55,high
 IMMOBILIENFINANZ,housing,50,high
 RUNDFUNK,housing,55,high
-TELEKOM,housing,50,high
+TELEKOM,subscriptions,50,high
 STADTWERKE,housing,45,high
 VERSICHER,insurance,50,high
 RECHTSSCHUTZ,insurance,45,high
 HUK,insurance,55,high
 ALLIANZ,insurance,55,high
-TELEFONICA,mobility,50,high
-VODAFONE,mobility,50,high
-CONGSTAR,mobility,50,high
+TELEFONICA,subscriptions,50,high
+VODAFONE,subscriptions,50,high
+CONGSTAR,subscriptions,50,high
+O2 ,subscriptions,55,high
+1&1,subscriptions,55,high
 BVG,mobility,45,high
 DEUTSCHE BAHN,mobility,50,medium
+DB VERTRIEB,mobility,50,high
 UBER,mobility,55,medium
 LIMEBIKE,mobility,60,medium
+LIME ,mobility,60,medium
+TANKSTELLE,mobility,50,high
+ARAL,mobility,45,high
+SHELL,mobility,50,medium
+ESSO,mobility,55,medium
+TOTALENERGIES,mobility,50,medium
+PARKEN,mobility,60,medium
+ADAC,mobility,55,medium
 REWE,groceries,40,high
 EDEKA,groceries,40,high
 LIDL,groceries,40,high
 ALDI,groceries,40,high
 PENNY,groceries,40,high
+KAUFLAND,groceries,45,high
+NETTO MARKEN,groceries,45,high
+BAECKER,groceries,55,medium
+BAECKEREI,groceries,50,medium
+BACKWAREN,groceries,55,medium
+ZEIT FUER BROT,groceries,45,high
+STEINECKE,groceries,50,high
 LIEFERANDO,dining,40,high
 TAKEAWAY,dining,40,high
 UBER EATS,dining,40,high
@@ -33,6 +51,37 @@ MCDONALD,dining,45,high
 BURGER KING,dining,45,high
 STARBUCKS,dining,50,high
 RESTAURANT,dining,55,medium
+BISTRO,dining,50,medium
+TRATTORIA,dining,45,high
+RAMEN,dining,45,high
+SUSHI,dining,45,high
+NOODLE,dining,50,medium
+PIZZA,dining,50,medium
+PASTA,dining,55,medium
+THAI,dining,55,medium
+CAFE ,dining,55,medium
+CAFÉ,dining,55,medium
+IMBISS,dining,50,medium
+KEBAB,dining,50,medium
+DOENER,dining,50,medium
+DÖNER,dining,50,medium
+BRAUHAUS,dining,50,medium
+WIRTSHAUS,dining,50,medium
+CITY CHICKEN,dining,40,high
+RISA CHICKEN,dining,40,high
+MONSIEUR VUONG,dining,40,high
+YAMYAM,dining,45,high
+BANH MI,dining,45,high
+DUMPLING,dining,50,medium
+DUMP LING,dining,45,high
+SCHNITZL,dining,50,medium
+CURRY61,dining,45,high
+HOLA MEXICO,dining,45,high
+FLEISCHEREI,groceries,50,medium
+BROTMEISTEREI,groceries,45,high
+ANKERBROT,groceries,45,high
+YORMA,groceries,50,medium
+SPAR//,groceries,55,medium
 AMAZON,shopping,50,medium
 AMZN,shopping,50,medium
 ZALANDO,shopping,45,high
@@ -44,6 +93,9 @@ SPOTIFY,subscriptions,40,high
 DISNEY,subscriptions,45,high
 APPLE.COM BILL,subscriptions,50,medium
 GOOGLE PAYMENT,subscriptions,55,medium
+DAZN,subscriptions,45,high
+YOUTUBE,subscriptions,55,medium
+FITX,leisure,50,high
 SPOK,leisure,60,medium
 FITNESS,leisure,65,medium
 MCFIT,leisure,60,medium
@@ -55,9 +107,13 @@ RYANAIR,travel,45,high
 EASYJET,travel,45,high
 HOTEL,travel,55,medium
 URLAUB,travel,60,medium
+HOSTEL,travel,55,medium
+ST CHRISTOPHER,travel,50,medium
 ROSSMANN,personal_care,40,high
 DM DROGERIE,personal_care,40,high
 DROGERIE,personal_care,50,medium
+MUELLER,personal_care,50,medium
+MÜLLER,personal_care,50,medium
 APOTHEKE,health,45,high
 DOCTOR,health,60,medium
 ARZT,health,55,medium
@@ -72,6 +128,13 @@ TIERARZT,pets,50,medium
 FINANZAMT,taxes_fees,40,high
 STEUER,taxes_fees,55,medium
 GEBUEHR,taxes_fees,60,medium
+ENTGELT,taxes_fees,50,medium
+FREMDENTGELT,taxes_fees,45,high
 BARGELD,cash_atm,45,high
 GELDAutomat,cash_atm,40,high
 GA NR,cash_atm,50,medium
+GA ,cash_atm,55,medium
+AUSZAHLUNG,cash_atm,60,medium
+MOONPAY,saving_investing,40,high
+TRADE REPUBLIC,saving_investing,45,high
+SCALABLE,saving_investing,50,medium

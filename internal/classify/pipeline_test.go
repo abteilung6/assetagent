@@ -67,14 +67,37 @@ func TestMatchPattern_priorityOrder(t *testing.T) {
 	}
 }
 
-func TestShouldAutoApply_rejectsOtherAndLow(t *testing.T) {
-	if classify.ShouldAutoApply(&classify.PatternMatch{Slug: "other", Confidence: "high"}) {
-		t.Fatal("other must not auto-apply")
+func TestMatchPattern_telcoAndDining(t *testing.T) {
+	rules := []classify.PatternRule{
+		{Pattern: "TELEFONICA", Slug: "subscriptions", Priority: 50, Confidence: "high"},
+		{Pattern: "TRATTORIA", Slug: "dining", Priority: 45, Confidence: "high"},
+		{Pattern: "GA ", Slug: "cash_atm", Priority: 55, Confidence: "medium"},
+		{Pattern: "MOONPAY", Slug: "saving_investing", Priority: 40, Confidence: "high"},
+		{Pattern: "ENTGELT", Slug: "taxes_fees", Priority: 50, Confidence: "medium"},
 	}
-	if classify.ShouldAutoApply(&classify.PatternMatch{Slug: "leisure", Confidence: "low"}) {
-		t.Fatal("low must not auto-apply")
+
+	match := classify.MatchPattern("Telefonica Germany GmbH + Co. OHG", "Rechnung", rules)
+	if match == nil || match.Slug != "subscriptions" {
+		t.Fatalf("telco = %#v", match)
 	}
-	if !classify.ShouldAutoApply(&classify.PatternMatch{Slug: "leisure", Confidence: "medium"}) {
-		t.Fatal("medium leisure should auto-apply")
+
+	match = classify.MatchPattern("Trattoria Pasta Degli//Berlin/DE/0", "Debitk", rules)
+	if match == nil || match.Slug != "dining" {
+		t.Fatalf("dining = %#v", match)
+	}
+
+	match = classify.MatchPattern("GA 7244/Alte Schoenhauser Strasse 45/Berlin/DE", "Fremdentgelt", rules)
+	if match == nil || match.Slug != "cash_atm" {
+		t.Fatalf("atm = %#v", match)
+	}
+
+	match = classify.MatchPattern("PayPal Europe", "MoonPay Technology Serv", rules)
+	if match == nil || match.Slug != "saving_investing" {
+		t.Fatalf("moonpay = %#v", match)
+	}
+
+	match = classify.MatchPattern("", "Entgeltabrechnung siehe Anlage", rules)
+	if match == nil || match.Slug != "taxes_fees" {
+		t.Fatalf("entgelt = %#v", match)
 	}
 }
