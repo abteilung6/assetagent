@@ -3,6 +3,7 @@ package evals
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,6 +45,26 @@ type expectedFile struct {
 		AmountTypical       string `json:"amount_typical"`
 		MemberCount         int    `json:"member_count"`
 	} `json:"recurring"`
+	// Baseline asserts FinancialBaseline metrics after activating recurring series.
+	Baseline *expectedBaseline `json:"baseline"`
+	// Forecast is an optional smoke check (one household is enough).
+	Forecast *expectedForecast `json:"forecast"`
+}
+
+type expectedBaseline struct {
+	RegularMonthlyIncome    string `json:"regular_monthly_income"`
+	MonthlyFixedCosts       string `json:"monthly_fixed_costs"`
+	MonthlyIrregularCosts   string `json:"monthly_irregular_costs"`
+	AvgVariableSpend        string `json:"avg_variable_spend"`
+	SustainableFreeCashflow string `json:"sustainable_free_cashflow"`
+	Confidence              string `json:"confidence"`
+}
+
+type expectedForecast struct {
+	StartingBalance string `json:"starting_balance"`
+	HorizonDays     int    `json:"horizon_days"`
+	AsOf            string `json:"as_of"` // YYYY-MM-DD projection start (frozen clock)
+	MinBalance      string `json:"min_balance"`
 }
 
 func TestGoldenHouseholds(t *testing.T) {
@@ -84,6 +105,116 @@ func runGoldenHousehold(t *testing.T, dir string) {
 	ctx := context.Background()
 	pool := setupPostgres(t, ctx)
 	t.Cleanup(pool.Close)
+
+	runMoneyPipeline(t, ctx, pool, dir, expected)
+
+	from := mustParseDate(t, expected.Period.From)
+	to := mustParseDate(t, expected.Period.To)
+	reports := repository.NewReports(pool)
+
+	rawCF, err := reports.GetCashflow(ctx, from, to)
+	if err != nil {
+		t.Fatalf("cashflow raw: %v", err)
+	}
+	assertCashflow(t, "cashflow_raw", rawCF.Income, rawCF.Expenses, rawCF.Net,
+		expected.CashflowRaw.Income, expected.CashflowRaw.Expenses, expected.CashflowRaw.Net)
+
+	v2, err := reports.GetCashflowV2(ctx, from, to)
+	if err != nil {
+		t.Fatalf("cashflow v2: %v", err)
+	}
+	assertCashflow(t, "cashflow_v2", v2.Income, v2.Expenses, v2.Net,
+		expected.CashflowV2.Income, expected.CashflowV2.Expenses, expected.CashflowV2.Net)
+
+	confirmed := 0
+	pairs, err := service.NewTransfers(pool).List(ctx)
+	if err != nil {
+		t.Fatalf("list transfers after confirm: %v", err)
+	}
+	for _, pair := range pairs {
+		if pair.Status == domain.TransferStatusConfirmed {
+			confirmed++
+		}
+	}
+	if confirmed != expected.Transfers.Confirmed {
+		t.Fatalf("confirmed transfers = %d, want %d", confirmed, expected.Transfers.Confirmed)
+	}
+	if expected.Transfers.Net != "0.00" {
+		t.Fatalf("fixture transfers.net must be 0.00 for Phase B invariant, got %s", expected.Transfers.Net)
+	}
+
+	series, err := service.NewRecurring(pool).List(ctx)
+	if err != nil {
+		t.Fatalf("list recurring: %v", err)
+	}
+	for _, want := range expected.Recurring {
+		found := false
+		for _, got := range series {
+			if !strings.Contains(got.DisplayName, want.DisplayNameContains) {
+				continue
+			}
+			found = true
+			if got.Interval != want.Interval {
+				t.Fatalf("recurring %q interval = %q, want %q", got.DisplayName, got.Interval, want.Interval)
+			}
+			if !got.AmountTypical.Equal(mustDecimal(t, want.AmountTypical)) {
+				t.Fatalf("recurring %q amount_typical = %s, want %s", got.DisplayName, got.AmountTypical, want.AmountTypical)
+			}
+			if got.MemberCount != want.MemberCount {
+				t.Fatalf("recurring %q members = %d, want %d", got.DisplayName, got.MemberCount, want.MemberCount)
+			}
+			break
+		}
+		if !found {
+			t.Fatalf("missing recurring series containing %q (have %d series)", want.DisplayNameContains, len(series))
+		}
+	}
+
+	if expected.Baseline == nil {
+		return
+	}
+
+	// Keep baseline/forecast deterministic across wall-clock dates: series from
+	// historical fixtures otherwise age into status=ended and drop out of metrics.
+	if _, err := pool.Exec(ctx, `UPDATE recurring_series SET status = 'active'`); err != nil {
+		t.Fatalf("activate recurring series: %v", err)
+	}
+
+	baseline, err := service.NewBaseline(pool).RecomputeAndSave(ctx, &from, &to)
+	if err != nil {
+		t.Fatalf("baseline recompute: %v", err)
+	}
+	assertBaseline(t, baseline, *expected.Baseline)
+
+	if expected.Forecast == nil {
+		return
+	}
+	confirmedBaseline, err := service.NewBaseline(pool).Confirm(ctx, baseline.ID)
+	if err != nil {
+		t.Fatalf("baseline confirm: %v", err)
+	}
+	asOf := mustParseDate(t, expected.Forecast.AsOf)
+	horizon := expected.Forecast.HorizonDays
+	if horizon <= 0 {
+		horizon = 90
+	}
+	fc, err := service.NewForecastAt(pool, asOf).Create(ctx, service.CreateForecastRequest{
+		BaselineID:      &confirmedBaseline.ID,
+		StartingBalance: mustDecimal(t, expected.Forecast.StartingBalance),
+		HorizonDays:     horizon,
+	})
+	if err != nil {
+		t.Fatalf("forecast create: %v", err)
+	}
+	wantMin := mustDecimal(t, expected.Forecast.MinBalance)
+	if !fc.MinBalance.Equal(wantMin) {
+		t.Fatalf("forecast.min_balance = %s, want %s (ending=%s)",
+			fc.MinBalance.StringFixed(2), wantMin.StringFixed(2), fc.EndingBalance.StringFixed(2))
+	}
+}
+
+func runMoneyPipeline(t *testing.T, ctx context.Context, pool *pgxpool.Pool, dir string, expected expectedFile) {
+	t.Helper()
 
 	importer := service.NewImport(pool)
 	csvs, err := filepath.Glob(filepath.Join(dir, "*.csv"))
@@ -133,68 +264,29 @@ func runGoldenHousehold(t *testing.T, dir string) {
 	if _, err := service.NewRecurring(pool).Scan(ctx); err != nil {
 		t.Fatalf("recurring scan: %v", err)
 	}
+}
 
-	from := mustParseDate(t, expected.Period.From)
-	to := mustParseDate(t, expected.Period.To)
-	// GetCashflow uses [from, to) exclusive end in some repos — check reports.
-	reports := repository.NewReports(pool)
-
-	rawCF, err := reports.GetCashflow(ctx, from, to)
-	if err != nil {
-		t.Fatalf("cashflow raw: %v", err)
+func assertBaseline(t *testing.T, got service.ComputedBaseline, want expectedBaseline) {
+	t.Helper()
+	checks := []struct {
+		label string
+		got   decimal.Decimal
+		want  string
+	}{
+		{"regular_monthly_income", got.RegularMonthlyIncome, want.RegularMonthlyIncome},
+		{"monthly_fixed_costs", got.MonthlyFixedCosts, want.MonthlyFixedCosts},
+		{"monthly_irregular_costs", got.MonthlyIrregularCosts, want.MonthlyIrregularCosts},
+		{"avg_variable_spend", got.AvgVariableSpend, want.AvgVariableSpend},
+		{"sustainable_free_cashflow", got.SustainableFreeCashflow, want.SustainableFreeCashflow},
 	}
-	assertCashflow(t, "cashflow_raw", rawCF.Income, rawCF.Expenses, rawCF.Net,
-		expected.CashflowRaw.Income, expected.CashflowRaw.Expenses, expected.CashflowRaw.Net)
-
-	v2, err := reports.GetCashflowV2(ctx, from, to)
-	if err != nil {
-		t.Fatalf("cashflow v2: %v", err)
-	}
-	assertCashflow(t, "cashflow_v2", v2.Income, v2.Expenses, v2.Net,
-		expected.CashflowV2.Income, expected.CashflowV2.Expenses, expected.CashflowV2.Net)
-
-	confirmed := 0
-	pairs, err := transfers.List(ctx)
-	if err != nil {
-		t.Fatalf("list transfers after confirm: %v", err)
-	}
-	for _, pair := range pairs {
-		if pair.Status == domain.TransferStatusConfirmed {
-			confirmed++
+	for _, c := range checks {
+		w := mustDecimal(t, c.want)
+		if !c.got.Equal(w) {
+			t.Fatalf("baseline.%s = %s, want %s", c.label, c.got.StringFixed(2), w.StringFixed(2))
 		}
 	}
-	if confirmed != expected.Transfers.Confirmed {
-		t.Fatalf("confirmed transfers = %d, want %d", confirmed, expected.Transfers.Confirmed)
-	}
-	if expected.Transfers.Net != "0.00" {
-		t.Fatalf("fixture transfers.net must be 0.00 for Phase B invariant, got %s", expected.Transfers.Net)
-	}
-
-	series, err := service.NewRecurring(pool).List(ctx)
-	if err != nil {
-		t.Fatalf("list recurring: %v", err)
-	}
-	for _, want := range expected.Recurring {
-		found := false
-		for _, got := range series {
-			if !strings.Contains(got.DisplayName, want.DisplayNameContains) {
-				continue
-			}
-			found = true
-			if got.Interval != want.Interval {
-				t.Fatalf("recurring %q interval = %q, want %q", got.DisplayName, got.Interval, want.Interval)
-			}
-			if !got.AmountTypical.Equal(mustDecimal(t, want.AmountTypical)) {
-				t.Fatalf("recurring %q amount_typical = %s, want %s", got.DisplayName, got.AmountTypical, want.AmountTypical)
-			}
-			if got.MemberCount != want.MemberCount {
-				t.Fatalf("recurring %q members = %d, want %d", got.DisplayName, got.MemberCount, want.MemberCount)
-			}
-			break
-		}
-		if !found {
-			t.Fatalf("missing recurring series containing %q (have %d series)", want.DisplayNameContains, len(series))
-		}
+	if want.Confidence != "" && got.Confidence != want.Confidence {
+		t.Fatalf("baseline.confidence = %q, want %q", got.Confidence, want.Confidence)
 	}
 }
 
@@ -277,4 +369,71 @@ func setupPostgres(t *testing.T, ctx context.Context) *pgxpool.Pool {
 		t.Fatalf("new pool: %v", err)
 	}
 	return pool
+}
+
+// TestDumpBaselineForecastValues prints cent-exact values used to author expected.json.
+// Run manually: go test ./internal/evals -run TestDumpBaselineForecastValues -v
+func TestDumpBaselineForecastValues(t *testing.T) {
+	if testing.Short() || os.Getenv("GOLDEN_DUMP") != "1" {
+		t.Skip("set GOLDEN_DUMP=1 to print baseline/forecast values")
+	}
+	root := filepath.Join("..", "..", "testdata", "golden")
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		t.Run(name, func(t *testing.T) {
+			dir := filepath.Join(root, name)
+			raw, err := os.ReadFile(filepath.Join(dir, "expected.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var expected expectedFile
+			if err := json.Unmarshal(raw, &expected); err != nil {
+				t.Fatal(err)
+			}
+			ctx := context.Background()
+			pool := setupPostgres(t, ctx)
+			t.Cleanup(pool.Close)
+			runMoneyPipeline(t, ctx, pool, dir, expected)
+			if _, err := pool.Exec(ctx, `UPDATE recurring_series SET status = 'active'`); err != nil {
+				t.Fatal(err)
+			}
+			from := mustParseDate(t, expected.Period.From)
+			to := mustParseDate(t, expected.Period.To)
+			baseline, err := service.NewBaseline(pool).RecomputeAndSave(ctx, &from, &to)
+			if err != nil {
+				t.Fatal(err)
+			}
+			fmt.Printf("\n%s baseline: income=%s fixed=%s irregular=%s variable=%s free=%s conf=%s\n",
+				name,
+				baseline.RegularMonthlyIncome.StringFixed(2),
+				baseline.MonthlyFixedCosts.StringFixed(2),
+				baseline.MonthlyIrregularCosts.StringFixed(2),
+				baseline.AvgVariableSpend.StringFixed(2),
+				baseline.SustainableFreeCashflow.StringFixed(2),
+				baseline.Confidence,
+			)
+			confirmed, err := service.NewBaseline(pool).Confirm(ctx, baseline.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			asOf := to.AddDate(0, 0, 1)
+			fc, err := service.NewForecastAt(pool, asOf).Create(ctx, service.CreateForecastRequest{
+				BaselineID:      &confirmed.ID,
+				StartingBalance: decimal.RequireFromString("5000.00"),
+				HorizonDays:     90,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			fmt.Printf("%s forecast as_of=%s min=%s end=%s\n",
+				name, asOf.Format("2006-01-02"), fc.MinBalance.StringFixed(2), fc.EndingBalance.StringFixed(2))
+		})
+	}
 }

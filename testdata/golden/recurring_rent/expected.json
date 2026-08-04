@@ -7,5 +7,19 @@
   "recurring": [
     { "display_name_contains": "Landlord", "interval": "monthly", "amount_typical": "1200.00", "member_count": 3 },
     { "display_name_contains": "Netflix", "interval": "monthly", "amount_typical": "15.99", "member_count": 3 }
-  ]
+  ],
+  "baseline": {
+    "regular_monthly_income": "0.00",
+    "monthly_fixed_costs": "1215.99",
+    "monthly_irregular_costs": "0.00",
+    "avg_variable_spend": "0.00",
+    "sustainable_free_cashflow": "-1215.99",
+    "confidence": "high"
+  },
+  "forecast": {
+    "starting_balance": "5000.00",
+    "horizon_days": 90,
+    "as_of": "2026-01-01",
+    "min_balance": "2552.03"
+  }
 }

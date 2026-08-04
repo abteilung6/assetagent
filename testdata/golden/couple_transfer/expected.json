@@ -4,5 +4,13 @@
   "cashflow_raw": { "income": "2500.00", "expenses": "512.50", "net": "1987.50" },
   "cashflow_v2": { "income": "2000.00", "expenses": "12.50", "net": "1987.50" },
   "transfers": { "confirmed": 1, "net": "0.00" },
-  "recurring": []
+  "recurring": [],
+  "baseline": {
+    "regular_monthly_income": "0.00",
+    "monthly_fixed_costs": "0.00",
+    "monthly_irregular_costs": "0.00",
+    "avg_variable_spend": "12.50",
+    "sustainable_free_cashflow": "-12.50",
+    "confidence": "low"
+  }
 }

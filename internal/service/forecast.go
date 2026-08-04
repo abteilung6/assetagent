@@ -71,6 +71,16 @@ func NewForecast(pool *pgxpool.Pool) *ForecastService {
 	}
 }
 
+// NewForecastAt is like NewForecast but freezes "now" for deterministic projections (golden/evals).
+func NewForecastAt(pool *pgxpool.Pool, at time.Time) *ForecastService {
+	at = time.Date(at.Year(), at.Month(), at.Day(), 0, 0, 0, 0, time.UTC)
+	return &ForecastService{
+		pool:     pool,
+		baseline: NewBaseline(pool),
+		now:      func() time.Time { return at },
+	}
+}
+
 type CreateForecastRequest struct {
 	BaselineID      *uuid.UUID
 	StartingBalance decimal.Decimal
