@@ -9,6 +9,7 @@ import (
 	"github.com/abteilung6/assetagent/internal/classify"
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
 	"github.com/abteilung6/assetagent/internal/domain"
+	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -25,14 +26,18 @@ func NewRecurring(pool *pgxpool.Pool) *Recurring {
 }
 
 func (s *Recurring) Scan(ctx context.Context) (domain.RecurringScanResult, error) {
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return domain.RecurringScanResult{}, err
+	}
 	q := sqldb.New(s.pool)
 
-	rows, err := q.ListTransactionsForRecurringScan(ctx)
+	rows, err := q.ListTransactionsForRecurringScan(ctx, householdID)
 	if err != nil {
 		return domain.RecurringScanResult{}, fmt.Errorf("list transactions: %w", err)
 	}
 
-	existingIDs, err := q.ListRecurringMemberTransactionIDs(ctx)
+	existingIDs, err := q.ListRecurringMemberTransactionIDs(ctx, householdID)
 	if err != nil {
 		return domain.RecurringScanResult{}, fmt.Errorf("list existing members: %w", err)
 	}
@@ -42,7 +47,7 @@ func (s *Recurring) Scan(ctx context.Context) (domain.RecurringScanResult, error
 	}
 
 	// Also skip legs already in transfer pairs — they are not recurring bills.
-	legs, err := q.ListTransferPairLegs(ctx)
+	legs, err := q.ListTransferPairLegs(ctx, householdID)
 	if err != nil {
 		return domain.RecurringScanResult{}, fmt.Errorf("list transfer legs: %w", err)
 	}
@@ -79,6 +84,7 @@ func (s *Recurring) Scan(ctx context.Context) (domain.RecurringScanResult, error
 			next = pgtype.Date{Time: *cand.NextExpected, Valid: true}
 		}
 		row, err := q.InsertRecurringSeries(ctx, sqldb.InsertRecurringSeriesParams{
+			HouseholdID:   householdID,
 			Fingerprint:   cand.Fingerprint,
 			DisplayName:   cand.DisplayName,
 			Cadence:       cand.Interval,
@@ -129,7 +135,11 @@ func (s *Recurring) Scan(ctx context.Context) (domain.RecurringScanResult, error
 }
 
 func (s *Recurring) List(ctx context.Context) ([]domain.RecurringSeries, error) {
-	rows, err := sqldb.New(s.pool).ListRecurringSeries(ctx)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := sqldb.New(s.pool).ListRecurringSeries(ctx, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +155,11 @@ func (s *Recurring) ListUncertain(ctx context.Context) ([]domain.RecurringSeries
 	if _, err := s.Scan(ctx); err != nil {
 		return nil, fmt.Errorf("scan before queue: %w", err)
 	}
-	rows, err := sqldb.New(s.pool).ListUncertainRecurringSeries(ctx)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := sqldb.New(s.pool).ListUncertainRecurringSeries(ctx, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -164,16 +178,24 @@ func (s *Recurring) ListMembers(
 	if limit <= 0 || limit > 20 {
 		limit = 3
 	}
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
 	q := sqldb.New(s.pool)
-	if _, err := q.GetRecurringSeries(ctx, seriesID); err != nil {
+	if _, err := q.GetRecurringSeries(ctx, sqldb.GetRecurringSeriesParams{
+		ID:          seriesID,
+		HouseholdID: householdID,
+	}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrRecurringSeriesNotFound
 		}
 		return nil, err
 	}
 	rows, err := q.ListRecurringSeriesMembers(ctx, sqldb.ListRecurringSeriesMembersParams{
-		SeriesID: seriesID,
-		RowLimit: int32(limit),
+		SeriesID:    seriesID,
+		HouseholdID: householdID,
+		RowLimit:    int32(limit),
 	})
 	if err != nil {
 		return nil, err
@@ -192,7 +214,14 @@ func (s *Recurring) ListMembers(
 }
 
 func (s *Recurring) Confirm(ctx context.Context, id uuid.UUID) (domain.RecurringSeries, error) {
-	row, err := sqldb.New(s.pool).ConfirmRecurringSeries(ctx, id)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return domain.RecurringSeries{}, err
+	}
+	row, err := sqldb.New(s.pool).ConfirmRecurringSeries(ctx, sqldb.ConfirmRecurringSeriesParams{
+		ID:          id,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.RecurringSeries{}, s.decideLookupError(ctx, id)
@@ -203,7 +232,14 @@ func (s *Recurring) Confirm(ctx context.Context, id uuid.UUID) (domain.Recurring
 }
 
 func (s *Recurring) Reject(ctx context.Context, id uuid.UUID) (domain.RecurringSeries, error) {
-	row, err := sqldb.New(s.pool).RejectRecurringSeries(ctx, id)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return domain.RecurringSeries{}, err
+	}
+	row, err := sqldb.New(s.pool).RejectRecurringSeries(ctx, sqldb.RejectRecurringSeriesParams{
+		ID:          id,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.RecurringSeries{}, s.decideLookupError(ctx, id)
@@ -214,7 +250,14 @@ func (s *Recurring) Reject(ctx context.Context, id uuid.UUID) (domain.RecurringS
 }
 
 func (s *Recurring) decideLookupError(ctx context.Context, id uuid.UUID) error {
-	_, err := sqldb.New(s.pool).GetRecurringSeries(ctx, id)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return err
+	}
+	_, err = sqldb.New(s.pool).GetRecurringSeries(ctx, sqldb.GetRecurringSeriesParams{
+		ID:          id,
+		HouseholdID: householdID,
+	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrRecurringSeriesNotFound
 	}

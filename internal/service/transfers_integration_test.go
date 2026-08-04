@@ -21,11 +21,13 @@ func TestIntegration_TransferScan(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	pool := setupPostgres(t, ctx)
+	ctx, pool := setupPostgres(t, ctx)
 	t.Cleanup(pool.Close)
+	householdID := mustHouseholdID(t, ctx)
 
 	q := sqldb.New(pool)
 	checking, err := q.CreateAccount(ctx, sqldb.CreateAccountParams{
+		HouseholdID:      householdID,
 		DisplayName:      "Checking",
 		Bank:             "sparkasse",
 		Currency:         "EUR",
@@ -36,6 +38,7 @@ func TestIntegration_TransferScan(t *testing.T) {
 		t.Fatalf("create checking: %v", err)
 	}
 	savings, err := q.CreateAccount(ctx, sqldb.CreateAccountParams{
+		HouseholdID:      householdID,
 		DisplayName:      "Savings",
 		Bank:             "sparkasse",
 		Currency:         "EUR",
@@ -47,9 +50,9 @@ func TestIntegration_TransferScan(t *testing.T) {
 	}
 
 	day := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
-	outID := insertTransferTx(t, ctx, q, checking.ID, "DE111", day, "-500.00", "UMBUCHUNG", "fp-out")
-	inID := insertTransferTx(t, ctx, q, savings.ID, "DE222", day, "500.00", "UMBUCHUNG", "fp-in")
-	insertTransferTx(t, ctx, q, checking.ID, "DE111", day, "-12.50", "EDEKA", "fp-grocery")
+	outID := insertTransferTx(t, ctx, q, householdID, checking.ID, "DE111", day, "-500.00", "UMBUCHUNG", "fp-out")
+	inID := insertTransferTx(t, ctx, q, householdID, savings.ID, "DE222", day, "500.00", "UMBUCHUNG", "fp-in")
+	insertTransferTx(t, ctx, q, householdID, checking.ID, "DE111", day, "-12.50", "EDEKA", "fp-grocery")
 
 	svc := service.NewTransfers(pool)
 	first, err := svc.Scan(ctx)
@@ -96,11 +99,13 @@ func TestIntegration_TransferConfirmCashflowV2(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	pool := setupPostgres(t, ctx)
+	ctx, pool := setupPostgres(t, ctx)
 	t.Cleanup(pool.Close)
+	householdID := mustHouseholdID(t, ctx)
 
 	q := sqldb.New(pool)
 	checking, err := q.CreateAccount(ctx, sqldb.CreateAccountParams{
+		HouseholdID:      householdID,
 		DisplayName:      "Checking",
 		Bank:             "sparkasse",
 		Currency:         "EUR",
@@ -111,6 +116,7 @@ func TestIntegration_TransferConfirmCashflowV2(t *testing.T) {
 		t.Fatalf("create checking: %v", err)
 	}
 	savings, err := q.CreateAccount(ctx, sqldb.CreateAccountParams{
+		HouseholdID:      householdID,
 		DisplayName:      "Savings",
 		Bank:             "sparkasse",
 		Currency:         "EUR",
@@ -122,10 +128,10 @@ func TestIntegration_TransferConfirmCashflowV2(t *testing.T) {
 	}
 
 	day := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
-	insertTransferTx(t, ctx, q, checking.ID, "DE111", day, "-500.00", "UMBUCHUNG", "fp-out-cf")
-	insertTransferTx(t, ctx, q, savings.ID, "DE222", day, "500.00", "UMBUCHUNG", "fp-in-cf")
-	insertTransferTx(t, ctx, q, checking.ID, "DE111", day, "-12.50", "EDEKA", "fp-grocery-cf")
-	insertTransferTx(t, ctx, q, checking.ID, "DE111", day, "2000.00", "GEHALT", "fp-salary-cf")
+	insertTransferTx(t, ctx, q, householdID, checking.ID, "DE111", day, "-500.00", "UMBUCHUNG", "fp-out-cf")
+	insertTransferTx(t, ctx, q, householdID, savings.ID, "DE222", day, "500.00", "UMBUCHUNG", "fp-in-cf")
+	insertTransferTx(t, ctx, q, householdID, checking.ID, "DE111", day, "-12.50", "EDEKA", "fp-grocery-cf")
+	insertTransferTx(t, ctx, q, householdID, checking.ID, "DE111", day, "2000.00", "GEHALT", "fp-salary-cf")
 
 	transfers := service.NewTransfers(pool)
 	scan, err := transfers.Scan(ctx)
@@ -189,8 +195,8 @@ func TestIntegration_TransferConfirmCashflowV2(t *testing.T) {
 	}
 
 	// Reject path on a fresh suggestion
-	out2 := insertTransferTx(t, ctx, q, checking.ID, "DE111", day.AddDate(0, 0, 1), "-80.00", "UMBUCHUNG", "fp-out-rej")
-	in2 := insertTransferTx(t, ctx, q, savings.ID, "DE222", day.AddDate(0, 0, 1), "80.00", "UMBUCHUNG", "fp-in-rej")
+	out2 := insertTransferTx(t, ctx, q, householdID, checking.ID, "DE111", day.AddDate(0, 0, 1), "-80.00", "UMBUCHUNG", "fp-out-rej")
+	in2 := insertTransferTx(t, ctx, q, householdID, savings.ID, "DE222", day.AddDate(0, 0, 1), "80.00", "UMBUCHUNG", "fp-in-rej")
 	_ = out2
 	_ = in2
 	scan2, err := transfers.Scan(ctx)
@@ -221,6 +227,7 @@ func insertTransferTx(
 	t *testing.T,
 	ctx context.Context,
 	q *sqldb.Queries,
+	householdID uuid.UUID,
 	accountID uuid.UUID,
 	orderAccount string,
 	day time.Time,
@@ -230,6 +237,7 @@ func insertTransferTx(
 ) uuid.UUID {
 	t.Helper()
 	id, err := q.InsertTransaction(ctx, sqldb.InsertTransactionParams{
+		HouseholdID:  householdID,
 		OrderAccount: orderAccount,
 		BookingDate:  pgtype.Date{Time: day, Valid: true},
 		ValueDate:    pgtype.Date{Time: day, Valid: true},

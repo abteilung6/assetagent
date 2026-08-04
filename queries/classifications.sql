@@ -6,12 +6,17 @@ SELECT
     booking_text,
     amount
 FROM transactions
+WHERE household_id = $1
 ORDER BY booking_date ASC, id ASC;
 
 -- name: ListConfirmedTransferTransactionIDs :many
-SELECT tx_out_id AS transaction_id FROM transfer_pairs WHERE status = 'confirmed'
+SELECT p.tx_out_id AS transaction_id
+FROM transfer_pairs p
+WHERE p.status = 'confirmed' AND p.household_id = $1
 UNION
-SELECT tx_in_id AS transaction_id FROM transfer_pairs WHERE status = 'confirmed';
+SELECT p.tx_in_id AS transaction_id
+FROM transfer_pairs p
+WHERE p.status = 'confirmed' AND p.household_id = $1;
 
 -- name: UpsertTransactionClassification :one
 INSERT INTO transaction_classifications (
@@ -36,10 +41,12 @@ WHERE transaction_classifications.source <> 'user_rule'
 RETURNING *;
 
 -- name: CountClassificationsBySource :many
-SELECT source, COUNT(*)::bigint AS count
-FROM transaction_classifications
-GROUP BY source
-ORDER BY source;
+SELECT tc.source, COUNT(*)::bigint AS count
+FROM transaction_classifications tc
+JOIN transactions t ON t.id = tc.transaction_id
+WHERE t.household_id = $1
+GROUP BY tc.source
+ORDER BY tc.source;
 
 -- name: ForceUpsertTransactionClassification :one
 INSERT INTO transaction_classifications (
@@ -70,31 +77,35 @@ SELECT
     booking_text,
     amount
 FROM transactions
-WHERE id = $1;
+WHERE id = $1 AND household_id = $2;
 
 -- name: GetTransactionClassification :one
-SELECT *
-FROM transaction_classifications
-WHERE transaction_id = $1;
+SELECT tc.*
+FROM transaction_classifications tc
+JOIN transactions t ON t.id = tc.transaction_id
+WHERE tc.transaction_id = $1 AND t.household_id = $2;
 
 -- name: ListClassificationRules :many
 SELECT *
 FROM classification_rules
+WHERE household_id = $1
 ORDER BY priority ASC, created_at ASC;
 
 -- name: GetClassificationRuleByMerchant :one
 SELECT *
 FROM classification_rules
-WHERE merchant_id = $1;
+WHERE merchant_id = $1 AND household_id = $2;
 
 -- name: GetClassificationRuleByPattern :one
 SELECT *
 FROM classification_rules
 WHERE merchant_id IS NULL
-  AND lower(pattern) = lower(sqlc.arg(pattern));
+  AND lower(pattern) = lower(sqlc.arg(pattern))
+  AND household_id = sqlc.arg(household_id);
 
 -- name: CreateClassificationRule :one
 INSERT INTO classification_rules (
+    household_id,
     priority,
     merchant_id,
     pattern,
@@ -103,12 +114,13 @@ INSERT INTO classification_rules (
     confidence,
     is_system
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1, $2, $3, $4, $5, $6, $7, $8
 )
 RETURNING *;
 
 -- name: UpsertSystemPatternRule :one
 INSERT INTO classification_rules (
+    household_id,
     priority,
     merchant_id,
     pattern,
@@ -117,6 +129,7 @@ INSERT INTO classification_rules (
     confidence,
     is_system
 ) VALUES (
+    sqlc.arg(household_id),
     sqlc.arg(priority),
     NULL,
     sqlc.arg(pattern),
@@ -136,16 +149,16 @@ RETURNING *;
 -- name: UpdateClassificationRuleCategory :one
 UPDATE classification_rules
 SET
-    category_id = $2,
-    created_from_transaction_id = $3,
-    priority = $4
-WHERE id = $1
+    category_id = $3,
+    created_from_transaction_id = $4,
+    priority = $5
+WHERE id = $1 AND household_id = $2
 RETURNING *;
 
 -- name: UpdateMerchantDefaultCategory :one
 UPDATE merchants
-SET default_category_id = $2
-WHERE id = $1
+SET default_category_id = $3
+WHERE id = $1 AND household_id = $2
 RETURNING *;
 
 -- name: ListClassificationQueue :many
@@ -166,7 +179,8 @@ FROM transaction_classifications tc
 JOIN transactions t ON t.id = tc.transaction_id
 JOIN categories c ON c.id = tc.category_id
 LEFT JOIN merchants m ON m.id = tc.merchant_id
-WHERE tc.source <> 'user_rule'
+WHERE t.household_id = $1
+  AND tc.source <> 'user_rule'
   AND c.slug <> 'transfer'
   AND t.one_off = false
   AND (

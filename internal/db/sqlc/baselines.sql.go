@@ -20,12 +20,18 @@ SET
     confirmed_at = now(),
     updated_at = now()
 WHERE id = $1
+  AND household_id = $2
   AND status = 'draft'
-RETURNING id, period_from, period_to, algorithm_version, status, regular_monthly_income, monthly_fixed_costs, monthly_irregular_costs, avg_variable_spend, sustainable_free_cashflow, confidence, assumptions, evidence, confirmed_at, created_at, updated_at
+RETURNING id, period_from, period_to, algorithm_version, status, regular_monthly_income, monthly_fixed_costs, monthly_irregular_costs, avg_variable_spend, sustainable_free_cashflow, confidence, assumptions, evidence, confirmed_at, created_at, updated_at, household_id
 `
 
-func (q *Queries) ConfirmFinancialBaseline(ctx context.Context, id uuid.UUID) (FinancialBaseline, error) {
-	row := q.db.QueryRow(ctx, confirmFinancialBaseline, id)
+type ConfirmFinancialBaselineParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) ConfirmFinancialBaseline(ctx context.Context, arg ConfirmFinancialBaselineParams) (FinancialBaseline, error) {
+	row := q.db.QueryRow(ctx, confirmFinancialBaseline, arg.ID, arg.HouseholdID)
 	var i FinancialBaseline
 	err := row.Scan(
 		&i.ID,
@@ -44,22 +50,24 @@ func (q *Queries) ConfirmFinancialBaseline(ctx context.Context, id uuid.UUID) (F
 		&i.ConfirmedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const getCurrentFinancialBaseline = `-- name: GetCurrentFinancialBaseline :one
-SELECT id, period_from, period_to, algorithm_version, status, regular_monthly_income, monthly_fixed_costs, monthly_irregular_costs, avg_variable_spend, sustainable_free_cashflow, confidence, assumptions, evidence, confirmed_at, created_at, updated_at
+SELECT id, period_from, period_to, algorithm_version, status, regular_monthly_income, monthly_fixed_costs, monthly_irregular_costs, avg_variable_spend, sustainable_free_cashflow, confidence, assumptions, evidence, confirmed_at, created_at, updated_at, household_id
 FROM financial_baselines
-WHERE status IN ('draft', 'confirmed')
+WHERE household_id = $1
+  AND status IN ('draft', 'confirmed')
 ORDER BY
     CASE status WHEN 'confirmed' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END,
     created_at DESC
 LIMIT 1
 `
 
-func (q *Queries) GetCurrentFinancialBaseline(ctx context.Context) (FinancialBaseline, error) {
-	row := q.db.QueryRow(ctx, getCurrentFinancialBaseline)
+func (q *Queries) GetCurrentFinancialBaseline(ctx context.Context, householdID uuid.UUID) (FinancialBaseline, error) {
+	row := q.db.QueryRow(ctx, getCurrentFinancialBaseline, householdID)
 	var i FinancialBaseline
 	err := row.Scan(
 		&i.ID,
@@ -78,18 +86,24 @@ func (q *Queries) GetCurrentFinancialBaseline(ctx context.Context) (FinancialBas
 		&i.ConfirmedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const getFinancialBaseline = `-- name: GetFinancialBaseline :one
-SELECT id, period_from, period_to, algorithm_version, status, regular_monthly_income, monthly_fixed_costs, monthly_irregular_costs, avg_variable_spend, sustainable_free_cashflow, confidence, assumptions, evidence, confirmed_at, created_at, updated_at
+SELECT id, period_from, period_to, algorithm_version, status, regular_monthly_income, monthly_fixed_costs, monthly_irregular_costs, avg_variable_spend, sustainable_free_cashflow, confidence, assumptions, evidence, confirmed_at, created_at, updated_at, household_id
 FROM financial_baselines
-WHERE id = $1
+WHERE id = $1 AND household_id = $2
 `
 
-func (q *Queries) GetFinancialBaseline(ctx context.Context, id uuid.UUID) (FinancialBaseline, error) {
-	row := q.db.QueryRow(ctx, getFinancialBaseline, id)
+type GetFinancialBaselineParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) GetFinancialBaseline(ctx context.Context, arg GetFinancialBaselineParams) (FinancialBaseline, error) {
+	row := q.db.QueryRow(ctx, getFinancialBaseline, arg.ID, arg.HouseholdID)
 	var i FinancialBaseline
 	err := row.Scan(
 		&i.ID,
@@ -108,6 +122,7 @@ func (q *Queries) GetFinancialBaseline(ctx context.Context, id uuid.UUID) (Finan
 		&i.ConfirmedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
@@ -156,6 +171,7 @@ func (q *Queries) InsertBaselineAdjustment(ctx context.Context, arg InsertBaseli
 
 const insertFinancialBaseline = `-- name: InsertFinancialBaseline :one
 INSERT INTO financial_baselines (
+    household_id,
     period_from,
     period_to,
     algorithm_version,
@@ -169,12 +185,13 @@ INSERT INTO financial_baselines (
     assumptions,
     evidence
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
 )
-RETURNING id, period_from, period_to, algorithm_version, status, regular_monthly_income, monthly_fixed_costs, monthly_irregular_costs, avg_variable_spend, sustainable_free_cashflow, confidence, assumptions, evidence, confirmed_at, created_at, updated_at
+RETURNING id, period_from, period_to, algorithm_version, status, regular_monthly_income, monthly_fixed_costs, monthly_irregular_costs, avg_variable_spend, sustainable_free_cashflow, confidence, assumptions, evidence, confirmed_at, created_at, updated_at, household_id
 `
 
 type InsertFinancialBaselineParams struct {
+	HouseholdID             uuid.UUID       `json:"household_id"`
 	PeriodFrom              pgtype.Date     `json:"period_from"`
 	PeriodTo                pgtype.Date     `json:"period_to"`
 	AlgorithmVersion        string          `json:"algorithm_version"`
@@ -191,6 +208,7 @@ type InsertFinancialBaselineParams struct {
 
 func (q *Queries) InsertFinancialBaseline(ctx context.Context, arg InsertFinancialBaselineParams) (FinancialBaseline, error) {
 	row := q.db.QueryRow(ctx, insertFinancialBaseline,
+		arg.HouseholdID,
 		arg.PeriodFrom,
 		arg.PeriodTo,
 		arg.AlgorithmVersion,
@@ -222,6 +240,7 @@ func (q *Queries) InsertFinancialBaseline(ctx context.Context, arg InsertFinanci
 		&i.ConfirmedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
@@ -231,10 +250,11 @@ UPDATE financial_baselines
 SET
     status = 'superseded',
     updated_at = now()
-WHERE status IN ('draft', 'confirmed')
+WHERE household_id = $1
+  AND status IN ('draft', 'confirmed')
 `
 
-func (q *Queries) SupersedeOpenFinancialBaselines(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, supersedeOpenFinancialBaselines)
+func (q *Queries) SupersedeOpenFinancialBaselines(ctx context.Context, householdID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, supersedeOpenFinancialBaselines, householdID)
 	return err
 }

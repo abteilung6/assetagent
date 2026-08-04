@@ -13,35 +13,40 @@ import (
 )
 
 const countMerchantAliases = `-- name: CountMerchantAliases :one
-SELECT COUNT(*)::bigint AS count FROM merchant_aliases
+SELECT COUNT(*)::bigint AS count
+FROM merchant_aliases a
+JOIN merchants m ON m.id = a.merchant_id
+WHERE m.household_id = $1
 `
 
-func (q *Queries) CountMerchantAliases(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countMerchantAliases)
+func (q *Queries) CountMerchantAliases(ctx context.Context, householdID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countMerchantAliases, householdID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const createMerchant = `-- name: CreateMerchant :one
-INSERT INTO merchants (display_name, default_category_id)
-VALUES ($1, $2)
-RETURNING id, display_name, default_category_id, created_at
+INSERT INTO merchants (household_id, display_name, default_category_id)
+VALUES ($1, $2, $3)
+RETURNING id, display_name, default_category_id, created_at, household_id
 `
 
 type CreateMerchantParams struct {
+	HouseholdID       uuid.UUID   `json:"household_id"`
 	DisplayName       string      `json:"display_name"`
 	DefaultCategoryID pgtype.UUID `json:"default_category_id"`
 }
 
 func (q *Queries) CreateMerchant(ctx context.Context, arg CreateMerchantParams) (Merchant, error) {
-	row := q.db.QueryRow(ctx, createMerchant, arg.DisplayName, arg.DefaultCategoryID)
+	row := q.db.QueryRow(ctx, createMerchant, arg.HouseholdID, arg.DisplayName, arg.DefaultCategoryID)
 	var i Merchant
 	err := row.Scan(
 		&i.ID,
 		&i.DisplayName,
 		&i.DefaultCategoryID,
 		&i.CreatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
@@ -72,18 +77,20 @@ func (q *Queries) CreateMerchantAlias(ctx context.Context, arg CreateMerchantAli
 }
 
 const getMerchantAlias = `-- name: GetMerchantAlias :one
-SELECT id, merchant_id, match_type, pattern, created_at
-FROM merchant_aliases
-WHERE match_type = $1 AND pattern = $2
+SELECT a.id, a.merchant_id, a.match_type, a.pattern, a.created_at
+FROM merchant_aliases a
+JOIN merchants m ON m.id = a.merchant_id
+WHERE a.match_type = $1 AND a.pattern = $2 AND m.household_id = $3
 `
 
 type GetMerchantAliasParams struct {
-	MatchType string `json:"match_type"`
-	Pattern   string `json:"pattern"`
+	MatchType   string    `json:"match_type"`
+	Pattern     string    `json:"pattern"`
+	HouseholdID uuid.UUID `json:"household_id"`
 }
 
 func (q *Queries) GetMerchantAlias(ctx context.Context, arg GetMerchantAliasParams) (MerchantAlias, error) {
-	row := q.db.QueryRow(ctx, getMerchantAlias, arg.MatchType, arg.Pattern)
+	row := q.db.QueryRow(ctx, getMerchantAlias, arg.MatchType, arg.Pattern, arg.HouseholdID)
 	var i MerchantAlias
 	err := row.Scan(
 		&i.ID,
@@ -100,7 +107,8 @@ SELECT DISTINCT
     counterparty,
     purpose
 FROM transactions
-WHERE counterparty <> '' OR purpose <> ''
+WHERE household_id = $1
+  AND (counterparty <> '' OR purpose <> '')
 ORDER BY counterparty, purpose
 `
 
@@ -109,8 +117,8 @@ type ListMerchantSourceLabelsRow struct {
 	Purpose      string `json:"purpose"`
 }
 
-func (q *Queries) ListMerchantSourceLabels(ctx context.Context) ([]ListMerchantSourceLabelsRow, error) {
-	rows, err := q.db.Query(ctx, listMerchantSourceLabels)
+func (q *Queries) ListMerchantSourceLabels(ctx context.Context, householdID uuid.UUID) ([]ListMerchantSourceLabelsRow, error) {
+	rows, err := q.db.Query(ctx, listMerchantSourceLabels, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -138,6 +146,7 @@ SELECT
     COUNT(a.id)::bigint AS alias_count
 FROM merchants m
 LEFT JOIN merchant_aliases a ON a.merchant_id = m.id
+WHERE m.household_id = $1
 GROUP BY m.id
 ORDER BY m.display_name ASC
 `
@@ -150,8 +159,8 @@ type ListMerchantsRow struct {
 	AliasCount        int64              `json:"alias_count"`
 }
 
-func (q *Queries) ListMerchants(ctx context.Context) ([]ListMerchantsRow, error) {
-	rows, err := q.db.Query(ctx, listMerchants)
+func (q *Queries) ListMerchants(ctx context.Context, householdID uuid.UUID) ([]ListMerchantsRow, error) {
+	rows, err := q.db.Query(ctx, listMerchants, householdID)
 	if err != nil {
 		return nil, err
 	}

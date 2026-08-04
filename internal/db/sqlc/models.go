@@ -5,6 +5,8 @@
 package db
 
 import (
+	"net/netip"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
@@ -19,6 +21,7 @@ type Account struct {
 	MaskedIdentifier string             `json:"masked_identifier"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	HouseholdID      uuid.UUID          `json:"household_id"`
 }
 
 type Action struct {
@@ -32,6 +35,16 @@ type Action struct {
 	VerifiedAt           pgtype.Timestamptz `json:"verified_at"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AuthIdentity struct {
+	ID              uuid.UUID          `json:"id"`
+	UserID          uuid.UUID          `json:"user_id"`
+	Provider        string             `json:"provider"`
+	ProviderSubject string             `json:"provider_subject"`
+	Email           string             `json:"email"`
+	EmailVerified   bool               `json:"email_verified"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 type BaselineAdjustment struct {
@@ -64,6 +77,7 @@ type ClassificationRule struct {
 	CreatedAt                pgtype.Timestamptz `json:"created_at"`
 	Confidence               string             `json:"confidence"`
 	IsSystem                 bool               `json:"is_system"`
+	HouseholdID              uuid.UUID          `json:"household_id"`
 }
 
 type Decision struct {
@@ -75,6 +89,7 @@ type Decision struct {
 	TargetValue pgtype.Numeric     `json:"target_value"`
 	DecidedAt   pgtype.Timestamptz `json:"decided_at"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	HouseholdID uuid.UUID          `json:"household_id"`
 }
 
 type FinancialBaseline struct {
@@ -94,6 +109,7 @@ type FinancialBaseline struct {
 	ConfirmedAt             pgtype.Timestamptz `json:"confirmed_at"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	HouseholdID             uuid.UUID          `json:"household_id"`
 }
 
 type Forecast struct {
@@ -107,6 +123,21 @@ type Forecast struct {
 	EndingBalance    decimal.Decimal    `json:"ending_balance"`
 	AlgorithmVersion string             `json:"algorithm_version"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	HouseholdID      uuid.UUID          `json:"household_id"`
+}
+
+type Household struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	ClaimedAt pgtype.Timestamptz `json:"claimed_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type HouseholdMembership struct {
+	HouseholdID uuid.UUID          `json:"household_id"`
+	UserID      uuid.UUID          `json:"user_id"`
+	Role        string             `json:"role"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type ImportRun struct {
@@ -128,6 +159,7 @@ type ImportRun struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	CommittedAt    pgtype.Timestamptz `json:"committed_at"`
 	RolledBackAt   pgtype.Timestamptz `json:"rolled_back_at"`
+	HouseholdID    uuid.UUID          `json:"household_id"`
 }
 
 type Merchant struct {
@@ -135,6 +167,7 @@ type Merchant struct {
 	DisplayName       string             `json:"display_name"`
 	DefaultCategoryID pgtype.UUID        `json:"default_category_id"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	HouseholdID       uuid.UUID          `json:"household_id"`
 }
 
 type MerchantAlias struct {
@@ -157,6 +190,15 @@ type MoneyReview struct {
 	ConfirmedAt   pgtype.Timestamptz `json:"confirmed_at"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	HouseholdID   uuid.UUID          `json:"household_id"`
+}
+
+type OauthLoginState struct {
+	State        string             `json:"state"`
+	Nonce        string             `json:"nonce"`
+	CodeVerifier string             `json:"code_verifier"`
+	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
 type RecurringSeries struct {
@@ -174,6 +216,7 @@ type RecurringSeries struct {
 	MemberCount   int32              `json:"member_count"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	HouseholdID   uuid.UUID          `json:"household_id"`
 }
 
 type RecurringSeriesMember struct {
@@ -184,13 +227,26 @@ type RecurringSeriesMember struct {
 }
 
 type Scenario struct {
-	ID         uuid.UUID          `json:"id"`
-	ForecastID uuid.UUID          `json:"forecast_id"`
-	Kind       string             `json:"kind"`
-	Params     []byte             `json:"params"`
-	Result     []byte             `json:"result"`
-	Status     string             `json:"status"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	ID          uuid.UUID          `json:"id"`
+	ForecastID  uuid.UUID          `json:"forecast_id"`
+	Kind        string             `json:"kind"`
+	Params      []byte             `json:"params"`
+	Result      []byte             `json:"result"`
+	Status      string             `json:"status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	HouseholdID uuid.UUID          `json:"household_id"`
+}
+
+type Session struct {
+	ID                uuid.UUID          `json:"id"`
+	UserID            uuid.UUID          `json:"user_id"`
+	TokenHash         []byte             `json:"token_hash"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	AbsoluteExpiresAt pgtype.Timestamptz `json:"absolute_expires_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	RevokedAt         pgtype.Timestamptz `json:"revoked_at"`
+	UserAgent         string             `json:"user_agent"`
+	Ip                *netip.Addr        `json:"ip"`
 }
 
 type Transaction struct {
@@ -216,6 +272,7 @@ type Transaction struct {
 	AccountID                      pgtype.UUID     `json:"account_id"`
 	ImportRunID                    pgtype.UUID     `json:"import_run_id"`
 	OneOff                         bool            `json:"one_off"`
+	HouseholdID                    uuid.UUID       `json:"household_id"`
 }
 
 type TransactionClassification struct {
@@ -236,5 +293,12 @@ type TransferPair struct {
 	Confidence  string             `json:"confidence"`
 	Rationale   []byte             `json:"rationale"`
 	ConfirmedAt pgtype.Timestamptz `json:"confirmed_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	HouseholdID uuid.UUID          `json:"household_id"`
+}
+
+type User struct {
+	ID          uuid.UUID          `json:"id"`
+	DisplayName string             `json:"display_name"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }

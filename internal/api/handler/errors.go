@@ -10,6 +10,13 @@ import (
 	"github.com/abteilung6/assetagent/internal/service"
 )
 
+func writeUnauthorizedError(w http.ResponseWriter, message string) {
+	writeJSON(w, http.StatusUnauthorized, gen.Error{
+		Error:   "unauthorized",
+		Message: message,
+	})
+}
+
 func writeValidationError(w http.ResponseWriter, message string) {
 	writeJSON(w, http.StatusBadRequest, gen.Error{
 		Error:   "validation_failed",

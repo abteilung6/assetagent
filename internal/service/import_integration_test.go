@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/abteilung6/assetagent/internal/authctx"
 	"github.com/abteilung6/assetagent/internal/db"
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
 	"github.com/abteilung6/assetagent/internal/domain"
@@ -26,12 +27,13 @@ func TestIntegration_Import(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	pool := setupPostgres(t, ctx)
+	ctx, pool := setupPostgres(t, ctx)
 	t.Cleanup(pool.Close)
 
 	importer := service.NewImport(pool)
 	repo := repository.NewTransaction(pool)
 	queries := sqldb.New(pool)
+	householdID := mustHouseholdID(t, ctx)
 
 	samplePath := filepath.Join("..", "..", "testdata", "sparkasse", "sample.csv")
 	overlapPath := filepath.Join("..", "..", "testdata", "sparkasse", "overlap.csv")
@@ -58,7 +60,10 @@ func TestIntegration_Import(t *testing.T) {
 			t.Fatalf("AccountName = %q, want Sparkasse Checking", result.AccountName)
 		}
 
-		run, err := queries.GetImportRun(ctx, result.ImportRunID)
+		run, err := queries.GetImportRun(ctx, sqldb.GetImportRunParams{
+			ID:          result.ImportRunID,
+			HouseholdID: householdID,
+		})
 		if err != nil {
 			t.Fatalf("GetImportRun: %v", err)
 		}
@@ -69,7 +74,10 @@ func TestIntegration_Import(t *testing.T) {
 			t.Fatalf("run stats = inserted=%d dup=%d valid=%d", run.RowInserted, run.RowDuplicate, run.RowValid)
 		}
 
-		linked, err := queries.CountTransactionsByImportRun(ctx, pgtype.UUID{Bytes: result.ImportRunID, Valid: true})
+		linked, err := queries.CountTransactionsByImportRun(ctx, sqldb.CountTransactionsByImportRunParams{
+			ImportRunID: pgtype.UUID{Bytes: result.ImportRunID, Valid: true},
+			HouseholdID: householdID,
+		})
 		if err != nil {
 			t.Fatalf("CountTransactionsByImportRun: %v", err)
 		}
@@ -100,7 +108,10 @@ func TestIntegration_Import(t *testing.T) {
 			t.Fatalf("Inserted = %d, Duplicates = %d, want 0/21", result.Inserted, result.Duplicates)
 		}
 
-		run, err := queries.GetImportRun(ctx, result.ImportRunID)
+		run, err := queries.GetImportRun(ctx, sqldb.GetImportRunParams{
+			ID:          result.ImportRunID,
+			HouseholdID: householdID,
+		})
 		if err != nil {
 			t.Fatalf("GetImportRun: %v", err)
 		}
@@ -109,14 +120,20 @@ func TestIntegration_Import(t *testing.T) {
 		}
 
 		// Existing txs keep the first run id; this run inserts nothing.
-		linked, err := queries.CountTransactionsByImportRun(ctx, pgtype.UUID{Bytes: result.ImportRunID, Valid: true})
+		linked, err := queries.CountTransactionsByImportRun(ctx, sqldb.CountTransactionsByImportRunParams{
+			ImportRunID: pgtype.UUID{Bytes: result.ImportRunID, Valid: true},
+			HouseholdID: householdID,
+		})
 		if err != nil {
 			t.Fatalf("CountTransactionsByImportRun: %v", err)
 		}
 		if linked != 0 {
 			t.Fatalf("linked txs for duplicate run = %d, want 0", linked)
 		}
-		stillFirst, err := queries.CountTransactionsByImportRun(ctx, firstRunID)
+		stillFirst, err := queries.CountTransactionsByImportRun(ctx, sqldb.CountTransactionsByImportRunParams{
+			ImportRunID: firstRunID,
+			HouseholdID: householdID,
+		})
 		if err != nil {
 			t.Fatalf("CountTransactionsByImportRun first: %v", err)
 		}
@@ -217,13 +234,14 @@ func TestIntegration_ImportRollback(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	pool := setupPostgres(t, ctx)
+	ctx, pool := setupPostgres(t, ctx)
 	t.Cleanup(pool.Close)
 
 	importer := service.NewImport(pool)
 	repo := repository.NewTransaction(pool)
 	reports := repository.NewReports(pool)
 	queries := sqldb.New(pool)
+	householdID := mustHouseholdID(t, ctx)
 
 	minimalPath := filepath.Join("..", "..", "testdata", "sparkasse", "minimal.csv")
 	runAPath := filepath.Join(t.TempDir(), "run-a.csv")
@@ -270,7 +288,10 @@ func TestIntegration_ImportRollback(t *testing.T) {
 		t.Fatalf("deleted = %d, want 6", rollback.Deleted)
 	}
 
-	runA, err := queries.GetImportRun(ctx, resultA.ImportRunID)
+	runA, err := queries.GetImportRun(ctx, sqldb.GetImportRunParams{
+		ID:          resultA.ImportRunID,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		t.Fatalf("GetImportRun A: %v", err)
 	}
@@ -278,7 +299,10 @@ func TestIntegration_ImportRollback(t *testing.T) {
 		t.Fatalf("A status = %q, want rolled_back", runA.Status)
 	}
 
-	linkedA, err := queries.CountTransactionsByImportRun(ctx, pgtype.UUID{Bytes: resultA.ImportRunID, Valid: true})
+	linkedA, err := queries.CountTransactionsByImportRun(ctx, sqldb.CountTransactionsByImportRunParams{
+		ImportRunID: pgtype.UUID{Bytes: resultA.ImportRunID, Valid: true},
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		t.Fatalf("linked A: %v", err)
 	}
@@ -286,7 +310,10 @@ func TestIntegration_ImportRollback(t *testing.T) {
 		t.Fatalf("linked A = %d, want 0", linkedA)
 	}
 
-	linkedB, err := queries.CountTransactionsByImportRun(ctx, pgtype.UUID{Bytes: resultB.ImportRunID, Valid: true})
+	linkedB, err := queries.CountTransactionsByImportRun(ctx, sqldb.CountTransactionsByImportRunParams{
+		ImportRunID: pgtype.UUID{Bytes: resultB.ImportRunID, Valid: true},
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		t.Fatalf("linked B: %v", err)
 	}
@@ -346,7 +373,7 @@ func mustDecimal(t *testing.T, raw string) decimal.Decimal {
 	return value
 }
 
-func setupPostgres(t *testing.T, ctx context.Context) *pgxpool.Pool {
+func setupPostgres(t *testing.T, ctx context.Context) (context.Context, *pgxpool.Pool) {
 	t.Helper()
 
 	container, err := postgres.Run(ctx,
@@ -380,7 +407,20 @@ func setupPostgres(t *testing.T, ctx context.Context) *pgxpool.Pool {
 		t.Fatalf("new pool: %v", err)
 	}
 
-	return pool
+	hid, err := repository.ResolveSeedHouseholdID(ctx, pool)
+	if err != nil {
+		t.Fatalf("seed household: %v", err)
+	}
+	return authctx.WithHouseholdID(ctx, hid), pool
+}
+
+func mustHouseholdID(t *testing.T, ctx context.Context) uuid.UUID {
+	t.Helper()
+	hid, ok := authctx.HouseholdID(ctx)
+	if !ok {
+		t.Fatal("missing household id in context")
+	}
+	return hid
 }
 
 func waitForDB(ctx context.Context, t *testing.T, connStr string) {

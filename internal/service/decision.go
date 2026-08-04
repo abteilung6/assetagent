@@ -9,6 +9,7 @@ import (
 
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
 	"github.com/abteilung6/assetagent/internal/decisions"
+	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -102,9 +103,16 @@ func (s *DecisionService) Create(ctx context.Context, req CreateDecisionRequest)
 		return Decision{}, fmt.Errorf("%w: action due_on is required", ErrInvalidDecision)
 	}
 
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return Decision{}, err
+	}
 	q := sqldb.New(s.pool)
 	if req.ReviewID != nil {
-		if _, err := q.GetMoneyReview(ctx, *req.ReviewID); err != nil {
+		if _, err := q.GetMoneyReview(ctx, sqldb.GetMoneyReviewParams{
+			ID:          *req.ReviewID,
+			HouseholdID: householdID,
+		}); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return Decision{}, ErrMoneyReviewNotFound
 			}
@@ -112,7 +120,10 @@ func (s *DecisionService) Create(ctx context.Context, req CreateDecisionRequest)
 		}
 	}
 	if req.ScenarioID != nil {
-		if _, err := q.GetScenario(ctx, *req.ScenarioID); err != nil {
+		if _, err := q.GetScenario(ctx, sqldb.GetScenarioParams{
+			ID:          *req.ScenarioID,
+			HouseholdID: householdID,
+		}); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return Decision{}, ErrScenarioNotFound
 			}
@@ -137,6 +148,7 @@ func (s *DecisionService) Create(ctx context.Context, req CreateDecisionRequest)
 	qtx := q.WithTx(tx)
 
 	drow, err := qtx.InsertDecision(ctx, sqldb.InsertDecisionParams{
+		HouseholdID: householdID,
 		ReviewID:    optionalUUID(req.ReviewID),
 		ScenarioID:  optionalUUID(req.ScenarioID),
 		Title:       req.Title,
@@ -169,14 +181,24 @@ func (s *DecisionService) List(ctx context.Context, limit int) ([]Decision, erro
 	if limit <= 0 {
 		limit = 50
 	}
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
 	q := sqldb.New(s.pool)
-	rows, err := q.ListDecisions(ctx, int32(limit))
+	rows, err := q.ListDecisions(ctx, sqldb.ListDecisionsParams{
+		HouseholdID: householdID,
+		RowLimit:    int32(limit),
+	})
 	if err != nil {
 		return nil, err
 	}
 	out := make([]Decision, 0, len(rows))
 	for _, row := range rows {
-		actions, err := q.ListActionsForDecision(ctx, row.ID)
+		actions, err := q.ListActionsForDecision(ctx, sqldb.ListActionsForDecisionParams{
+			DecisionID:  row.ID,
+			HouseholdID: householdID,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -203,9 +225,14 @@ func (s *DecisionService) ListActions(ctx context.Context, status *string, limit
 		}
 		statusArg = pgtype.Text{String: *status, Valid: true}
 	}
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := sqldb.New(s.pool).ListActions(ctx, sqldb.ListActionsParams{
-		Status:   statusArg,
-		RowLimit: int32(limit),
+		HouseholdID: householdID,
+		Status:      statusArg,
+		RowLimit:    int32(limit),
 	})
 	if err != nil {
 		return nil, err
@@ -225,8 +252,15 @@ func (s *DecisionService) UpdateActionStatus(ctx context.Context, id uuid.UUID, 
 	if err := decisions.ValidateStatus(req.Status); err != nil {
 		return Action{}, fmt.Errorf("%w: %v", ErrInvalidActionStatus, err)
 	}
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return Action{}, err
+	}
 	q := sqldb.New(s.pool)
-	row, err := q.GetAction(ctx, id)
+	row, err := q.GetAction(ctx, sqldb.GetActionParams{
+		ID:          id,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Action{}, ErrActionNotFound
@@ -251,6 +285,7 @@ func (s *DecisionService) UpdateActionStatus(ctx context.Context, id uuid.UUID, 
 
 	updated, err := q.UpdateActionStatus(ctx, sqldb.UpdateActionStatusParams{
 		ID:          id,
+		HouseholdID: householdID,
 		Status:      req.Status,
 		OutcomeNote: note,
 		VerifiedAt:  verified,

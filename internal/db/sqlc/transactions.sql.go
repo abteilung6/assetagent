@@ -15,10 +15,11 @@ import (
 
 const countTransactions = `-- name: CountTransactions :one
 SELECT COUNT(*)::bigint AS count FROM transactions
+WHERE household_id = $1
 `
 
-func (q *Queries) CountTransactions(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countTransactions)
+func (q *Queries) CountTransactions(ctx context.Context, householdID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countTransactions, householdID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -27,21 +28,23 @@ func (q *Queries) CountTransactions(ctx context.Context) (int64, error) {
 const countTransactionsFiltered = `-- name: CountTransactionsFiltered :one
 SELECT COUNT(*)::bigint AS count
 FROM transactions
-WHERE ($1::date IS NULL OR booking_date >= $1::date)
-  AND ($2::date IS NULL OR booking_date <= $2::date)
-  AND ($3::text IS NULL OR order_account = $3)
-  AND ($4::text IS NULL OR counterparty ILIKE $4 || '%')
-  AND ($5::numeric IS NULL OR amount >= $5::numeric)
-  AND ($6::numeric IS NULL OR amount <= $6::numeric)
+WHERE household_id = $1
+  AND ($2::date IS NULL OR booking_date >= $2::date)
+  AND ($3::date IS NULL OR booking_date <= $3::date)
+  AND ($4::text IS NULL OR order_account = $4)
+  AND ($5::text IS NULL OR counterparty ILIKE $5 || '%')
+  AND ($6::numeric IS NULL OR amount >= $6::numeric)
+  AND ($7::numeric IS NULL OR amount <= $7::numeric)
   AND (
-    $7::text IS NULL
-    OR purpose ILIKE '%' || $7 || '%'
-    OR counterparty ILIKE '%' || $7 || '%'
-    OR booking_text ILIKE '%' || $7 || '%'
+    $8::text IS NULL
+    OR purpose ILIKE '%' || $8 || '%'
+    OR counterparty ILIKE '%' || $8 || '%'
+    OR booking_text ILIKE '%' || $8 || '%'
   )
 `
 
 type CountTransactionsFilteredParams struct {
+	HouseholdID  uuid.UUID      `json:"household_id"`
 	FromDate     pgtype.Date    `json:"from_date"`
 	ToDate       pgtype.Date    `json:"to_date"`
 	Account      pgtype.Text    `json:"account"`
@@ -53,6 +56,7 @@ type CountTransactionsFilteredParams struct {
 
 func (q *Queries) CountTransactionsFiltered(ctx context.Context, arg CountTransactionsFilteredParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countTransactionsFiltered,
+		arg.HouseholdID,
 		arg.FromDate,
 		arg.ToDate,
 		arg.Account,
@@ -68,6 +72,7 @@ func (q *Queries) CountTransactionsFiltered(ctx context.Context, arg CountTransa
 
 const insertTransaction = `-- name: InsertTransaction :one
 INSERT INTO transactions (
+    household_id,
     order_account,
     booking_date,
     value_date,
@@ -89,12 +94,13 @@ INSERT INTO transactions (
     account_id,
     import_run_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
 )
 RETURNING id
 `
 
 type InsertTransactionParams struct {
+	HouseholdID                    uuid.UUID       `json:"household_id"`
 	OrderAccount                   string          `json:"order_account"`
 	BookingDate                    pgtype.Date     `json:"booking_date"`
 	ValueDate                      pgtype.Date     `json:"value_date"`
@@ -119,6 +125,7 @@ type InsertTransactionParams struct {
 
 func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, insertTransaction,
+		arg.HouseholdID,
 		arg.OrderAccount,
 		arg.BookingDate,
 		arg.ValueDate,
@@ -147,6 +154,7 @@ func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionPa
 
 const insertTransactionIfNew = `-- name: InsertTransactionIfNew :one
 INSERT INTO transactions (
+    household_id,
     order_account,
     booking_date,
     value_date,
@@ -168,13 +176,14 @@ INSERT INTO transactions (
     account_id,
     import_run_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
 )
 ON CONFLICT (fingerprint) DO NOTHING
 RETURNING id
 `
 
 type InsertTransactionIfNewParams struct {
+	HouseholdID                    uuid.UUID       `json:"household_id"`
 	OrderAccount                   string          `json:"order_account"`
 	BookingDate                    pgtype.Date     `json:"booking_date"`
 	ValueDate                      pgtype.Date     `json:"value_date"`
@@ -199,6 +208,7 @@ type InsertTransactionIfNewParams struct {
 
 func (q *Queries) InsertTransactionIfNew(ctx context.Context, arg InsertTransactionIfNewParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, insertTransactionIfNew,
+		arg.HouseholdID,
 		arg.OrderAccount,
 		arg.BookingDate,
 		arg.ValueDate,
@@ -255,29 +265,31 @@ SELECT
         WHERE m.transaction_id = t.id
     ) AS recurring
 FROM transactions t
-WHERE ($1::date IS NULL OR t.booking_date >= $1::date)
-  AND ($2::date IS NULL OR t.booking_date <= $2::date)
-  AND ($3::text IS NULL OR t.order_account = $3)
-  AND ($4::text IS NULL OR t.counterparty ILIKE $4 || '%')
-  AND ($5::numeric IS NULL OR t.amount >= $5::numeric)
-  AND ($6::numeric IS NULL OR t.amount <= $6::numeric)
+WHERE t.household_id = $1
+  AND ($2::date IS NULL OR t.booking_date >= $2::date)
+  AND ($3::date IS NULL OR t.booking_date <= $3::date)
+  AND ($4::text IS NULL OR t.order_account = $4)
+  AND ($5::text IS NULL OR t.counterparty ILIKE $5 || '%')
+  AND ($6::numeric IS NULL OR t.amount >= $6::numeric)
+  AND ($7::numeric IS NULL OR t.amount <= $7::numeric)
   AND (
-    $7::text IS NULL
-    OR t.purpose ILIKE '%' || $7 || '%'
-    OR t.counterparty ILIKE '%' || $7 || '%'
-    OR t.booking_text ILIKE '%' || $7 || '%'
+    $8::text IS NULL
+    OR t.purpose ILIKE '%' || $8 || '%'
+    OR t.counterparty ILIKE '%' || $8 || '%'
+    OR t.booking_text ILIKE '%' || $8 || '%'
   )
 ORDER BY
-  CASE WHEN $8 = 'amount' AND COALESCE($9, false) THEN t.amount END ASC NULLS LAST,
-  CASE WHEN $8 = 'amount' AND NOT COALESCE($9, false) THEN t.amount END DESC NULLS LAST,
-  CASE WHEN $8 = 'counterparty' AND COALESCE($9, false) THEN t.counterparty END ASC NULLS LAST,
-  CASE WHEN $8 = 'counterparty' AND NOT COALESCE($9, false) THEN t.counterparty END DESC NULLS LAST,
-  CASE WHEN ($8 IS NULL OR $8 = 'booking_date') AND COALESCE($9, false) THEN t.booking_date END ASC NULLS LAST,
-  CASE WHEN ($8 IS NULL OR $8 = 'booking_date') AND NOT COALESCE($9, false) THEN t.booking_date END DESC NULLS LAST
-LIMIT $11 OFFSET $10
+  CASE WHEN $9 = 'amount' AND COALESCE($10, false) THEN t.amount END ASC NULLS LAST,
+  CASE WHEN $9 = 'amount' AND NOT COALESCE($10, false) THEN t.amount END DESC NULLS LAST,
+  CASE WHEN $9 = 'counterparty' AND COALESCE($10, false) THEN t.counterparty END ASC NULLS LAST,
+  CASE WHEN $9 = 'counterparty' AND NOT COALESCE($10, false) THEN t.counterparty END DESC NULLS LAST,
+  CASE WHEN ($9 IS NULL OR $9 = 'booking_date') AND COALESCE($10, false) THEN t.booking_date END ASC NULLS LAST,
+  CASE WHEN ($9 IS NULL OR $9 = 'booking_date') AND NOT COALESCE($10, false) THEN t.booking_date END DESC NULLS LAST
+LIMIT $12 OFFSET $11
 `
 
 type ListTransactionsParams struct {
+	HouseholdID  uuid.UUID      `json:"household_id"`
 	FromDate     pgtype.Date    `json:"from_date"`
 	ToDate       pgtype.Date    `json:"to_date"`
 	Account      pgtype.Text    `json:"account"`
@@ -319,6 +331,7 @@ type ListTransactionsRow struct {
 
 func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]ListTransactionsRow, error) {
 	rows, err := q.db.Query(ctx, listTransactions,
+		arg.HouseholdID,
 		arg.FromDate,
 		arg.ToDate,
 		arg.Account,
@@ -376,8 +389,8 @@ func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsPara
 const setTransactionOneOff = `-- name: SetTransactionOneOff :one
 WITH updated AS (
     UPDATE transactions
-    SET one_off = $2
-    WHERE id = $1
+    SET one_off = $3
+    WHERE id = $1 AND household_id = $2
     RETURNING
         id,
         order_account,
@@ -434,8 +447,9 @@ FROM updated
 `
 
 type SetTransactionOneOffParams struct {
-	ID     uuid.UUID `json:"id"`
-	OneOff bool      `json:"one_off"`
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+	OneOff      bool      `json:"one_off"`
 }
 
 type SetTransactionOneOffRow struct {
@@ -465,7 +479,7 @@ type SetTransactionOneOffRow struct {
 }
 
 func (q *Queries) SetTransactionOneOff(ctx context.Context, arg SetTransactionOneOffParams) (SetTransactionOneOffRow, error) {
-	row := q.db.QueryRow(ctx, setTransactionOneOff, arg.ID, arg.OneOff)
+	row := q.db.QueryRow(ctx, setTransactionOneOff, arg.ID, arg.HouseholdID, arg.OneOff)
 	var i SetTransactionOneOffRow
 	err := row.Scan(
 		&i.ID,

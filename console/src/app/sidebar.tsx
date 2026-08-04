@@ -1,10 +1,12 @@
 import type React from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ClipboardListIcon,
   GaugeIcon,
   InboxIcon,
   LineChartIcon,
+  LogOutIcon,
   MessageSquareIcon,
   Table2Icon,
   TrendingUpIcon,
@@ -15,6 +17,7 @@ import {
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarHeader,
   SidebarMenu,
@@ -26,6 +29,7 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { postLogoutMutation } from "@/api/@tanstack/react-query.gen";
 import { useClassificationQueue } from "@/hooks/use-classification-queue";
 import { useUncertainRecurring } from "@/hooks/use-recurring-uncertain";
 import { useTransferCandidates } from "@/hooks/use-transfer-candidates";
@@ -40,6 +44,15 @@ function pathActive(pathname: string, target: string, exact = false): boolean {
 
 export const AppSidebar: React.FC = () => {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const logout = useMutation({
+    ...postLogoutMutation(),
+    onSettled: async () => {
+      queryClient.clear();
+      await navigate({ to: "/login" });
+    },
+  });
   const candidatesQuery = useTransferCandidates();
   const classificationQuery = useClassificationQueue();
   const recurringQuery = useUncertainRecurring();
@@ -229,6 +242,22 @@ export const AppSidebar: React.FC = () => {
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="Log out"
+              disabled={logout.isPending}
+              onClick={() => {
+                logout.mutate({});
+              }}
+            >
+              <LogOutIcon />
+              <span>Log out</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

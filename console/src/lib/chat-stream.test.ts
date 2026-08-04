@@ -54,6 +54,7 @@ describe("streamChat", () => {
       "/api/chat/stream",
       expect.objectContaining({
         method: "POST",
+        credentials: "include",
         body: JSON.stringify({
           messages: [{ role: "user", content: "How much did I spend?" }],
           provider: "openrouter",

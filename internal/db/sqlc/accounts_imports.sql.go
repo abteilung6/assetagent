@@ -15,11 +15,16 @@ import (
 const countTransactionsByImportRun = `-- name: CountTransactionsByImportRun :one
 SELECT COUNT(*)::bigint AS count
 FROM transactions
-WHERE import_run_id = $1
+WHERE import_run_id = $1 AND household_id = $2
 `
 
-func (q *Queries) CountTransactionsByImportRun(ctx context.Context, importRunID pgtype.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, countTransactionsByImportRun, importRunID)
+type CountTransactionsByImportRunParams struct {
+	ImportRunID pgtype.UUID `json:"import_run_id"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+}
+
+func (q *Queries) CountTransactionsByImportRun(ctx context.Context, arg CountTransactionsByImportRunParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countTransactionsByImportRun, arg.ImportRunID, arg.HouseholdID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -27,18 +32,20 @@ func (q *Queries) CountTransactionsByImportRun(ctx context.Context, importRunID 
 
 const createAccount = `-- name: CreateAccount :one
 INSERT INTO accounts (
+    household_id,
     display_name,
     bank,
     currency,
     order_account,
     masked_identifier
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4, $5, $6
 )
-RETURNING id, display_name, bank, currency, order_account, masked_identifier, created_at, updated_at
+RETURNING id, display_name, bank, currency, order_account, masked_identifier, created_at, updated_at, household_id
 `
 
 type CreateAccountParams struct {
+	HouseholdID      uuid.UUID   `json:"household_id"`
 	DisplayName      string      `json:"display_name"`
 	Bank             string      `json:"bank"`
 	Currency         string      `json:"currency"`
@@ -48,6 +55,7 @@ type CreateAccountParams struct {
 
 func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error) {
 	row := q.db.QueryRow(ctx, createAccount,
+		arg.HouseholdID,
 		arg.DisplayName,
 		arg.Bank,
 		arg.Currency,
@@ -64,12 +72,14 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (A
 		&i.MaskedIdentifier,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const createImportRun = `-- name: CreateImportRun :one
 INSERT INTO import_runs (
+    household_id,
     account_id,
     source_filename,
     file_hash,
@@ -86,12 +96,13 @@ INSERT INTO import_runs (
     warnings,
     committed_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
 )
-RETURNING id, account_id, source_filename, file_hash, parser_name, parser_version, status, period_from, period_to, row_total, row_valid, row_invalid, row_inserted, row_duplicate, warnings, created_at, committed_at, rolled_back_at
+RETURNING id, account_id, source_filename, file_hash, parser_name, parser_version, status, period_from, period_to, row_total, row_valid, row_invalid, row_inserted, row_duplicate, warnings, created_at, committed_at, rolled_back_at, household_id
 `
 
 type CreateImportRunParams struct {
+	HouseholdID    uuid.UUID          `json:"household_id"`
 	AccountID      uuid.UUID          `json:"account_id"`
 	SourceFilename string             `json:"source_filename"`
 	FileHash       string             `json:"file_hash"`
@@ -111,6 +122,7 @@ type CreateImportRunParams struct {
 
 func (q *Queries) CreateImportRun(ctx context.Context, arg CreateImportRunParams) (ImportRun, error) {
 	row := q.db.QueryRow(ctx, createImportRun,
+		arg.HouseholdID,
 		arg.AccountID,
 		arg.SourceFilename,
 		arg.FileHash,
@@ -147,17 +159,23 @@ func (q *Queries) CreateImportRun(ctx context.Context, arg CreateImportRunParams
 		&i.CreatedAt,
 		&i.CommittedAt,
 		&i.RolledBackAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const deleteTransactionsByImportRun = `-- name: DeleteTransactionsByImportRun :execrows
 DELETE FROM transactions
-WHERE import_run_id = $1
+WHERE import_run_id = $1 AND household_id = $2
 `
 
-func (q *Queries) DeleteTransactionsByImportRun(ctx context.Context, importRunID pgtype.UUID) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteTransactionsByImportRun, importRunID)
+type DeleteTransactionsByImportRunParams struct {
+	ImportRunID pgtype.UUID `json:"import_run_id"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+}
+
+func (q *Queries) DeleteTransactionsByImportRun(ctx context.Context, arg DeleteTransactionsByImportRunParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteTransactionsByImportRun, arg.ImportRunID, arg.HouseholdID)
 	if err != nil {
 		return 0, err
 	}
@@ -165,12 +183,17 @@ func (q *Queries) DeleteTransactionsByImportRun(ctx context.Context, importRunID
 }
 
 const getAccountByID = `-- name: GetAccountByID :one
-SELECT id, display_name, bank, currency, order_account, masked_identifier, created_at, updated_at FROM accounts
-WHERE id = $1
+SELECT id, display_name, bank, currency, order_account, masked_identifier, created_at, updated_at, household_id FROM accounts
+WHERE id = $1 AND household_id = $2
 `
 
-func (q *Queries) GetAccountByID(ctx context.Context, id uuid.UUID) (Account, error) {
-	row := q.db.QueryRow(ctx, getAccountByID, id)
+type GetAccountByIDParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) GetAccountByID(ctx context.Context, arg GetAccountByIDParams) (Account, error) {
+	row := q.db.QueryRow(ctx, getAccountByID, arg.ID, arg.HouseholdID)
 	var i Account
 	err := row.Scan(
 		&i.ID,
@@ -181,17 +204,23 @@ func (q *Queries) GetAccountByID(ctx context.Context, id uuid.UUID) (Account, er
 		&i.MaskedIdentifier,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const getAccountByOrderAccount = `-- name: GetAccountByOrderAccount :one
-SELECT id, display_name, bank, currency, order_account, masked_identifier, created_at, updated_at FROM accounts
-WHERE order_account = $1
+SELECT id, display_name, bank, currency, order_account, masked_identifier, created_at, updated_at, household_id FROM accounts
+WHERE order_account = $1 AND household_id = $2
 `
 
-func (q *Queries) GetAccountByOrderAccount(ctx context.Context, orderAccount pgtype.Text) (Account, error) {
-	row := q.db.QueryRow(ctx, getAccountByOrderAccount, orderAccount)
+type GetAccountByOrderAccountParams struct {
+	OrderAccount pgtype.Text `json:"order_account"`
+	HouseholdID  uuid.UUID   `json:"household_id"`
+}
+
+func (q *Queries) GetAccountByOrderAccount(ctx context.Context, arg GetAccountByOrderAccountParams) (Account, error) {
+	row := q.db.QueryRow(ctx, getAccountByOrderAccount, arg.OrderAccount, arg.HouseholdID)
 	var i Account
 	err := row.Scan(
 		&i.ID,
@@ -202,17 +231,23 @@ func (q *Queries) GetAccountByOrderAccount(ctx context.Context, orderAccount pgt
 		&i.MaskedIdentifier,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const getImportRun = `-- name: GetImportRun :one
-SELECT id, account_id, source_filename, file_hash, parser_name, parser_version, status, period_from, period_to, row_total, row_valid, row_invalid, row_inserted, row_duplicate, warnings, created_at, committed_at, rolled_back_at FROM import_runs
-WHERE id = $1
+SELECT id, account_id, source_filename, file_hash, parser_name, parser_version, status, period_from, period_to, row_total, row_valid, row_invalid, row_inserted, row_duplicate, warnings, created_at, committed_at, rolled_back_at, household_id FROM import_runs
+WHERE id = $1 AND household_id = $2
 `
 
-func (q *Queries) GetImportRun(ctx context.Context, id uuid.UUID) (ImportRun, error) {
-	row := q.db.QueryRow(ctx, getImportRun, id)
+type GetImportRunParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) GetImportRun(ctx context.Context, arg GetImportRunParams) (ImportRun, error) {
+	row := q.db.QueryRow(ctx, getImportRun, arg.ID, arg.HouseholdID)
 	var i ImportRun
 	err := row.Scan(
 		&i.ID,
@@ -233,19 +268,26 @@ func (q *Queries) GetImportRun(ctx context.Context, id uuid.UUID) (ImportRun, er
 		&i.CreatedAt,
 		&i.CommittedAt,
 		&i.RolledBackAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const listImportRuns = `-- name: ListImportRuns :many
-SELECT id, account_id, source_filename, file_hash, parser_name, parser_version, status, period_from, period_to, row_total, row_valid, row_invalid, row_inserted, row_duplicate, warnings, created_at, committed_at, rolled_back_at
+SELECT id, account_id, source_filename, file_hash, parser_name, parser_version, status, period_from, period_to, row_total, row_valid, row_invalid, row_inserted, row_duplicate, warnings, created_at, committed_at, rolled_back_at, household_id
 FROM import_runs
+WHERE household_id = $1
 ORDER BY created_at DESC
-LIMIT $1
+LIMIT $2
 `
 
-func (q *Queries) ListImportRuns(ctx context.Context, limit int32) ([]ImportRun, error) {
-	rows, err := q.db.Query(ctx, listImportRuns, limit)
+type ListImportRunsParams struct {
+	HouseholdID uuid.UUID `json:"household_id"`
+	Limit       int32     `json:"limit"`
+}
+
+func (q *Queries) ListImportRuns(ctx context.Context, arg ListImportRunsParams) ([]ImportRun, error) {
+	rows, err := q.db.Query(ctx, listImportRuns, arg.HouseholdID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -272,6 +314,7 @@ func (q *Queries) ListImportRuns(ctx context.Context, limit int32) ([]ImportRun,
 			&i.CreatedAt,
 			&i.CommittedAt,
 			&i.RolledBackAt,
+			&i.HouseholdID,
 		); err != nil {
 			return nil, err
 		}
@@ -289,12 +332,18 @@ SET
     status = 'rolled_back',
     rolled_back_at = now()
 WHERE id = $1
+  AND household_id = $2
   AND status = 'committed'
-RETURNING id, account_id, source_filename, file_hash, parser_name, parser_version, status, period_from, period_to, row_total, row_valid, row_invalid, row_inserted, row_duplicate, warnings, created_at, committed_at, rolled_back_at
+RETURNING id, account_id, source_filename, file_hash, parser_name, parser_version, status, period_from, period_to, row_total, row_valid, row_invalid, row_inserted, row_duplicate, warnings, created_at, committed_at, rolled_back_at, household_id
 `
 
-func (q *Queries) MarkImportRunRolledBack(ctx context.Context, id uuid.UUID) (ImportRun, error) {
-	row := q.db.QueryRow(ctx, markImportRunRolledBack, id)
+type MarkImportRunRolledBackParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) MarkImportRunRolledBack(ctx context.Context, arg MarkImportRunRolledBackParams) (ImportRun, error) {
+	row := q.db.QueryRow(ctx, markImportRunRolledBack, arg.ID, arg.HouseholdID)
 	var i ImportRun
 	err := row.Scan(
 		&i.ID,
@@ -315,6 +364,7 @@ func (q *Queries) MarkImportRunRolledBack(ctx context.Context, id uuid.UUID) (Im
 		&i.CreatedAt,
 		&i.CommittedAt,
 		&i.RolledBackAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
@@ -322,21 +372,28 @@ func (q *Queries) MarkImportRunRolledBack(ctx context.Context, id uuid.UUID) (Im
 const updateImportRunCounts = `-- name: UpdateImportRunCounts :one
 UPDATE import_runs
 SET
-    row_inserted = $2,
-    row_duplicate = $3,
+    row_inserted = $3,
+    row_duplicate = $4,
     committed_at = COALESCE(committed_at, now())
 WHERE id = $1
-RETURNING id, account_id, source_filename, file_hash, parser_name, parser_version, status, period_from, period_to, row_total, row_valid, row_invalid, row_inserted, row_duplicate, warnings, created_at, committed_at, rolled_back_at
+  AND household_id = $2
+RETURNING id, account_id, source_filename, file_hash, parser_name, parser_version, status, period_from, period_to, row_total, row_valid, row_invalid, row_inserted, row_duplicate, warnings, created_at, committed_at, rolled_back_at, household_id
 `
 
 type UpdateImportRunCountsParams struct {
 	ID           uuid.UUID `json:"id"`
+	HouseholdID  uuid.UUID `json:"household_id"`
 	RowInserted  int32     `json:"row_inserted"`
 	RowDuplicate int32     `json:"row_duplicate"`
 }
 
 func (q *Queries) UpdateImportRunCounts(ctx context.Context, arg UpdateImportRunCountsParams) (ImportRun, error) {
-	row := q.db.QueryRow(ctx, updateImportRunCounts, arg.ID, arg.RowInserted, arg.RowDuplicate)
+	row := q.db.QueryRow(ctx, updateImportRunCounts,
+		arg.ID,
+		arg.HouseholdID,
+		arg.RowInserted,
+		arg.RowDuplicate,
+	)
 	var i ImportRun
 	err := row.Scan(
 		&i.ID,
@@ -357,6 +414,7 @@ func (q *Queries) UpdateImportRunCounts(ctx context.Context, arg UpdateImportRun
 		&i.CreatedAt,
 		&i.CommittedAt,
 		&i.RolledBackAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }

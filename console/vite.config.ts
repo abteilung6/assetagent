@@ -12,7 +12,13 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      // Optional fallback when VITE_API_BASE_URL is unset.
+      // Auth cookies require absolute API base (see VITE_API_BASE_URL).
       "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+      },
+      "/auth": {
         target: "http://localhost:8080",
         changeOrigin: true,
       },

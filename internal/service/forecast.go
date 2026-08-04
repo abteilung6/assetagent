@@ -9,6 +9,7 @@ import (
 
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
 	"github.com/abteilung6/assetagent/internal/forecast"
+	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -157,7 +158,14 @@ func (s *ForecastService) Create(ctx context.Context, req CreateForecastRequest)
 }
 
 func (s *ForecastService) Get(ctx context.Context, id uuid.UUID) (ForecastArtifact, error) {
-	row, err := sqldb.New(s.pool).GetForecast(ctx, id)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return ForecastArtifact{}, err
+	}
+	row, err := sqldb.New(s.pool).GetForecast(ctx, sqldb.GetForecastParams{
+		ID:          id,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ForecastArtifact{}, ErrForecastNotFound
@@ -172,7 +180,14 @@ func (s *ForecastService) LatestForCurrentBaseline(ctx context.Context) (Forecas
 	if err != nil {
 		return ForecastArtifact{}, err
 	}
-	row, err := sqldb.New(s.pool).GetLatestForecastForBaseline(ctx, baseline.ID)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return ForecastArtifact{}, err
+	}
+	row, err := sqldb.New(s.pool).GetLatestForecastForBaseline(ctx, sqldb.GetLatestForecastForBaselineParams{
+		BaselineID:  baseline.ID,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ForecastArtifact{}, ErrForecastNotFound
@@ -225,12 +240,17 @@ func (s *ForecastService) RunScenario(ctx context.Context, req RunScenarioReques
 		return ScenarioArtifact{}, err
 	}
 
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return ScenarioArtifact{}, err
+	}
 	row, err := sqldb.New(s.pool).InsertScenario(ctx, sqldb.InsertScenarioParams{
-		ForecastID: req.ForecastID,
-		Kind:       string(req.Kind),
-		Params:     paramsJSON,
-		Result:     resultJSON,
-		Status:     "confirmed",
+		HouseholdID: householdID,
+		ForecastID:  req.ForecastID,
+		Kind:        string(req.Kind),
+		Params:      paramsJSON,
+		Result:      resultJSON,
+		Status:      "confirmed",
 	})
 	if err != nil {
 		return ScenarioArtifact{}, fmt.Errorf("insert scenario: %w", err)
@@ -247,7 +267,14 @@ func (s *ForecastService) RunScenario(ctx context.Context, req RunScenarioReques
 }
 
 func (s *ForecastService) ListScenarios(ctx context.Context, forecastID uuid.UUID) ([]ScenarioArtifact, error) {
-	rows, err := sqldb.New(s.pool).ListScenariosForForecast(ctx, forecastID)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := sqldb.New(s.pool).ListScenariosForForecast(ctx, sqldb.ListScenariosForForecastParams{
+		ForecastID:  forecastID,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +300,14 @@ func (s *ForecastService) resolveBaseline(ctx context.Context, id *uuid.UUID) (C
 		}
 		return b, nil
 	}
-	row, err := sqldb.New(s.pool).GetFinancialBaseline(ctx, *id)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return ComputedBaseline{}, err
+	}
+	row, err := sqldb.New(s.pool).GetFinancialBaseline(ctx, sqldb.GetFinancialBaselineParams{
+		ID:          *id,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ComputedBaseline{}, ErrBaselineNotFound
@@ -306,7 +340,12 @@ func (s *ForecastService) insertForecast(ctx context.Context, artifact ForecastA
 		return ForecastArtifact{}, err
 	}
 
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return ForecastArtifact{}, err
+	}
 	row, err := sqldb.New(s.pool).InsertForecast(ctx, sqldb.InsertForecastParams{
+		HouseholdID:      householdID,
 		BaselineID:       artifact.BaselineID,
 		HorizonDays:      int32(artifact.HorizonDays),
 		StartingBalance:  artifact.StartingBalance,

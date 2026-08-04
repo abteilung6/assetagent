@@ -4,7 +4,8 @@ SELECT
   COALESCE(SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END), 0)::numeric AS expenses,
   COALESCE(SUM(amount), 0)::numeric AS net
 FROM transactions
-WHERE booking_date >= sqlc.arg('from_date')::date
+WHERE household_id = sqlc.arg('household_id')
+  AND booking_date >= sqlc.arg('from_date')::date
   AND booking_date <= sqlc.arg('to_date')::date;
 
 -- name: GetCashflowV2 :one
@@ -13,13 +14,15 @@ SELECT
   COALESCE(SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END), 0)::numeric AS expenses,
   COALESCE(SUM(amount), 0)::numeric AS net
 FROM transactions t
-WHERE t.booking_date >= sqlc.arg('from_date')::date
+WHERE t.household_id = sqlc.arg('household_id')
+  AND t.booking_date >= sqlc.arg('from_date')::date
   AND t.booking_date <= sqlc.arg('to_date')::date
   AND t.one_off = false
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = sqlc.arg('household_id')
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   );
 
@@ -27,7 +30,8 @@ WHERE t.booking_date >= sqlc.arg('from_date')::date
 SELECT DISTINCT COALESCE(a.display_name, t.order_account, 'unknown')::text AS account_name
 FROM transactions t
 LEFT JOIN accounts a ON a.id = t.account_id
-WHERE t.booking_date >= sqlc.arg('from_date')::date
+WHERE t.household_id = sqlc.arg('household_id')
+  AND t.booking_date >= sqlc.arg('from_date')::date
   AND t.booking_date <= sqlc.arg('to_date')::date
 ORDER BY account_name ASC;
 
@@ -36,7 +40,8 @@ SELECT p.id
 FROM transfer_pairs p
 JOIN transactions out_tx ON out_tx.id = p.tx_out_id
 JOIN transactions in_tx ON in_tx.id = p.tx_in_id
-WHERE p.status = 'confirmed'
+WHERE p.household_id = sqlc.arg('household_id')
+  AND p.status = 'confirmed'
   AND (
     (out_tx.booking_date >= sqlc.arg('from_date')::date AND out_tx.booking_date <= sqlc.arg('to_date')::date)
     OR (in_tx.booking_date >= sqlc.arg('from_date')::date AND in_tx.booking_date <= sqlc.arg('to_date')::date)
@@ -46,13 +51,15 @@ ORDER BY p.created_at ASC;
 -- name: ListCashflowV2TransactionIDs :many
 SELECT t.id
 FROM transactions t
-WHERE t.booking_date >= sqlc.arg('from_date')::date
+WHERE t.household_id = sqlc.arg('household_id')
+  AND t.booking_date >= sqlc.arg('from_date')::date
   AND t.booking_date <= sqlc.arg('to_date')::date
   AND t.one_off = false
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = sqlc.arg('household_id')
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   )
 ORDER BY t.booking_date ASC, t.id ASC
@@ -60,7 +67,8 @@ LIMIT sqlc.arg('row_limit');
 
 -- name: GetLatestBookingDate :one
 SELECT MAX(booking_date)::date AS latest_booking_date
-FROM transactions;
+FROM transactions
+WHERE household_id = $1;
 
 -- name: GetTopCounterparties :many
 SELECT
@@ -68,7 +76,8 @@ SELECT
   SUM(-amount)::numeric AS total_spent,
   COUNT(*)::bigint AS transaction_count
 FROM transactions
-WHERE booking_date >= sqlc.arg('from_date')::date
+WHERE household_id = sqlc.arg('household_id')
+  AND booking_date >= sqlc.arg('from_date')::date
   AND booking_date <= sqlc.arg('to_date')::date
   AND amount < 0
   AND counterparty <> ''
@@ -83,13 +92,15 @@ SELECT
   COALESCE(SUM(CASE WHEN t.amount < 0 THEN -t.amount ELSE 0 END), 0)::numeric AS expenses,
   COALESCE(SUM(t.amount), 0)::numeric AS net
 FROM transactions t
-WHERE t.booking_date >= sqlc.arg('from_date')::date
+WHERE t.household_id = sqlc.arg('household_id')
+  AND t.booking_date >= sqlc.arg('from_date')::date
   AND t.booking_date <= sqlc.arg('to_date')::date
   AND t.one_off = false
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = sqlc.arg('household_id')
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   )
 GROUP BY 1
@@ -100,7 +111,8 @@ SELECT
   COUNT(*)::bigint AS one_off_count,
   COALESCE(SUM(-amount), 0)::numeric AS one_off_expense_total
 FROM transactions
-WHERE booking_date >= sqlc.arg('from_date')::date
+WHERE household_id = sqlc.arg('household_id')
+  AND booking_date >= sqlc.arg('from_date')::date
   AND booking_date <= sqlc.arg('to_date')::date
   AND one_off = true
   AND amount < 0;
@@ -114,7 +126,8 @@ SELECT
 FROM transactions t
 JOIN transaction_classifications tc ON tc.transaction_id = t.id
 JOIN categories c ON c.id = tc.category_id
-WHERE t.booking_date >= sqlc.arg('from_date')::date
+WHERE t.household_id = sqlc.arg('household_id')
+  AND t.booking_date >= sqlc.arg('from_date')::date
   AND t.booking_date <= sqlc.arg('to_date')::date
   AND t.amount < 0
   AND t.one_off = false
@@ -122,6 +135,7 @@ WHERE t.booking_date >= sqlc.arg('from_date')::date
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = sqlc.arg('household_id')
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   )
 GROUP BY c.slug, c.display_name
@@ -136,7 +150,8 @@ SELECT
 FROM transactions t
 JOIN transaction_classifications tc ON tc.transaction_id = t.id
 JOIN categories c ON c.id = tc.category_id
-WHERE t.booking_date >= sqlc.arg('from_date')::date
+WHERE t.household_id = sqlc.arg('household_id')
+  AND t.booking_date >= sqlc.arg('from_date')::date
   AND t.booking_date <= sqlc.arg('to_date')::date
   AND t.amount < 0
   AND t.one_off = false
@@ -145,6 +160,7 @@ WHERE t.booking_date >= sqlc.arg('from_date')::date
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = sqlc.arg('household_id')
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   )
 GROUP BY 1
@@ -160,7 +176,8 @@ WITH category_totals AS (
   FROM transactions t
   JOIN transaction_classifications tc ON tc.transaction_id = t.id
   JOIN categories c ON c.id = tc.category_id
-  WHERE t.booking_date >= sqlc.arg('from_date')::date
+  WHERE t.household_id = sqlc.arg('household_id')
+    AND t.booking_date >= sqlc.arg('from_date')::date
     AND t.booking_date <= sqlc.arg('to_date')::date
     AND t.amount < 0
     AND t.one_off = false
@@ -168,6 +185,7 @@ WITH category_totals AS (
       SELECT 1
       FROM transfer_pairs p
       WHERE p.status = 'confirmed'
+        AND p.household_id = sqlc.arg('household_id')
         AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
     )
   GROUP BY c.slug, c.display_name
@@ -187,7 +205,8 @@ FROM transactions t
 JOIN transaction_classifications tc ON tc.transaction_id = t.id
 JOIN categories c ON c.id = tc.category_id
 JOIN top_categories top ON top.category_slug = c.slug
-WHERE t.booking_date >= sqlc.arg('from_date')::date
+WHERE t.household_id = sqlc.arg('household_id')
+  AND t.booking_date >= sqlc.arg('from_date')::date
   AND t.booking_date <= sqlc.arg('to_date')::date
   AND t.amount < 0
   AND t.one_off = false
@@ -195,6 +214,7 @@ WHERE t.booking_date >= sqlc.arg('from_date')::date
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = sqlc.arg('household_id')
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   )
 GROUP BY 1, c.slug, c.display_name
@@ -206,13 +226,15 @@ SELECT
   COALESCE(SUM(-t.amount), 0)::numeric AS expenses,
   COUNT(*)::bigint AS transaction_count
 FROM transactions t
-WHERE t.booking_date >= sqlc.arg('from_date')::date
+WHERE t.household_id = sqlc.arg('household_id')
+  AND t.booking_date >= sqlc.arg('from_date')::date
   AND t.booking_date <= sqlc.arg('to_date')::date
   AND t.amount < 0
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = sqlc.arg('household_id')
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   )
 GROUP BY 1

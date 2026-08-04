@@ -125,7 +125,7 @@ func TestGetRecurringMembers(t *testing.T) {
 
 func newRecurringTestRouter(recurring handler.RecurringService) chi.Router {
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(nil, nil, nil, nil, nil, nil, nil, recurring, nil, nil, nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(nil, nil, nil, nil, nil, nil, nil, recurring, nil, nil, nil, nil, nil), gen.ChiServerOptions{
 		BaseRouter: router,
 	})
 	return router

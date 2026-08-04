@@ -40,6 +40,7 @@ type Handler struct {
 	moneyReview MoneyReviewService
 	forecast    ForecastService
 	decision    DecisionService
+	sessions    *service.SessionService
 }
 
 func New(
@@ -55,6 +56,7 @@ func New(
 	moneyReview MoneyReviewService,
 	forecast ForecastService,
 	decision DecisionService,
+	sessions *service.SessionService,
 ) *Handler {
 	return &Handler{
 		list:        list,
@@ -69,6 +71,7 @@ func New(
 		moneyReview: moneyReview,
 		forecast:    forecast,
 		decision:    decision,
+		sessions:    sessions,
 	}
 }
 

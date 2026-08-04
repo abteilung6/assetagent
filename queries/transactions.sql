@@ -1,5 +1,6 @@
 -- name: InsertTransaction :one
 INSERT INTO transactions (
+    household_id,
     order_account,
     booking_date,
     value_date,
@@ -21,12 +22,13 @@ INSERT INTO transactions (
     account_id,
     import_run_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
 )
 RETURNING id;
 
 -- name: InsertTransactionIfNew :one
 INSERT INTO transactions (
+    household_id,
     order_account,
     booking_date,
     value_date,
@@ -48,18 +50,20 @@ INSERT INTO transactions (
     account_id,
     import_run_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
 )
 ON CONFLICT (fingerprint) DO NOTHING
 RETURNING id;
 
 -- name: CountTransactions :one
-SELECT COUNT(*)::bigint AS count FROM transactions;
+SELECT COUNT(*)::bigint AS count FROM transactions
+WHERE household_id = $1;
 
 -- name: CountTransactionsFiltered :one
 SELECT COUNT(*)::bigint AS count
 FROM transactions
-WHERE (sqlc.narg('from_date')::date IS NULL OR booking_date >= sqlc.narg('from_date')::date)
+WHERE household_id = sqlc.arg('household_id')
+  AND (sqlc.narg('from_date')::date IS NULL OR booking_date >= sqlc.narg('from_date')::date)
   AND (sqlc.narg('to_date')::date IS NULL OR booking_date <= sqlc.narg('to_date')::date)
   AND (sqlc.narg('account')::text IS NULL OR order_account = sqlc.narg('account'))
   AND (sqlc.narg('counterparty')::text IS NULL OR counterparty ILIKE sqlc.narg('counterparty') || '%')
@@ -102,7 +106,8 @@ SELECT
         WHERE m.transaction_id = t.id
     ) AS recurring
 FROM transactions t
-WHERE (sqlc.narg('from_date')::date IS NULL OR t.booking_date >= sqlc.narg('from_date')::date)
+WHERE t.household_id = sqlc.arg('household_id')
+  AND (sqlc.narg('from_date')::date IS NULL OR t.booking_date >= sqlc.narg('from_date')::date)
   AND (sqlc.narg('to_date')::date IS NULL OR t.booking_date <= sqlc.narg('to_date')::date)
   AND (sqlc.narg('account')::text IS NULL OR t.order_account = sqlc.narg('account'))
   AND (sqlc.narg('counterparty')::text IS NULL OR t.counterparty ILIKE sqlc.narg('counterparty') || '%')
@@ -126,8 +131,8 @@ LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 -- name: SetTransactionOneOff :one
 WITH updated AS (
     UPDATE transactions
-    SET one_off = $2
-    WHERE id = $1
+    SET one_off = $3
+    WHERE id = $1 AND household_id = $2
     RETURNING
         id,
         order_account,

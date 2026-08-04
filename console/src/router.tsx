@@ -16,6 +16,7 @@ import ImportsPage from "@/pages/imports/page";
 import InsightsCategoriesPage from "@/pages/insights/categories/page";
 import InsightsMonthPage from "@/pages/insights/month/page";
 import InsightsMonthsPage from "@/pages/insights/months/page";
+import LoginPage from "@/pages/login/page";
 import PlanPage from "@/pages/plan/page";
 import ReviewPage from "@/pages/review/page";
 import ReviewDetailPage from "@/pages/reviews/detail";
@@ -29,6 +30,15 @@ import { parseTransactionSearchParams } from "@/pages/transactions/search-params
 
 const rootRoute = createRootRoute({
   component: AppLayout,
+});
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  component: LoginPage,
+  staticData: {
+    title: "Anmelden",
+  },
 });
 
 const indexRoute = createRoute({
@@ -237,6 +247,7 @@ export {
 };
 
 const routeTree = rootRoute.addChildren([
+  loginRoute,
   indexRoute,
   chatRoute,
   baselineRoute,

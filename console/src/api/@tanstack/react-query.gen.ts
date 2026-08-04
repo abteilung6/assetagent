@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { getActions, getBaselineCategoryMerchants, getBaselineCategorySpend, getBaselineCategorySpendMonthly, getBaselineDailyExpensePace, getBaselineMonthlyCashflow, getBaselineOneOffImpact, getCategories, getClassificationQueue, getCurrentBaseline, getDecisions, getForecast, getForecastScenarios, getHealth, getImport, getImports, getLatestForecast, getLlmModels, getMoneyReview, getMoneyReviews, getRecurring, getRecurringMembers, getTransactions, getTransferCandidates, getUncertainRecurring, type Options, postActionStatus, postBaselineAdjust, postBaselineConfirm, postBaselinesRecompute, postChat, postClassificationApplySuggestions, postClassificationCorrect, postDecisions, postForecasts, postForecastScenario, postImportRollback, postImports, postImportsPreview, postMoneyReviewConfirm, postMoneyReviews, postRecurringConfirm, postRecurringReject, postTransactionOneOff, postTransferConfirm, postTransferReject } from '../sdk.gen';
-import type { GetActionsData, GetActionsResponse, GetBaselineCategoryMerchantsData, GetBaselineCategoryMerchantsError, GetBaselineCategoryMerchantsResponse, GetBaselineCategorySpendData, GetBaselineCategorySpendError, GetBaselineCategorySpendMonthlyData, GetBaselineCategorySpendMonthlyError, GetBaselineCategorySpendMonthlyResponse, GetBaselineCategorySpendResponse, GetBaselineDailyExpensePaceData, GetBaselineDailyExpensePaceError, GetBaselineDailyExpensePaceResponse, GetBaselineMonthlyCashflowData, GetBaselineMonthlyCashflowResponse, GetBaselineOneOffImpactData, GetBaselineOneOffImpactError, GetBaselineOneOffImpactResponse, GetCategoriesData, GetCategoriesResponse, GetClassificationQueueData, GetClassificationQueueResponse, GetCurrentBaselineData, GetCurrentBaselineError, GetCurrentBaselineResponse, GetDecisionsData, GetDecisionsResponse, GetForecastData, GetForecastError, GetForecastResponse, GetForecastScenariosData, GetForecastScenariosResponse, GetHealthData, GetHealthResponse, GetImportData, GetImportError, GetImportResponse, GetImportsData, GetImportsError, GetImportsResponse, GetLatestForecastData, GetLatestForecastError, GetLatestForecastResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetMoneyReviewData, GetMoneyReviewError, GetMoneyReviewResponse, GetMoneyReviewsData, GetMoneyReviewsResponse, GetRecurringData, GetRecurringMembersData, GetRecurringMembersError, GetRecurringMembersResponse, GetRecurringResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, GetTransferCandidatesData, GetTransferCandidatesResponse, GetUncertainRecurringData, GetUncertainRecurringResponse, PostActionStatusData, PostActionStatusError, PostActionStatusResponse, PostBaselineAdjustData, PostBaselineAdjustError, PostBaselineAdjustResponse, PostBaselineConfirmData, PostBaselineConfirmError, PostBaselineConfirmResponse, PostBaselinesRecomputeData, PostBaselinesRecomputeError, PostBaselinesRecomputeResponse, PostChatData, PostChatError, PostChatResponse, PostClassificationApplySuggestionsData, PostClassificationApplySuggestionsResponse, PostClassificationCorrectData, PostClassificationCorrectError, PostClassificationCorrectResponse, PostDecisionsData, PostDecisionsError, PostDecisionsResponse, PostForecastScenarioData, PostForecastScenarioError, PostForecastScenarioResponse, PostForecastsData, PostForecastsError, PostForecastsResponse, PostImportRollbackData, PostImportRollbackError, PostImportRollbackResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse, PostMoneyReviewConfirmData, PostMoneyReviewConfirmError, PostMoneyReviewConfirmResponse, PostMoneyReviewsData, PostMoneyReviewsError, PostMoneyReviewsResponse, PostRecurringConfirmData, PostRecurringConfirmError, PostRecurringConfirmResponse, PostRecurringRejectData, PostRecurringRejectError, PostRecurringRejectResponse, PostTransactionOneOffData, PostTransactionOneOffError, PostTransactionOneOffResponse, PostTransferConfirmData, PostTransferConfirmError, PostTransferConfirmResponse, PostTransferRejectData, PostTransferRejectError, PostTransferRejectResponse } from '../types.gen';
+import { getActions, getBaselineCategoryMerchants, getBaselineCategorySpend, getBaselineCategorySpendMonthly, getBaselineDailyExpensePace, getBaselineMonthlyCashflow, getBaselineOneOffImpact, getCategories, getClassificationQueue, getCurrentBaseline, getDecisions, getForecast, getForecastScenarios, getHealth, getImport, getImports, getLatestForecast, getLlmModels, getMe, getMoneyReview, getMoneyReviews, getRecurring, getRecurringMembers, getTransactions, getTransferCandidates, getUncertainRecurring, type Options, postActionStatus, postBaselineAdjust, postBaselineConfirm, postBaselinesRecompute, postChat, postClassificationApplySuggestions, postClassificationCorrect, postDecisions, postForecasts, postForecastScenario, postImportRollback, postImports, postImportsPreview, postLogout, postMoneyReviewConfirm, postMoneyReviews, postRecurringConfirm, postRecurringReject, postTransactionOneOff, postTransferConfirm, postTransferReject } from '../sdk.gen';
+import type { GetActionsData, GetActionsResponse, GetBaselineCategoryMerchantsData, GetBaselineCategoryMerchantsError, GetBaselineCategoryMerchantsResponse, GetBaselineCategorySpendData, GetBaselineCategorySpendError, GetBaselineCategorySpendMonthlyData, GetBaselineCategorySpendMonthlyError, GetBaselineCategorySpendMonthlyResponse, GetBaselineCategorySpendResponse, GetBaselineDailyExpensePaceData, GetBaselineDailyExpensePaceError, GetBaselineDailyExpensePaceResponse, GetBaselineMonthlyCashflowData, GetBaselineMonthlyCashflowResponse, GetBaselineOneOffImpactData, GetBaselineOneOffImpactError, GetBaselineOneOffImpactResponse, GetCategoriesData, GetCategoriesResponse, GetClassificationQueueData, GetClassificationQueueResponse, GetCurrentBaselineData, GetCurrentBaselineError, GetCurrentBaselineResponse, GetDecisionsData, GetDecisionsResponse, GetForecastData, GetForecastError, GetForecastResponse, GetForecastScenariosData, GetForecastScenariosResponse, GetHealthData, GetHealthResponse, GetImportData, GetImportError, GetImportResponse, GetImportsData, GetImportsError, GetImportsResponse, GetLatestForecastData, GetLatestForecastError, GetLatestForecastResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetMeData, GetMeError, GetMeResponse, GetMoneyReviewData, GetMoneyReviewError, GetMoneyReviewResponse, GetMoneyReviewsData, GetMoneyReviewsResponse, GetRecurringData, GetRecurringMembersData, GetRecurringMembersError, GetRecurringMembersResponse, GetRecurringResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, GetTransferCandidatesData, GetTransferCandidatesResponse, GetUncertainRecurringData, GetUncertainRecurringResponse, PostActionStatusData, PostActionStatusError, PostActionStatusResponse, PostBaselineAdjustData, PostBaselineAdjustError, PostBaselineAdjustResponse, PostBaselineConfirmData, PostBaselineConfirmError, PostBaselineConfirmResponse, PostBaselinesRecomputeData, PostBaselinesRecomputeError, PostBaselinesRecomputeResponse, PostChatData, PostChatError, PostChatResponse, PostClassificationApplySuggestionsData, PostClassificationApplySuggestionsResponse, PostClassificationCorrectData, PostClassificationCorrectError, PostClassificationCorrectResponse, PostDecisionsData, PostDecisionsError, PostDecisionsResponse, PostForecastScenarioData, PostForecastScenarioError, PostForecastScenarioResponse, PostForecastsData, PostForecastsError, PostForecastsResponse, PostImportRollbackData, PostImportRollbackError, PostImportRollbackResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse, PostLogoutData, PostLogoutError, PostLogoutResponse, PostMoneyReviewConfirmData, PostMoneyReviewConfirmError, PostMoneyReviewConfirmResponse, PostMoneyReviewsData, PostMoneyReviewsError, PostMoneyReviewsResponse, PostRecurringConfirmData, PostRecurringConfirmError, PostRecurringConfirmResponse, PostRecurringRejectData, PostRecurringRejectError, PostRecurringRejectResponse, PostTransactionOneOffData, PostTransactionOneOffError, PostTransactionOneOffResponse, PostTransferConfirmData, PostTransferConfirmError, PostTransferConfirmResponse, PostTransferRejectData, PostTransferRejectError, PostTransferRejectResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -37,6 +37,41 @@ const createQueryKey = <TOptions extends Options>(id: string, options?: TOptions
         params.query = options.query;
     }
     return [params];
+};
+
+export const getMeQueryKey = (options?: Options<GetMeData>) => createQueryKey('getMe', options);
+
+/**
+ * Current user and household
+ */
+export const getMeOptions = (options?: Options<GetMeData>) => queryOptions<GetMeResponse, GetMeError, GetMeResponse, ReturnType<typeof getMeQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getMe({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getMeQueryKey(options)
+});
+
+/**
+ * Revoke session and clear cookie
+ */
+export const postLogoutMutation = (options?: Partial<Options<PostLogoutData>>): UseMutationOptions<PostLogoutResponse, PostLogoutError, Options<PostLogoutData>> => {
+    const mutationOptions: UseMutationOptions<PostLogoutResponse, PostLogoutError, Options<PostLogoutData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postLogout({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
 };
 
 export const getHealthQueryKey = (options?: Options<GetHealthData>) => createQueryKey('getHealth', options);

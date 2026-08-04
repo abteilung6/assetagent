@@ -3,17 +3,19 @@ SELECT DISTINCT
     counterparty,
     purpose
 FROM transactions
-WHERE counterparty <> '' OR purpose <> ''
+WHERE household_id = $1
+  AND (counterparty <> '' OR purpose <> '')
 ORDER BY counterparty, purpose;
 
 -- name: GetMerchantAlias :one
-SELECT *
-FROM merchant_aliases
-WHERE match_type = $1 AND pattern = $2;
+SELECT a.*
+FROM merchant_aliases a
+JOIN merchants m ON m.id = a.merchant_id
+WHERE a.match_type = $1 AND a.pattern = $2 AND m.household_id = $3;
 
 -- name: CreateMerchant :one
-INSERT INTO merchants (display_name, default_category_id)
-VALUES ($1, $2)
+INSERT INTO merchants (household_id, display_name, default_category_id)
+VALUES ($1, $2, $3)
 RETURNING *;
 
 -- name: CreateMerchantAlias :one
@@ -30,8 +32,12 @@ SELECT
     COUNT(a.id)::bigint AS alias_count
 FROM merchants m
 LEFT JOIN merchant_aliases a ON a.merchant_id = m.id
+WHERE m.household_id = $1
 GROUP BY m.id
 ORDER BY m.display_name ASC;
 
 -- name: CountMerchantAliases :one
-SELECT COUNT(*)::bigint AS count FROM merchant_aliases;
+SELECT COUNT(*)::bigint AS count
+FROM merchant_aliases a
+JOIN merchants m ON m.id = a.merchant_id
+WHERE m.household_id = $1;

@@ -9,22 +9,25 @@ SELECT
     counterparty,
     counterparty_iban
 FROM transactions
-WHERE account_id IS NOT NULL
+WHERE household_id = $1
+  AND account_id IS NOT NULL
 ORDER BY booking_date ASC, id ASC;
 
 -- name: ListTransferPairLegs :many
 SELECT tx_out_id, tx_in_id
-FROM transfer_pairs;
+FROM transfer_pairs
+WHERE household_id = $1;
 
 -- name: InsertTransferPair :one
 INSERT INTO transfer_pairs (
+    household_id,
     tx_out_id,
     tx_in_id,
     status,
     confidence,
     rationale
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4, $5, $6
 )
 ON CONFLICT (tx_out_id, tx_in_id) DO NOTHING
 RETURNING *;
@@ -54,18 +57,20 @@ JOIN transactions out_tx ON out_tx.id = p.tx_out_id
 JOIN transactions in_tx ON in_tx.id = p.tx_in_id
 LEFT JOIN accounts out_acc ON out_acc.id = out_tx.account_id
 LEFT JOIN accounts in_acc ON in_acc.id = in_tx.account_id
-WHERE p.status = 'suggested'
+WHERE p.household_id = $1
+  AND p.status = 'suggested'
 ORDER BY p.created_at DESC;
 
 -- name: ListTransferPairs :many
 SELECT *
 FROM transfer_pairs
+WHERE household_id = $1
 ORDER BY created_at DESC;
 
 -- name: GetTransferPair :one
 SELECT *
 FROM transfer_pairs
-WHERE id = $1;
+WHERE id = $1 AND household_id = $2;
 
 -- name: ConfirmTransferPair :one
 UPDATE transfer_pairs
@@ -73,6 +78,7 @@ SET
     status = 'confirmed',
     confirmed_at = now()
 WHERE id = $1
+  AND household_id = $2
   AND status = 'suggested'
 RETURNING *;
 
@@ -82,5 +88,6 @@ SET
     status = 'rejected',
     confirmed_at = NULL
 WHERE id = $1
+  AND household_id = $2
   AND status = 'suggested'
 RETURNING *;

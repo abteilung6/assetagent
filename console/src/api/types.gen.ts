@@ -13,6 +13,27 @@ export type HealthResponse = {
     status: string;
 };
 
+export type MeResponse = {
+    user: MeUser;
+    household: MeHousehold;
+    membership: MeMembership;
+};
+
+export type MeUser = {
+    id: string;
+    display_name: string;
+    email?: string;
+};
+
+export type MeHousehold = {
+    id: string;
+    name: string;
+};
+
+export type MeMembership = {
+    role: 'owner' | 'member';
+};
+
 export type Pagination = {
     limit: number;
     offset: number;
@@ -615,6 +636,56 @@ export type ActionStatusRequest = {
     status: 'planned' | 'done' | 'skipped' | 'irrelevant';
     outcome_note?: string;
 };
+
+export type GetMeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/me';
+};
+
+export type GetMeErrors = {
+    /**
+     * Not authenticated
+     */
+    401: Error;
+};
+
+export type GetMeError = GetMeErrors[keyof GetMeErrors];
+
+export type GetMeResponses = {
+    /**
+     * Authenticated user context
+     */
+    200: MeResponse;
+};
+
+export type GetMeResponse = GetMeResponses[keyof GetMeResponses];
+
+export type PostLogoutData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/auth/logout';
+};
+
+export type PostLogoutErrors = {
+    /**
+     * Not authenticated
+     */
+    401: Error;
+};
+
+export type PostLogoutError = PostLogoutErrors[keyof PostLogoutErrors];
+
+export type PostLogoutResponses = {
+    /**
+     * Session revoked and cookie cleared
+     */
+    204: void;
+};
+
+export type PostLogoutResponse = PostLogoutResponses[keyof PostLogoutResponses];
 
 export type GetHealthData = {
     body?: never;

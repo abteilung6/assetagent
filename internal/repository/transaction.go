@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/abteilung6/assetagent/internal/domain"
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
+	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -15,20 +15,29 @@ import (
 )
 
 type Transaction struct {
+	pool    *pgxpool.Pool
 	queries sqldb.Querier
 }
 
 func NewTransaction(pool *pgxpool.Pool) *Transaction {
-	return &Transaction{queries: sqldb.New(pool)}
+	return &Transaction{pool: pool, queries: sqldb.New(pool)}
 }
 
 func (r *Transaction) Insert(ctx context.Context, tx domain.Transaction) (uuid.UUID, error) {
-	return r.queries.InsertTransaction(ctx, buildParams(tx, domain.Fingerprint(tx)))
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return r.queries.InsertTransaction(ctx, buildParams(householdID, tx, domain.Fingerprint(tx)))
 }
 
 func (r *Transaction) BatchInsert(ctx context.Context, txs []domain.Transaction) (inserted, duplicates int, err error) {
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return 0, 0, err
+	}
 	for _, tx := range txs {
-		params := buildIfNewParams(tx, domain.Fingerprint(tx))
+		params := buildIfNewParams(householdID, tx, domain.Fingerprint(tx))
 		_, err := r.queries.InsertTransactionIfNew(ctx, params)
 		if errors.Is(err, pgx.ErrNoRows) {
 			duplicates++
@@ -44,11 +53,19 @@ func (r *Transaction) BatchInsert(ctx context.Context, txs []domain.Transaction)
 }
 
 func (r *Transaction) Count(ctx context.Context) (int64, error) {
-	return r.queries.CountTransactions(ctx)
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return 0, err
+	}
+	return r.queries.CountTransactions(ctx, householdID)
 }
 
 func (r *Transaction) List(ctx context.Context, params domain.ListParams) (domain.ListResult, error) {
-	filter := buildFilterParams(params)
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return domain.ListResult{}, err
+	}
+	filter := buildFilterParams(householdID, params)
 
 	total, err := r.queries.CountTransactionsFiltered(ctx, filter)
 	if err != nil {
@@ -61,6 +78,7 @@ func (r *Transaction) List(ctx context.Context, params domain.ListParams) (domai
 	}
 
 	rows, err := r.queries.ListTransactions(ctx, sqldb.ListTransactionsParams{
+		HouseholdID:  filter.HouseholdID,
 		FromDate:     filter.FromDate,
 		ToDate:       filter.ToDate,
 		Account:      filter.Account,
@@ -89,9 +107,14 @@ func (r *Transaction) List(ctx context.Context, params domain.ListParams) (domai
 }
 
 func (r *Transaction) SetOneOff(ctx context.Context, id uuid.UUID, oneOff bool) (domain.Transaction, error) {
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return domain.Transaction{}, err
+	}
 	row, err := r.queries.SetTransactionOneOff(ctx, sqldb.SetTransactionOneOffParams{
-		ID:     id,
-		OneOff: oneOff,
+		ID:          id,
+		HouseholdID: householdID,
+		OneOff:      oneOff,
 	})
 	if err != nil {
 		return domain.Transaction{}, err
@@ -99,8 +122,9 @@ func (r *Transaction) SetOneOff(ctx context.Context, id uuid.UUID, oneOff bool) 
 	return setOneOffRowToDomain(row), nil
 }
 
-func buildFilterParams(params domain.ListParams) sqldb.CountTransactionsFilteredParams {
+func buildFilterParams(householdID uuid.UUID, params domain.ListParams) sqldb.CountTransactionsFilteredParams {
 	return sqldb.CountTransactionsFilteredParams{
+		HouseholdID:  householdID,
 		FromDate:     dateFromPtr(params.FromDate),
 		ToDate:       dateFromPtr(params.ToDate),
 		Account:      textFromPtr(params.Account),
@@ -185,8 +209,9 @@ func numericFromPtr(value *decimal.Decimal) pgtype.Numeric {
 	return n
 }
 
-func buildParams(tx domain.Transaction, fingerprint string) sqldb.InsertTransactionParams {
+func buildParams(householdID uuid.UUID, tx domain.Transaction, fingerprint string) sqldb.InsertTransactionParams {
 	return sqldb.InsertTransactionParams{
+		HouseholdID:                    householdID,
 		OrderAccount:                   tx.OrderAccount,
 		BookingDate:                    pgtype.Date{Time: tx.BookingDate, Valid: true},
 		ValueDate:                      pgtype.Date{Time: tx.ValueDate, Valid: true},
@@ -210,8 +235,8 @@ func buildParams(tx domain.Transaction, fingerprint string) sqldb.InsertTransact
 	}
 }
 
-func buildIfNewParams(tx domain.Transaction, fingerprint string) sqldb.InsertTransactionIfNewParams {
-	return sqldb.InsertTransactionIfNewParams(buildParams(tx, fingerprint))
+func buildIfNewParams(householdID uuid.UUID, tx domain.Transaction, fingerprint string) sqldb.InsertTransactionIfNewParams {
+	return sqldb.InsertTransactionIfNewParams(buildParams(householdID, tx, fingerprint))
 }
 
 func textFromPtr(value *string) pgtype.Text {

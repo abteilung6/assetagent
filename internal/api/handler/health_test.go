@@ -26,7 +26,7 @@ func (noopList) SetTransactionOneOff(_ context.Context, id uuid.UUID, oneOff boo
 
 func TestGetHealth(t *testing.T) {
 	router := chi.NewRouter()
-	gen.HandlerFromMux(handler.New(noopList{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), router)
+	gen.HandlerFromMux(handler.New(noopList{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), router)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
 	rec := httptest.NewRecorder()

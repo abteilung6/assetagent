@@ -1,5 +1,6 @@
 -- name: InsertFinancialBaseline :one
 INSERT INTO financial_baselines (
+    household_id,
     period_from,
     period_to,
     algorithm_version,
@@ -13,19 +14,20 @@ INSERT INTO financial_baselines (
     assumptions,
     evidence
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
 )
 RETURNING *;
 
 -- name: GetFinancialBaseline :one
 SELECT *
 FROM financial_baselines
-WHERE id = $1;
+WHERE id = $1 AND household_id = $2;
 
 -- name: GetCurrentFinancialBaseline :one
 SELECT *
 FROM financial_baselines
-WHERE status IN ('draft', 'confirmed')
+WHERE household_id = $1
+  AND status IN ('draft', 'confirmed')
 ORDER BY
     CASE status WHEN 'confirmed' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END,
     created_at DESC
@@ -36,7 +38,8 @@ UPDATE financial_baselines
 SET
     status = 'superseded',
     updated_at = now()
-WHERE status IN ('draft', 'confirmed');
+WHERE household_id = $1
+  AND status IN ('draft', 'confirmed');
 
 -- name: ConfirmFinancialBaseline :one
 UPDATE financial_baselines
@@ -45,6 +48,7 @@ SET
     confirmed_at = now(),
     updated_at = now()
 WHERE id = $1
+  AND household_id = $2
   AND status = 'draft'
 RETURNING *;
 

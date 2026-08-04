@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -31,6 +32,18 @@ type Config struct {
 	LangfuseSecretKey   string
 	OTLPEndpoint        string
 	LangfuseTraceDetail string
+
+	AppEnv                string
+	FrontendURL           string
+	CORSAllowedOrigins    string
+	GoogleClientID        string
+	GoogleClientSecret    string
+	GoogleRedirectURL     string
+	SessionCookieName     string
+	SessionCookieSecure   bool
+	SessionIdleHours      int
+	SessionAbsoluteHours  int
+	AuthClaimExistingData bool
 }
 
 func Load() (Config, error) {
@@ -73,26 +86,53 @@ func Load() (Config, error) {
 		}
 	}
 
+	frontendURL := envOrDefault("FRONTEND_URL", "http://localhost:5173")
+	if frontendURL != "" {
+		if err := validateHTTPBaseURL(frontendURL, "FRONTEND_URL"); err != nil {
+			return Config{}, err
+		}
+	}
+
+	sessionIdleHours, err := parseIntEnv("SESSION_IDLE_HOURS", 336)
+	if err != nil {
+		return Config{}, err
+	}
+	sessionAbsoluteHours, err := parseIntEnv("SESSION_ABSOLUTE_HOURS", 720)
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		DatabaseURL:              databaseURL,
 		APIAddr:                  envOrDefault("API_ADDR", ":8080"),
-		OllamaBaseURL:              ollamaBaseURL,
-		OllamaModel:                envOrDefault("OLLAMA_MODEL", "llama3.2"),
-		LogLevel:                   level,
-		LogFormat:                  format,
-		LLMDefaultProvider:         llmDefaultProvider,
-		LLMProviders:               llmProviders,
-		OpenRouterBaseURL:          openRouterBaseURL,
-		OpenRouterAPIKey:           os.Getenv("OPENROUTER_API_KEY"),
-		OpenRouterDefaultModel:     envOrDefault("OPENROUTER_DEFAULT_MODEL", ""),
-		OpenRouterModelAllowlist:   envOrDefault("OPENROUTER_MODEL_ALLOWLIST", ""),
-		OpenRouterAppURL:           envOrDefault("OPENROUTER_APP_URL", ""),
-		OpenRouterAppName:          envOrDefault("OPENROUTER_APP_NAME", "assetagent"),
-		LangfuseEnabled:            parseBoolEnv("LANGFUSE_ENABLED", false),
-		LangfusePublicKey:          os.Getenv("LANGFUSE_PUBLIC_KEY"),
-		LangfuseSecretKey:          os.Getenv("LANGFUSE_SECRET_KEY"),
-		OTLPEndpoint:               envOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:3000/api/public/otel"),
-		LangfuseTraceDetail:        envOrDefault("LANGFUSE_TRACE_DETAIL", "metadata_only"),
+		OllamaBaseURL:            ollamaBaseURL,
+		OllamaModel:              envOrDefault("OLLAMA_MODEL", "llama3.2"),
+		LogLevel:                 level,
+		LogFormat:                format,
+		LLMDefaultProvider:       llmDefaultProvider,
+		LLMProviders:             llmProviders,
+		OpenRouterBaseURL:        openRouterBaseURL,
+		OpenRouterAPIKey:         os.Getenv("OPENROUTER_API_KEY"),
+		OpenRouterDefaultModel:   envOrDefault("OPENROUTER_DEFAULT_MODEL", ""),
+		OpenRouterModelAllowlist: envOrDefault("OPENROUTER_MODEL_ALLOWLIST", ""),
+		OpenRouterAppURL:         envOrDefault("OPENROUTER_APP_URL", ""),
+		OpenRouterAppName:        envOrDefault("OPENROUTER_APP_NAME", "assetagent"),
+		LangfuseEnabled:          parseBoolEnv("LANGFUSE_ENABLED", false),
+		LangfusePublicKey:        os.Getenv("LANGFUSE_PUBLIC_KEY"),
+		LangfuseSecretKey:        os.Getenv("LANGFUSE_SECRET_KEY"),
+		OTLPEndpoint:             envOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:3000/api/public/otel"),
+		LangfuseTraceDetail:      envOrDefault("LANGFUSE_TRACE_DETAIL", "metadata_only"),
+		AppEnv:                   envOrDefault("APP_ENV", "development"),
+		FrontendURL:              frontendURL,
+		CORSAllowedOrigins:       envOrDefault("CORS_ALLOWED_ORIGINS", "http://localhost:5173"),
+		GoogleClientID:           os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret:       os.Getenv("GOOGLE_CLIENT_SECRET"),
+		GoogleRedirectURL:        envOrDefault("GOOGLE_REDIRECT_URL", "http://localhost:8080/auth/google/callback"),
+		SessionCookieName:        envOrDefault("SESSION_COOKIE_NAME", "session"),
+		SessionCookieSecure:      parseBoolEnv("SESSION_COOKIE_SECURE", false),
+		SessionIdleHours:         sessionIdleHours,
+		SessionAbsoluteHours:     sessionAbsoluteHours,
+		AuthClaimExistingData:    parseBoolEnv("AUTH_CLAIM_EXISTING_DATA", false),
 	}, nil
 }
 
@@ -180,4 +220,16 @@ func parseBoolEnv(key string, fallback bool) bool {
 	default:
 		return fallback
 	}
+}
+
+func parseIntEnv(key string, fallback int) (int, error) {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return fallback, nil
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("%s: must be an integer, got %q", key, raw)
+	}
+	return n, nil
 }

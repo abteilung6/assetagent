@@ -19,13 +19,15 @@ SELECT
   COALESCE(SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END), 0)::numeric AS expenses,
   COALESCE(SUM(amount), 0)::numeric AS net
 FROM transactions
-WHERE booking_date >= $1::date
-  AND booking_date <= $2::date
+WHERE household_id = $1
+  AND booking_date >= $2::date
+  AND booking_date <= $3::date
 `
 
 type GetCashflowParams struct {
-	FromDate pgtype.Date `json:"from_date"`
-	ToDate   pgtype.Date `json:"to_date"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+	FromDate    pgtype.Date `json:"from_date"`
+	ToDate      pgtype.Date `json:"to_date"`
 }
 
 type GetCashflowRow struct {
@@ -35,7 +37,7 @@ type GetCashflowRow struct {
 }
 
 func (q *Queries) GetCashflow(ctx context.Context, arg GetCashflowParams) (GetCashflowRow, error) {
-	row := q.db.QueryRow(ctx, getCashflow, arg.FromDate, arg.ToDate)
+	row := q.db.QueryRow(ctx, getCashflow, arg.HouseholdID, arg.FromDate, arg.ToDate)
 	var i GetCashflowRow
 	err := row.Scan(&i.Income, &i.Expenses, &i.Net)
 	return i, err
@@ -47,20 +49,23 @@ SELECT
   COALESCE(SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END), 0)::numeric AS expenses,
   COALESCE(SUM(amount), 0)::numeric AS net
 FROM transactions t
-WHERE t.booking_date >= $1::date
-  AND t.booking_date <= $2::date
+WHERE t.household_id = $1
+  AND t.booking_date >= $2::date
+  AND t.booking_date <= $3::date
   AND t.one_off = false
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = $1
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   )
 `
 
 type GetCashflowV2Params struct {
-	FromDate pgtype.Date `json:"from_date"`
-	ToDate   pgtype.Date `json:"to_date"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+	FromDate    pgtype.Date `json:"from_date"`
+	ToDate      pgtype.Date `json:"to_date"`
 }
 
 type GetCashflowV2Row struct {
@@ -70,7 +75,7 @@ type GetCashflowV2Row struct {
 }
 
 func (q *Queries) GetCashflowV2(ctx context.Context, arg GetCashflowV2Params) (GetCashflowV2Row, error) {
-	row := q.db.QueryRow(ctx, getCashflowV2, arg.FromDate, arg.ToDate)
+	row := q.db.QueryRow(ctx, getCashflowV2, arg.HouseholdID, arg.FromDate, arg.ToDate)
 	var i GetCashflowV2Row
 	err := row.Scan(&i.Income, &i.Expenses, &i.Net)
 	return i, err
@@ -79,10 +84,11 @@ func (q *Queries) GetCashflowV2(ctx context.Context, arg GetCashflowV2Params) (G
 const getLatestBookingDate = `-- name: GetLatestBookingDate :one
 SELECT MAX(booking_date)::date AS latest_booking_date
 FROM transactions
+WHERE household_id = $1
 `
 
-func (q *Queries) GetLatestBookingDate(ctx context.Context) (pgtype.Date, error) {
-	row := q.db.QueryRow(ctx, getLatestBookingDate)
+func (q *Queries) GetLatestBookingDate(ctx context.Context, householdID uuid.UUID) (pgtype.Date, error) {
+	row := q.db.QueryRow(ctx, getLatestBookingDate, householdID)
 	var latest_booking_date pgtype.Date
 	err := row.Scan(&latest_booking_date)
 	return latest_booking_date, err
@@ -93,15 +99,17 @@ SELECT
   COUNT(*)::bigint AS one_off_count,
   COALESCE(SUM(-amount), 0)::numeric AS one_off_expense_total
 FROM transactions
-WHERE booking_date >= $1::date
-  AND booking_date <= $2::date
+WHERE household_id = $1
+  AND booking_date >= $2::date
+  AND booking_date <= $3::date
   AND one_off = true
   AND amount < 0
 `
 
 type GetOneOffExpenseImpactParams struct {
-	FromDate pgtype.Date `json:"from_date"`
-	ToDate   pgtype.Date `json:"to_date"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+	FromDate    pgtype.Date `json:"from_date"`
+	ToDate      pgtype.Date `json:"to_date"`
 }
 
 type GetOneOffExpenseImpactRow struct {
@@ -110,7 +118,7 @@ type GetOneOffExpenseImpactRow struct {
 }
 
 func (q *Queries) GetOneOffExpenseImpact(ctx context.Context, arg GetOneOffExpenseImpactParams) (GetOneOffExpenseImpactRow, error) {
-	row := q.db.QueryRow(ctx, getOneOffExpenseImpact, arg.FromDate, arg.ToDate)
+	row := q.db.QueryRow(ctx, getOneOffExpenseImpact, arg.HouseholdID, arg.FromDate, arg.ToDate)
 	var i GetOneOffExpenseImpactRow
 	err := row.Scan(&i.OneOffCount, &i.OneOffExpenseTotal)
 	return i, err
@@ -122,19 +130,21 @@ SELECT
   SUM(-amount)::numeric AS total_spent,
   COUNT(*)::bigint AS transaction_count
 FROM transactions
-WHERE booking_date >= $1::date
-  AND booking_date <= $2::date
+WHERE household_id = $1
+  AND booking_date >= $2::date
+  AND booking_date <= $3::date
   AND amount < 0
   AND counterparty <> ''
 GROUP BY counterparty
 ORDER BY total_spent DESC, counterparty ASC
-LIMIT $3
+LIMIT $4
 `
 
 type GetTopCounterpartiesParams struct {
-	FromDate pgtype.Date `json:"from_date"`
-	ToDate   pgtype.Date `json:"to_date"`
-	RowLimit int32       `json:"row_limit"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+	FromDate    pgtype.Date `json:"from_date"`
+	ToDate      pgtype.Date `json:"to_date"`
+	RowLimit    int32       `json:"row_limit"`
 }
 
 type GetTopCounterpartiesRow struct {
@@ -144,7 +154,12 @@ type GetTopCounterpartiesRow struct {
 }
 
 func (q *Queries) GetTopCounterparties(ctx context.Context, arg GetTopCounterpartiesParams) ([]GetTopCounterpartiesRow, error) {
-	rows, err := q.db.Query(ctx, getTopCounterparties, arg.FromDate, arg.ToDate, arg.RowLimit)
+	rows, err := q.db.Query(ctx, getTopCounterparties,
+		arg.HouseholdID,
+		arg.FromDate,
+		arg.ToDate,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -167,18 +182,20 @@ const listAccountsInPeriod = `-- name: ListAccountsInPeriod :many
 SELECT DISTINCT COALESCE(a.display_name, t.order_account, 'unknown')::text AS account_name
 FROM transactions t
 LEFT JOIN accounts a ON a.id = t.account_id
-WHERE t.booking_date >= $1::date
-  AND t.booking_date <= $2::date
+WHERE t.household_id = $1
+  AND t.booking_date >= $2::date
+  AND t.booking_date <= $3::date
 ORDER BY account_name ASC
 `
 
 type ListAccountsInPeriodParams struct {
-	FromDate pgtype.Date `json:"from_date"`
-	ToDate   pgtype.Date `json:"to_date"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+	FromDate    pgtype.Date `json:"from_date"`
+	ToDate      pgtype.Date `json:"to_date"`
 }
 
 func (q *Queries) ListAccountsInPeriod(ctx context.Context, arg ListAccountsInPeriodParams) ([]string, error) {
-	rows, err := q.db.Query(ctx, listAccountsInPeriod, arg.FromDate, arg.ToDate)
+	rows, err := q.db.Query(ctx, listAccountsInPeriod, arg.HouseholdID, arg.FromDate, arg.ToDate)
 	if err != nil {
 		return nil, err
 	}
@@ -200,27 +217,35 @@ func (q *Queries) ListAccountsInPeriod(ctx context.Context, arg ListAccountsInPe
 const listCashflowV2TransactionIDs = `-- name: ListCashflowV2TransactionIDs :many
 SELECT t.id
 FROM transactions t
-WHERE t.booking_date >= $1::date
-  AND t.booking_date <= $2::date
+WHERE t.household_id = $1
+  AND t.booking_date >= $2::date
+  AND t.booking_date <= $3::date
   AND t.one_off = false
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = $1
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   )
 ORDER BY t.booking_date ASC, t.id ASC
-LIMIT $3
+LIMIT $4
 `
 
 type ListCashflowV2TransactionIDsParams struct {
-	FromDate pgtype.Date `json:"from_date"`
-	ToDate   pgtype.Date `json:"to_date"`
-	RowLimit int32       `json:"row_limit"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+	FromDate    pgtype.Date `json:"from_date"`
+	ToDate      pgtype.Date `json:"to_date"`
+	RowLimit    int32       `json:"row_limit"`
 }
 
 func (q *Queries) ListCashflowV2TransactionIDs(ctx context.Context, arg ListCashflowV2TransactionIDsParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, listCashflowV2TransactionIDs, arg.FromDate, arg.ToDate, arg.RowLimit)
+	rows, err := q.db.Query(ctx, listCashflowV2TransactionIDs,
+		arg.HouseholdID,
+		arg.FromDate,
+		arg.ToDate,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -248,25 +273,28 @@ SELECT
 FROM transactions t
 JOIN transaction_classifications tc ON tc.transaction_id = t.id
 JOIN categories c ON c.id = tc.category_id
-WHERE t.booking_date >= $1::date
-  AND t.booking_date <= $2::date
+WHERE t.household_id = $1
+  AND t.booking_date >= $2::date
+  AND t.booking_date <= $3::date
   AND t.amount < 0
   AND t.one_off = false
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = $1
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   )
 GROUP BY c.slug, c.display_name
 ORDER BY total DESC, c.display_name ASC
-LIMIT $3
+LIMIT $4
 `
 
 type ListCategorySpendInPeriodParams struct {
-	FromDate pgtype.Date `json:"from_date"`
-	ToDate   pgtype.Date `json:"to_date"`
-	RowLimit int32       `json:"row_limit"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+	FromDate    pgtype.Date `json:"from_date"`
+	ToDate      pgtype.Date `json:"to_date"`
+	RowLimit    int32       `json:"row_limit"`
 }
 
 type ListCategorySpendInPeriodRow struct {
@@ -277,7 +305,12 @@ type ListCategorySpendInPeriodRow struct {
 }
 
 func (q *Queries) ListCategorySpendInPeriod(ctx context.Context, arg ListCategorySpendInPeriodParams) ([]ListCategorySpendInPeriodRow, error) {
-	rows, err := q.db.Query(ctx, listCategorySpendInPeriod, arg.FromDate, arg.ToDate, arg.RowLimit)
+	rows, err := q.db.Query(ctx, listCategorySpendInPeriod,
+		arg.HouseholdID,
+		arg.FromDate,
+		arg.ToDate,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -306,21 +339,23 @@ SELECT p.id
 FROM transfer_pairs p
 JOIN transactions out_tx ON out_tx.id = p.tx_out_id
 JOIN transactions in_tx ON in_tx.id = p.tx_in_id
-WHERE p.status = 'confirmed'
+WHERE p.household_id = $1
+  AND p.status = 'confirmed'
   AND (
-    (out_tx.booking_date >= $1::date AND out_tx.booking_date <= $2::date)
-    OR (in_tx.booking_date >= $1::date AND in_tx.booking_date <= $2::date)
+    (out_tx.booking_date >= $2::date AND out_tx.booking_date <= $3::date)
+    OR (in_tx.booking_date >= $2::date AND in_tx.booking_date <= $3::date)
   )
 ORDER BY p.created_at ASC
 `
 
 type ListConfirmedTransferIDsInPeriodParams struct {
-	FromDate pgtype.Date `json:"from_date"`
-	ToDate   pgtype.Date `json:"to_date"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+	FromDate    pgtype.Date `json:"from_date"`
+	ToDate      pgtype.Date `json:"to_date"`
 }
 
 func (q *Queries) ListConfirmedTransferIDsInPeriod(ctx context.Context, arg ListConfirmedTransferIDsInPeriodParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, listConfirmedTransferIDsInPeriod, arg.FromDate, arg.ToDate)
+	rows, err := q.db.Query(ctx, listConfirmedTransferIDsInPeriod, arg.HouseholdID, arg.FromDate, arg.ToDate)
 	if err != nil {
 		return nil, err
 	}
@@ -345,13 +380,15 @@ SELECT
   COALESCE(SUM(-t.amount), 0)::numeric AS expenses,
   COUNT(*)::bigint AS transaction_count
 FROM transactions t
-WHERE t.booking_date >= $1::date
-  AND t.booking_date <= $2::date
+WHERE t.household_id = $1
+  AND t.booking_date >= $2::date
+  AND t.booking_date <= $3::date
   AND t.amount < 0
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = $1
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   )
 GROUP BY 1
@@ -359,8 +396,9 @@ ORDER BY 1 ASC
 `
 
 type ListDailyExpensePaceInPeriodParams struct {
-	FromDate pgtype.Date `json:"from_date"`
-	ToDate   pgtype.Date `json:"to_date"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+	FromDate    pgtype.Date `json:"from_date"`
+	ToDate      pgtype.Date `json:"to_date"`
 }
 
 type ListDailyExpensePaceInPeriodRow struct {
@@ -370,7 +408,7 @@ type ListDailyExpensePaceInPeriodRow struct {
 }
 
 func (q *Queries) ListDailyExpensePaceInPeriod(ctx context.Context, arg ListDailyExpensePaceInPeriodParams) ([]ListDailyExpensePaceInPeriodRow, error) {
-	rows, err := q.db.Query(ctx, listDailyExpensePaceInPeriod, arg.FromDate, arg.ToDate)
+	rows, err := q.db.Query(ctx, listDailyExpensePaceInPeriod, arg.HouseholdID, arg.FromDate, arg.ToDate)
 	if err != nil {
 		return nil, err
 	}
@@ -397,23 +435,26 @@ SELECT
 FROM transactions t
 JOIN transaction_classifications tc ON tc.transaction_id = t.id
 JOIN categories c ON c.id = tc.category_id
-WHERE t.booking_date >= $1::date
-  AND t.booking_date <= $2::date
+WHERE t.household_id = $1
+  AND t.booking_date >= $2::date
+  AND t.booking_date <= $3::date
   AND t.amount < 0
   AND t.one_off = false
-  AND c.slug = $3
+  AND c.slug = $4
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = $1
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   )
 GROUP BY 1
 ORDER BY total DESC, merchant ASC
-LIMIT $4
+LIMIT $5
 `
 
 type ListMerchantSpendInCategoryPeriodParams struct {
+	HouseholdID  uuid.UUID   `json:"household_id"`
 	FromDate     pgtype.Date `json:"from_date"`
 	ToDate       pgtype.Date `json:"to_date"`
 	CategorySlug string      `json:"category_slug"`
@@ -428,6 +469,7 @@ type ListMerchantSpendInCategoryPeriodRow struct {
 
 func (q *Queries) ListMerchantSpendInCategoryPeriod(ctx context.Context, arg ListMerchantSpendInCategoryPeriodParams) ([]ListMerchantSpendInCategoryPeriodRow, error) {
 	rows, err := q.db.Query(ctx, listMerchantSpendInCategoryPeriod,
+		arg.HouseholdID,
 		arg.FromDate,
 		arg.ToDate,
 		arg.CategorySlug,
@@ -458,13 +500,15 @@ SELECT
   COALESCE(SUM(CASE WHEN t.amount < 0 THEN -t.amount ELSE 0 END), 0)::numeric AS expenses,
   COALESCE(SUM(t.amount), 0)::numeric AS net
 FROM transactions t
-WHERE t.booking_date >= $1::date
-  AND t.booking_date <= $2::date
+WHERE t.household_id = $1
+  AND t.booking_date >= $2::date
+  AND t.booking_date <= $3::date
   AND t.one_off = false
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = $1
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   )
 GROUP BY 1
@@ -472,8 +516,9 @@ ORDER BY 1 ASC
 `
 
 type ListMonthlyCashflowV2Params struct {
-	FromDate pgtype.Date `json:"from_date"`
-	ToDate   pgtype.Date `json:"to_date"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+	FromDate    pgtype.Date `json:"from_date"`
+	ToDate      pgtype.Date `json:"to_date"`
 }
 
 type ListMonthlyCashflowV2Row struct {
@@ -484,7 +529,7 @@ type ListMonthlyCashflowV2Row struct {
 }
 
 func (q *Queries) ListMonthlyCashflowV2(ctx context.Context, arg ListMonthlyCashflowV2Params) ([]ListMonthlyCashflowV2Row, error) {
-	rows, err := q.db.Query(ctx, listMonthlyCashflowV2, arg.FromDate, arg.ToDate)
+	rows, err := q.db.Query(ctx, listMonthlyCashflowV2, arg.HouseholdID, arg.FromDate, arg.ToDate)
 	if err != nil {
 		return nil, err
 	}
@@ -517,14 +562,16 @@ WITH category_totals AS (
   FROM transactions t
   JOIN transaction_classifications tc ON tc.transaction_id = t.id
   JOIN categories c ON c.id = tc.category_id
-  WHERE t.booking_date >= $1::date
-    AND t.booking_date <= $2::date
+  WHERE t.household_id = $1
+    AND t.booking_date >= $2::date
+    AND t.booking_date <= $3::date
     AND t.amount < 0
     AND t.one_off = false
     AND NOT EXISTS (
       SELECT 1
       FROM transfer_pairs p
       WHERE p.status = 'confirmed'
+        AND p.household_id = $1
         AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
     )
   GROUP BY c.slug, c.display_name
@@ -533,7 +580,7 @@ top_categories AS (
   SELECT category_slug, category_name
   FROM category_totals
   ORDER BY period_total DESC, category_name ASC
-  LIMIT $3
+  LIMIT $4
 )
 SELECT
   date_trunc('month', t.booking_date)::date AS month_start,
@@ -544,14 +591,16 @@ FROM transactions t
 JOIN transaction_classifications tc ON tc.transaction_id = t.id
 JOIN categories c ON c.id = tc.category_id
 JOIN top_categories top ON top.category_slug = c.slug
-WHERE t.booking_date >= $1::date
-  AND t.booking_date <= $2::date
+WHERE t.household_id = $1
+  AND t.booking_date >= $2::date
+  AND t.booking_date <= $3::date
   AND t.amount < 0
   AND t.one_off = false
   AND NOT EXISTS (
     SELECT 1
     FROM transfer_pairs p
     WHERE p.status = 'confirmed'
+      AND p.household_id = $1
       AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
   )
 GROUP BY 1, c.slug, c.display_name
@@ -559,6 +608,7 @@ ORDER BY 1 ASC, total DESC, c.display_name ASC
 `
 
 type ListMonthlyCategorySpendInPeriodParams struct {
+	HouseholdID   uuid.UUID   `json:"household_id"`
 	FromDate      pgtype.Date `json:"from_date"`
 	ToDate        pgtype.Date `json:"to_date"`
 	CategoryLimit int32       `json:"category_limit"`
@@ -572,7 +622,12 @@ type ListMonthlyCategorySpendInPeriodRow struct {
 }
 
 func (q *Queries) ListMonthlyCategorySpendInPeriod(ctx context.Context, arg ListMonthlyCategorySpendInPeriodParams) ([]ListMonthlyCategorySpendInPeriodRow, error) {
-	rows, err := q.db.Query(ctx, listMonthlyCategorySpendInPeriod, arg.FromDate, arg.ToDate, arg.CategoryLimit)
+	rows, err := q.db.Query(ctx, listMonthlyCategorySpendInPeriod,
+		arg.HouseholdID,
+		arg.FromDate,
+		arg.ToDate,
+		arg.CategoryLimit,
+	)
 	if err != nil {
 		return nil, err
 	}

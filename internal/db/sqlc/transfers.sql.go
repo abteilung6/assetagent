@@ -19,12 +19,18 @@ SET
     status = 'confirmed',
     confirmed_at = now()
 WHERE id = $1
+  AND household_id = $2
   AND status = 'suggested'
-RETURNING id, tx_out_id, tx_in_id, status, confidence, rationale, confirmed_at, created_at
+RETURNING id, tx_out_id, tx_in_id, status, confidence, rationale, confirmed_at, created_at, household_id
 `
 
-func (q *Queries) ConfirmTransferPair(ctx context.Context, id uuid.UUID) (TransferPair, error) {
-	row := q.db.QueryRow(ctx, confirmTransferPair, id)
+type ConfirmTransferPairParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) ConfirmTransferPair(ctx context.Context, arg ConfirmTransferPairParams) (TransferPair, error) {
+	row := q.db.QueryRow(ctx, confirmTransferPair, arg.ID, arg.HouseholdID)
 	var i TransferPair
 	err := row.Scan(
 		&i.ID,
@@ -35,18 +41,24 @@ func (q *Queries) ConfirmTransferPair(ctx context.Context, id uuid.UUID) (Transf
 		&i.Rationale,
 		&i.ConfirmedAt,
 		&i.CreatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const getTransferPair = `-- name: GetTransferPair :one
-SELECT id, tx_out_id, tx_in_id, status, confidence, rationale, confirmed_at, created_at
+SELECT id, tx_out_id, tx_in_id, status, confidence, rationale, confirmed_at, created_at, household_id
 FROM transfer_pairs
-WHERE id = $1
+WHERE id = $1 AND household_id = $2
 `
 
-func (q *Queries) GetTransferPair(ctx context.Context, id uuid.UUID) (TransferPair, error) {
-	row := q.db.QueryRow(ctx, getTransferPair, id)
+type GetTransferPairParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) GetTransferPair(ctx context.Context, arg GetTransferPairParams) (TransferPair, error) {
+	row := q.db.QueryRow(ctx, getTransferPair, arg.ID, arg.HouseholdID)
 	var i TransferPair
 	err := row.Scan(
 		&i.ID,
@@ -57,34 +69,38 @@ func (q *Queries) GetTransferPair(ctx context.Context, id uuid.UUID) (TransferPa
 		&i.Rationale,
 		&i.ConfirmedAt,
 		&i.CreatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const insertTransferPair = `-- name: InsertTransferPair :one
 INSERT INTO transfer_pairs (
+    household_id,
     tx_out_id,
     tx_in_id,
     status,
     confidence,
     rationale
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4, $5, $6
 )
 ON CONFLICT (tx_out_id, tx_in_id) DO NOTHING
-RETURNING id, tx_out_id, tx_in_id, status, confidence, rationale, confirmed_at, created_at
+RETURNING id, tx_out_id, tx_in_id, status, confidence, rationale, confirmed_at, created_at, household_id
 `
 
 type InsertTransferPairParams struct {
-	TxOutID    uuid.UUID `json:"tx_out_id"`
-	TxInID     uuid.UUID `json:"tx_in_id"`
-	Status     string    `json:"status"`
-	Confidence string    `json:"confidence"`
-	Rationale  []byte    `json:"rationale"`
+	HouseholdID uuid.UUID `json:"household_id"`
+	TxOutID     uuid.UUID `json:"tx_out_id"`
+	TxInID      uuid.UUID `json:"tx_in_id"`
+	Status      string    `json:"status"`
+	Confidence  string    `json:"confidence"`
+	Rationale   []byte    `json:"rationale"`
 }
 
 func (q *Queries) InsertTransferPair(ctx context.Context, arg InsertTransferPairParams) (TransferPair, error) {
 	row := q.db.QueryRow(ctx, insertTransferPair,
+		arg.HouseholdID,
 		arg.TxOutID,
 		arg.TxInID,
 		arg.Status,
@@ -101,6 +117,7 @@ func (q *Queries) InsertTransferPair(ctx context.Context, arg InsertTransferPair
 		&i.Rationale,
 		&i.ConfirmedAt,
 		&i.CreatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
@@ -130,7 +147,8 @@ JOIN transactions out_tx ON out_tx.id = p.tx_out_id
 JOIN transactions in_tx ON in_tx.id = p.tx_in_id
 LEFT JOIN accounts out_acc ON out_acc.id = out_tx.account_id
 LEFT JOIN accounts in_acc ON in_acc.id = in_tx.account_id
-WHERE p.status = 'suggested'
+WHERE p.household_id = $1
+  AND p.status = 'suggested'
 ORDER BY p.created_at DESC
 `
 
@@ -155,8 +173,8 @@ type ListSuggestedTransferCandidatesRow struct {
 	InAccountName   string             `json:"in_account_name"`
 }
 
-func (q *Queries) ListSuggestedTransferCandidates(ctx context.Context) ([]ListSuggestedTransferCandidatesRow, error) {
-	rows, err := q.db.Query(ctx, listSuggestedTransferCandidates)
+func (q *Queries) ListSuggestedTransferCandidates(ctx context.Context, householdID uuid.UUID) ([]ListSuggestedTransferCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, listSuggestedTransferCandidates, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +223,8 @@ SELECT
     counterparty,
     counterparty_iban
 FROM transactions
-WHERE account_id IS NOT NULL
+WHERE household_id = $1
+  AND account_id IS NOT NULL
 ORDER BY booking_date ASC, id ASC
 `
 
@@ -220,8 +239,8 @@ type ListTransactionsForTransferScanRow struct {
 	CounterpartyIban pgtype.Text     `json:"counterparty_iban"`
 }
 
-func (q *Queries) ListTransactionsForTransferScan(ctx context.Context) ([]ListTransactionsForTransferScanRow, error) {
-	rows, err := q.db.Query(ctx, listTransactionsForTransferScan)
+func (q *Queries) ListTransactionsForTransferScan(ctx context.Context, householdID uuid.UUID) ([]ListTransactionsForTransferScanRow, error) {
+	rows, err := q.db.Query(ctx, listTransactionsForTransferScan, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -252,6 +271,7 @@ func (q *Queries) ListTransactionsForTransferScan(ctx context.Context) ([]ListTr
 const listTransferPairLegs = `-- name: ListTransferPairLegs :many
 SELECT tx_out_id, tx_in_id
 FROM transfer_pairs
+WHERE household_id = $1
 `
 
 type ListTransferPairLegsRow struct {
@@ -259,8 +279,8 @@ type ListTransferPairLegsRow struct {
 	TxInID  uuid.UUID `json:"tx_in_id"`
 }
 
-func (q *Queries) ListTransferPairLegs(ctx context.Context) ([]ListTransferPairLegsRow, error) {
-	rows, err := q.db.Query(ctx, listTransferPairLegs)
+func (q *Queries) ListTransferPairLegs(ctx context.Context, householdID uuid.UUID) ([]ListTransferPairLegsRow, error) {
+	rows, err := q.db.Query(ctx, listTransferPairLegs, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -280,13 +300,14 @@ func (q *Queries) ListTransferPairLegs(ctx context.Context) ([]ListTransferPairL
 }
 
 const listTransferPairs = `-- name: ListTransferPairs :many
-SELECT id, tx_out_id, tx_in_id, status, confidence, rationale, confirmed_at, created_at
+SELECT id, tx_out_id, tx_in_id, status, confidence, rationale, confirmed_at, created_at, household_id
 FROM transfer_pairs
+WHERE household_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListTransferPairs(ctx context.Context) ([]TransferPair, error) {
-	rows, err := q.db.Query(ctx, listTransferPairs)
+func (q *Queries) ListTransferPairs(ctx context.Context, householdID uuid.UUID) ([]TransferPair, error) {
+	rows, err := q.db.Query(ctx, listTransferPairs, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -303,6 +324,7 @@ func (q *Queries) ListTransferPairs(ctx context.Context) ([]TransferPair, error)
 			&i.Rationale,
 			&i.ConfirmedAt,
 			&i.CreatedAt,
+			&i.HouseholdID,
 		); err != nil {
 			return nil, err
 		}
@@ -320,12 +342,18 @@ SET
     status = 'rejected',
     confirmed_at = NULL
 WHERE id = $1
+  AND household_id = $2
   AND status = 'suggested'
-RETURNING id, tx_out_id, tx_in_id, status, confidence, rationale, confirmed_at, created_at
+RETURNING id, tx_out_id, tx_in_id, status, confidence, rationale, confirmed_at, created_at, household_id
 `
 
-func (q *Queries) RejectTransferPair(ctx context.Context, id uuid.UUID) (TransferPair, error) {
-	row := q.db.QueryRow(ctx, rejectTransferPair, id)
+type RejectTransferPairParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) RejectTransferPair(ctx context.Context, arg RejectTransferPairParams) (TransferPair, error) {
+	row := q.db.QueryRow(ctx, rejectTransferPair, arg.ID, arg.HouseholdID)
 	var i TransferPair
 	err := row.Scan(
 		&i.ID,
@@ -336,6 +364,7 @@ func (q *Queries) RejectTransferPair(ctx context.Context, id uuid.UUID) (Transfe
 		&i.Rationale,
 		&i.ConfirmedAt,
 		&i.CreatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }

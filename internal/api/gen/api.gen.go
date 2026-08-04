@@ -4,6 +4,7 @@
 package gen
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,6 +13,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
+)
+
+const (
+	CookieAuthScopes cookieAuthContextKey = "cookieAuth.Scopes"
 )
 
 // Defines values for ActionStatus.
@@ -269,6 +274,24 @@ func (e LLMModelSelectionProvider) Valid() bool {
 	case Ollama:
 		return true
 	case Openrouter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeMembershipRole.
+const (
+	Member MeMembershipRole = "member"
+	Owner  MeMembershipRole = "owner"
+)
+
+// Valid indicates whether the value is a known member of the MeMembershipRole enum.
+func (e MeMembershipRole) Valid() bool {
+	switch e {
+	case Member:
+		return true
+	case Owner:
 		return true
 	default:
 		return false
@@ -1126,6 +1149,34 @@ type LLMModelSelection struct {
 // LLMModelSelectionProvider defines model for LLMModelSelection.Provider.
 type LLMModelSelectionProvider string
 
+// MeHousehold defines model for MeHousehold.
+type MeHousehold struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+}
+
+// MeMembership defines model for MeMembership.
+type MeMembership struct {
+	Role MeMembershipRole `json:"role"`
+}
+
+// MeMembershipRole defines model for MeMembership.Role.
+type MeMembershipRole string
+
+// MeResponse defines model for MeResponse.
+type MeResponse struct {
+	Household  MeHousehold  `json:"household"`
+	Membership MeMembership `json:"membership"`
+	User       MeUser       `json:"user"`
+}
+
+// MeUser defines model for MeUser.
+type MeUser struct {
+	DisplayName string               `json:"display_name"`
+	Email       *openapi_types.Email `json:"email,omitempty"`
+	Id          openapi_types.UUID   `json:"id"`
+}
+
 // MoneyReview defines model for MoneyReview.
 type MoneyReview struct {
 	BaselineId    openapi_types.UUID   `json:"baseline_id"`
@@ -1360,6 +1411,9 @@ type TransferPairConfidence string
 
 // TransferPairStatus defines model for TransferPair.Status.
 type TransferPairStatus string
+
+// cookieAuthContextKey is the context key for cookieAuth security scheme
+type cookieAuthContextKey string
 
 // GetActionsParams defines parameters for GetActions.
 type GetActionsParams struct {
@@ -1626,6 +1680,9 @@ type ServerInterface interface {
 	// List available LLM models for chat
 	// (GET /api/llm/models)
 	GetLLMModels(w http.ResponseWriter, r *http.Request)
+	// Current user and household
+	// (GET /api/me)
+	GetMe(w http.ResponseWriter, r *http.Request)
 	// List all recurring series
 	// (GET /api/recurring)
 	GetRecurring(w http.ResponseWriter, r *http.Request)
@@ -1668,6 +1725,9 @@ type ServerInterface interface {
 	// Reject a suggested transfer pair
 	// (POST /api/transfers/{id}/reject)
 	PostTransferReject(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Revoke session and clear cookie
+	// (POST /auth/logout)
+	PostLogout(w http.ResponseWriter, r *http.Request)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -1866,6 +1926,12 @@ func (_ Unimplemented) GetLLMModels(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Current user and household
+// (GET /api/me)
+func (_ Unimplemented) GetMe(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List all recurring series
 // (GET /api/recurring)
 func (_ Unimplemented) GetRecurring(w http.ResponseWriter, r *http.Request) {
@@ -1950,6 +2016,12 @@ func (_ Unimplemented) PostTransferReject(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Revoke session and clear cookie
+// (POST /auth/logout)
+func (_ Unimplemented) PostLogout(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ServerInterfaceWrapper converts contexts to parameters.
 type ServerInterfaceWrapper struct {
 	Handler            ServerInterface
@@ -1964,6 +2036,12 @@ func (siw *ServerInterfaceWrapper) GetActions(w http.ResponseWriter, r *http.Req
 
 	var err error
 	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetActionsParams
@@ -2020,6 +2098,12 @@ func (siw *ServerInterfaceWrapper) PostActionStatus(w http.ResponseWriter, r *ht
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostActionStatus(w, r, id)
 	}))
@@ -2036,6 +2120,12 @@ func (siw *ServerInterfaceWrapper) GetBaselineCategoryMerchants(w http.ResponseW
 
 	var err error
 	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetBaselineCategoryMerchantsParams
@@ -2109,6 +2199,12 @@ func (siw *ServerInterfaceWrapper) GetBaselineCategorySpend(w http.ResponseWrite
 	var err error
 	_ = err
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetBaselineCategorySpendParams
 
@@ -2168,6 +2264,12 @@ func (siw *ServerInterfaceWrapper) GetBaselineCategorySpendMonthly(w http.Respon
 	var err error
 	_ = err
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetBaselineCategorySpendMonthlyParams
 
@@ -2224,6 +2326,12 @@ func (siw *ServerInterfaceWrapper) GetBaselineCategorySpendMonthly(w http.Respon
 // GetCurrentBaseline operation middleware
 func (siw *ServerInterfaceWrapper) GetCurrentBaseline(w http.ResponseWriter, r *http.Request) {
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCurrentBaseline(w, r)
 	}))
@@ -2240,6 +2348,12 @@ func (siw *ServerInterfaceWrapper) GetBaselineDailyExpensePace(w http.ResponseWr
 
 	var err error
 	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetBaselineDailyExpensePaceParams
@@ -2287,6 +2401,12 @@ func (siw *ServerInterfaceWrapper) GetBaselineMonthlyCashflow(w http.ResponseWri
 	var err error
 	_ = err
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetBaselineMonthlyCashflowParams
 
@@ -2319,6 +2439,12 @@ func (siw *ServerInterfaceWrapper) GetBaselineOneOffImpact(w http.ResponseWriter
 
 	var err error
 	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetBaselineOneOffImpactParams
@@ -2363,6 +2489,12 @@ func (siw *ServerInterfaceWrapper) GetBaselineOneOffImpact(w http.ResponseWriter
 // PostBaselinesRecompute operation middleware
 func (siw *ServerInterfaceWrapper) PostBaselinesRecompute(w http.ResponseWriter, r *http.Request) {
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostBaselinesRecompute(w, r)
 	}))
@@ -2388,6 +2520,12 @@ func (siw *ServerInterfaceWrapper) PostBaselineAdjust(w http.ResponseWriter, r *
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
 		return
 	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostBaselineAdjust(w, r, id)
@@ -2415,6 +2553,12 @@ func (siw *ServerInterfaceWrapper) PostBaselineConfirm(w http.ResponseWriter, r 
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostBaselineConfirm(w, r, id)
 	}))
@@ -2428,6 +2572,12 @@ func (siw *ServerInterfaceWrapper) PostBaselineConfirm(w http.ResponseWriter, r 
 
 // GetCategories operation middleware
 func (siw *ServerInterfaceWrapper) GetCategories(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCategories(w, r)
@@ -2443,6 +2593,12 @@ func (siw *ServerInterfaceWrapper) GetCategories(w http.ResponseWriter, r *http.
 // PostChat operation middleware
 func (siw *ServerInterfaceWrapper) PostChat(w http.ResponseWriter, r *http.Request) {
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostChat(w, r)
 	}))
@@ -2456,6 +2612,12 @@ func (siw *ServerInterfaceWrapper) PostChat(w http.ResponseWriter, r *http.Reque
 
 // PostChatStream operation middleware
 func (siw *ServerInterfaceWrapper) PostChatStream(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostChatStream(w, r)
@@ -2471,6 +2633,12 @@ func (siw *ServerInterfaceWrapper) PostChatStream(w http.ResponseWriter, r *http
 // PostClassificationApplySuggestions operation middleware
 func (siw *ServerInterfaceWrapper) PostClassificationApplySuggestions(w http.ResponseWriter, r *http.Request) {
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostClassificationApplySuggestions(w, r)
 	}))
@@ -2484,6 +2652,12 @@ func (siw *ServerInterfaceWrapper) PostClassificationApplySuggestions(w http.Res
 
 // GetClassificationQueue operation middleware
 func (siw *ServerInterfaceWrapper) GetClassificationQueue(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetClassificationQueue(w, r)
@@ -2511,6 +2685,12 @@ func (siw *ServerInterfaceWrapper) PostClassificationCorrect(w http.ResponseWrit
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostClassificationCorrect(w, r, transactionId)
 	}))
@@ -2527,6 +2707,12 @@ func (siw *ServerInterfaceWrapper) GetDecisions(w http.ResponseWriter, r *http.R
 
 	var err error
 	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetDecisionsParams
@@ -2558,6 +2744,12 @@ func (siw *ServerInterfaceWrapper) GetDecisions(w http.ResponseWriter, r *http.R
 // PostDecisions operation middleware
 func (siw *ServerInterfaceWrapper) PostDecisions(w http.ResponseWriter, r *http.Request) {
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostDecisions(w, r)
 	}))
@@ -2572,6 +2764,12 @@ func (siw *ServerInterfaceWrapper) PostDecisions(w http.ResponseWriter, r *http.
 // PostForecasts operation middleware
 func (siw *ServerInterfaceWrapper) PostForecasts(w http.ResponseWriter, r *http.Request) {
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostForecasts(w, r)
 	}))
@@ -2585,6 +2783,12 @@ func (siw *ServerInterfaceWrapper) PostForecasts(w http.ResponseWriter, r *http.
 
 // GetLatestForecast operation middleware
 func (siw *ServerInterfaceWrapper) GetLatestForecast(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetLatestForecast(w, r)
@@ -2612,6 +2816,12 @@ func (siw *ServerInterfaceWrapper) GetForecast(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetForecast(w, r, id)
 	}))
@@ -2638,6 +2848,12 @@ func (siw *ServerInterfaceWrapper) GetForecastScenarios(w http.ResponseWriter, r
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetForecastScenarios(w, r, id)
 	}))
@@ -2663,6 +2879,12 @@ func (siw *ServerInterfaceWrapper) PostForecastScenario(w http.ResponseWriter, r
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
 		return
 	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostForecastScenario(w, r, id)
@@ -2695,6 +2917,12 @@ func (siw *ServerInterfaceWrapper) GetImports(w http.ResponseWriter, r *http.Req
 	var err error
 	_ = err
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetImportsParams
 
@@ -2725,6 +2953,12 @@ func (siw *ServerInterfaceWrapper) GetImports(w http.ResponseWriter, r *http.Req
 // PostImports operation middleware
 func (siw *ServerInterfaceWrapper) PostImports(w http.ResponseWriter, r *http.Request) {
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostImports(w, r)
 	}))
@@ -2738,6 +2972,12 @@ func (siw *ServerInterfaceWrapper) PostImports(w http.ResponseWriter, r *http.Re
 
 // PostImportsPreview operation middleware
 func (siw *ServerInterfaceWrapper) PostImportsPreview(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostImportsPreview(w, r)
@@ -2765,6 +3005,12 @@ func (siw *ServerInterfaceWrapper) GetImport(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetImport(w, r, id)
 	}))
@@ -2791,6 +3037,12 @@ func (siw *ServerInterfaceWrapper) PostImportRollback(w http.ResponseWriter, r *
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostImportRollback(w, r, id)
 	}))
@@ -2805,6 +3057,12 @@ func (siw *ServerInterfaceWrapper) PostImportRollback(w http.ResponseWriter, r *
 // GetLLMModels operation middleware
 func (siw *ServerInterfaceWrapper) GetLLMModels(w http.ResponseWriter, r *http.Request) {
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetLLMModels(w, r)
 	}))
@@ -2816,8 +3074,34 @@ func (siw *ServerInterfaceWrapper) GetLLMModels(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// GetMe operation middleware
+func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetRecurring operation middleware
 func (siw *ServerInterfaceWrapper) GetRecurring(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetRecurring(w, r)
@@ -2832,6 +3116,12 @@ func (siw *ServerInterfaceWrapper) GetRecurring(w http.ResponseWriter, r *http.R
 
 // GetUncertainRecurring operation middleware
 func (siw *ServerInterfaceWrapper) GetUncertainRecurring(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetUncertainRecurring(w, r)
@@ -2859,6 +3149,12 @@ func (siw *ServerInterfaceWrapper) PostRecurringConfirm(w http.ResponseWriter, r
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostRecurringConfirm(w, r, id)
 	}))
@@ -2884,6 +3180,12 @@ func (siw *ServerInterfaceWrapper) GetRecurringMembers(w http.ResponseWriter, r 
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
 		return
 	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetRecurringMembersParams
@@ -2927,6 +3229,12 @@ func (siw *ServerInterfaceWrapper) PostRecurringReject(w http.ResponseWriter, r 
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostRecurringReject(w, r, id)
 	}))
@@ -2943,6 +3251,12 @@ func (siw *ServerInterfaceWrapper) GetMoneyReviews(w http.ResponseWriter, r *htt
 
 	var err error
 	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetMoneyReviewsParams
@@ -2974,6 +3288,12 @@ func (siw *ServerInterfaceWrapper) GetMoneyReviews(w http.ResponseWriter, r *htt
 // PostMoneyReviews operation middleware
 func (siw *ServerInterfaceWrapper) PostMoneyReviews(w http.ResponseWriter, r *http.Request) {
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostMoneyReviews(w, r)
 	}))
@@ -2999,6 +3319,12 @@ func (siw *ServerInterfaceWrapper) GetMoneyReview(w http.ResponseWriter, r *http
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
 		return
 	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMoneyReview(w, r, id)
@@ -3026,6 +3352,12 @@ func (siw *ServerInterfaceWrapper) PostMoneyReviewConfirm(w http.ResponseWriter,
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostMoneyReviewConfirm(w, r, id)
 	}))
@@ -3042,6 +3374,12 @@ func (siw *ServerInterfaceWrapper) GetTransactions(w http.ResponseWriter, r *htt
 
 	var err error
 	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetTransactionsParams
@@ -3215,6 +3553,12 @@ func (siw *ServerInterfaceWrapper) PostTransactionOneOff(w http.ResponseWriter, 
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostTransactionOneOff(w, r, transactionId)
 	}))
@@ -3228,6 +3572,12 @@ func (siw *ServerInterfaceWrapper) PostTransactionOneOff(w http.ResponseWriter, 
 
 // GetTransferCandidates operation middleware
 func (siw *ServerInterfaceWrapper) GetTransferCandidates(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetTransferCandidates(w, r)
@@ -3255,6 +3605,12 @@ func (siw *ServerInterfaceWrapper) PostTransferConfirm(w http.ResponseWriter, r 
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostTransferConfirm(w, r, id)
 	}))
@@ -3281,8 +3637,28 @@ func (siw *ServerInterfaceWrapper) PostTransferReject(w http.ResponseWriter, r *
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostTransferReject(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostLogout operation middleware
+func (siw *ServerInterfaceWrapper) PostLogout(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostLogout(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3502,6 +3878,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/api/llm/models", wrapper.GetLLMModels)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/me", wrapper.GetMe)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/recurring", wrapper.GetRecurring)
 	})
 	r.Group(func(r chi.Router) {
@@ -3542,6 +3921,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/transfers/{id}/reject", wrapper.PostTransferReject)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/logout", wrapper.PostLogout)
 	})
 
 	return r

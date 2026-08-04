@@ -9,6 +9,7 @@ import (
 	"github.com/abteilung6/assetagent/internal/classify"
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
 	"github.com/abteilung6/assetagent/internal/domain"
+	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,14 +29,18 @@ func NewTransfers(pool *pgxpool.Pool) *Transfers {
 }
 
 func (s *Transfers) Scan(ctx context.Context) (domain.TransferScanResult, error) {
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return domain.TransferScanResult{}, err
+	}
 	q := sqldb.New(s.pool)
 
-	rows, err := q.ListTransactionsForTransferScan(ctx)
+	rows, err := q.ListTransactionsForTransferScan(ctx, householdID)
 	if err != nil {
 		return domain.TransferScanResult{}, fmt.Errorf("list transactions: %w", err)
 	}
 
-	legs, err := q.ListTransferPairLegs(ctx)
+	legs, err := q.ListTransferPairLegs(ctx, householdID)
 	if err != nil {
 		return domain.TransferScanResult{}, fmt.Errorf("list existing pairs: %w", err)
 	}
@@ -79,11 +84,12 @@ func (s *Transfers) Scan(ctx context.Context) (domain.TransferScanResult, error)
 			return domain.TransferScanResult{}, fmt.Errorf("marshal rationale: %w", err)
 		}
 		row, err := q.InsertTransferPair(ctx, sqldb.InsertTransferPairParams{
-			TxOutID:    cand.TxOutID,
-			TxInID:     cand.TxInID,
-			Status:     cand.Status,
-			Confidence: cand.Confidence,
-			Rationale:  rationale,
+			HouseholdID: householdID,
+			TxOutID:     cand.TxOutID,
+			TxInID:      cand.TxInID,
+			Status:      cand.Status,
+			Confidence:  cand.Confidence,
+			Rationale:   rationale,
 		})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -99,7 +105,11 @@ func (s *Transfers) Scan(ctx context.Context) (domain.TransferScanResult, error)
 }
 
 func (s *Transfers) List(ctx context.Context) ([]domain.TransferPair, error) {
-	rows, err := sqldb.New(s.pool).ListTransferPairs(ctx)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := sqldb.New(s.pool).ListTransferPairs(ctx, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +121,11 @@ func (s *Transfers) List(ctx context.Context) ([]domain.TransferPair, error) {
 }
 
 func (s *Transfers) ListCandidates(ctx context.Context) ([]domain.TransferCandidate, error) {
-	rows, err := sqldb.New(s.pool).ListSuggestedTransferCandidates(ctx)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := sqldb.New(s.pool).ListSuggestedTransferCandidates(ctx, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -155,9 +169,16 @@ func (s *Transfers) Reject(ctx context.Context, id uuid.UUID) (domain.TransferPa
 }
 
 func (s *Transfers) decide(ctx context.Context, id uuid.UUID, confirm bool) (domain.TransferPair, error) {
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return domain.TransferPair{}, err
+	}
 	q := sqldb.New(s.pool)
 
-	existing, err := q.GetTransferPair(ctx, id)
+	existing, err := q.GetTransferPair(ctx, sqldb.GetTransferPairParams{
+		ID:          id,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.TransferPair{}, ErrTransferPairNotFound
@@ -170,9 +191,15 @@ func (s *Transfers) decide(ctx context.Context, id uuid.UUID, confirm bool) (dom
 
 	var row sqldb.TransferPair
 	if confirm {
-		row, err = q.ConfirmTransferPair(ctx, id)
+		row, err = q.ConfirmTransferPair(ctx, sqldb.ConfirmTransferPairParams{
+			ID:          id,
+			HouseholdID: householdID,
+		})
 	} else {
-		row, err = q.RejectTransferPair(ctx, id)
+		row, err = q.RejectTransferPair(ctx, sqldb.RejectTransferPairParams{
+			ID:          id,
+			HouseholdID: householdID,
+		})
 	}
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

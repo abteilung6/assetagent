@@ -8,6 +8,7 @@ import (
 
 	"github.com/abteilung6/assetagent/internal/api/gen"
 	"github.com/abteilung6/assetagent/internal/api/handler"
+	"github.com/abteilung6/assetagent/internal/api/middleware"
 	"github.com/abteilung6/assetagent/internal/chat"
 	"github.com/abteilung6/assetagent/internal/chat/tools"
 	"github.com/abteilung6/assetagent/internal/config"
@@ -90,10 +91,59 @@ func newServeCmd() *cobra.Command {
 				chatCfg,
 			)
 
+			authRepo := repository.NewAuth(pool)
+			sessions := service.NewSession(authRepo, service.SessionConfigFromEnv(
+				cfg.AppEnv,
+				cfg.SessionCookieName,
+				cfg.SessionCookieSecure,
+				cfg.SessionIdleHours,
+				cfg.SessionAbsoluteHours,
+			))
+
+			var googleAuth *service.GoogleAuthService
+			googleConfigured := cfg.GoogleClientID != "" && cfg.GoogleClientSecret != ""
+			if googleConfigured {
+				verifier, verr := service.NewRealGoogleIDTokenVerifier(ctx, cfg.GoogleClientID)
+				if verr != nil {
+					slog.Warn("google oidc verifier unavailable", "err", verr)
+				} else {
+					googleAuth = service.NewGoogleAuth(
+						authRepo,
+						sessions,
+						service.NewRealGoogleOAuth(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL),
+						verifier,
+						service.GoogleAuthConfig{
+							ClientID:          cfg.GoogleClientID,
+							ClientSecret:      cfg.GoogleClientSecret,
+							RedirectURL:       cfg.GoogleRedirectURL,
+							FrontendURL:       cfg.FrontendURL,
+							ClaimExistingData: cfg.AuthClaimExistingData,
+							Configured:        true,
+						},
+					)
+				}
+			} else {
+				slog.Info("google sign-in disabled (GOOGLE_CLIENT_ID/SECRET not set)")
+			}
+
 			router := chi.NewRouter()
+			router.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigins))
+			router.Use(middleware.ResolveSessionMiddleware(sessions))
+			router.Use(middleware.RequireAuthMiddleware)
+
+			if googleAuth != nil {
+				gh := handler.NewGoogleAuthHandler(googleAuth, sessions)
+				router.Get("/auth/google/start", gh.Start)
+				router.Get("/auth/google/callback", gh.Callback)
+			} else {
+				unavailable := handler.NewGoogleAuthHandler(nil, sessions)
+				router.Get("/auth/google/start", unavailable.Start)
+				router.Get("/auth/google/callback", unavailable.Callback)
+			}
+
 			importer := service.NewImport(pool)
 			categories := repository.NewCategories(pool)
-			gen.HandlerWithOptions(handler.New(listSvc, chatSvc, llmRegistry, importer, transfers, classifySvc, categories, recurringSvc, baselineSvc, moneyReviewSvc, forecastSvc, service.NewDecision(pool)), gen.ChiServerOptions{
+			gen.HandlerWithOptions(handler.New(listSvc, chatSvc, llmRegistry, importer, transfers, classifySvc, categories, recurringSvc, baselineSvc, moneyReviewSvc, forecastSvc, service.NewDecision(pool), sessions), gen.ChiServerOptions{
 				BaseRouter:       router,
 				ErrorHandlerFunc: handler.APIErrorHandler,
 			})

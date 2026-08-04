@@ -19,12 +19,18 @@ SET
     status = 'active',
     updated_at = now()
 WHERE id = $1
+  AND household_id = $2
   AND status = 'uncertain'
-RETURNING id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at
+RETURNING id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at, household_id
 `
 
-func (q *Queries) ConfirmRecurringSeries(ctx context.Context, id uuid.UUID) (RecurringSeries, error) {
-	row := q.db.QueryRow(ctx, confirmRecurringSeries, id)
+type ConfirmRecurringSeriesParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) ConfirmRecurringSeries(ctx context.Context, arg ConfirmRecurringSeriesParams) (RecurringSeries, error) {
+	row := q.db.QueryRow(ctx, confirmRecurringSeries, arg.ID, arg.HouseholdID)
 	var i RecurringSeries
 	err := row.Scan(
 		&i.ID,
@@ -41,18 +47,24 @@ func (q *Queries) ConfirmRecurringSeries(ctx context.Context, id uuid.UUID) (Rec
 		&i.MemberCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const getRecurringSeries = `-- name: GetRecurringSeries :one
-SELECT id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at
+SELECT id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at, household_id
 FROM recurring_series
-WHERE id = $1
+WHERE id = $1 AND household_id = $2
 `
 
-func (q *Queries) GetRecurringSeries(ctx context.Context, id uuid.UUID) (RecurringSeries, error) {
-	row := q.db.QueryRow(ctx, getRecurringSeries, id)
+type GetRecurringSeriesParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) GetRecurringSeries(ctx context.Context, arg GetRecurringSeriesParams) (RecurringSeries, error) {
+	row := q.db.QueryRow(ctx, getRecurringSeries, arg.ID, arg.HouseholdID)
 	var i RecurringSeries
 	err := row.Scan(
 		&i.ID,
@@ -69,12 +81,14 @@ func (q *Queries) GetRecurringSeries(ctx context.Context, id uuid.UUID) (Recurri
 		&i.MemberCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const insertRecurringSeries = `-- name: InsertRecurringSeries :one
 INSERT INTO recurring_series (
+    household_id,
     fingerprint,
     display_name,
     cadence,
@@ -87,13 +101,14 @@ INSERT INTO recurring_series (
     uncertainty,
     member_count
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
 )
 ON CONFLICT (fingerprint) DO NOTHING
-RETURNING id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at
+RETURNING id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at, household_id
 `
 
 type InsertRecurringSeriesParams struct {
+	HouseholdID   uuid.UUID       `json:"household_id"`
 	Fingerprint   string          `json:"fingerprint"`
 	DisplayName   string          `json:"display_name"`
 	Cadence       string          `json:"cadence"`
@@ -109,6 +124,7 @@ type InsertRecurringSeriesParams struct {
 
 func (q *Queries) InsertRecurringSeries(ctx context.Context, arg InsertRecurringSeriesParams) (RecurringSeries, error) {
 	row := q.db.QueryRow(ctx, insertRecurringSeries,
+		arg.HouseholdID,
 		arg.Fingerprint,
 		arg.DisplayName,
 		arg.Cadence,
@@ -137,6 +153,7 @@ func (q *Queries) InsertRecurringSeries(ctx context.Context, arg InsertRecurring
 		&i.MemberCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
@@ -171,12 +188,14 @@ func (q *Queries) InsertRecurringSeriesMember(ctx context.Context, arg InsertRec
 }
 
 const listRecurringMemberTransactionIDs = `-- name: ListRecurringMemberTransactionIDs :many
-SELECT transaction_id
-FROM recurring_series_members
+SELECT m.transaction_id
+FROM recurring_series_members m
+JOIN recurring_series s ON s.id = m.series_id
+WHERE s.household_id = $1
 `
 
-func (q *Queries) ListRecurringMemberTransactionIDs(ctx context.Context) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, listRecurringMemberTransactionIDs)
+func (q *Queries) ListRecurringMemberTransactionIDs(ctx context.Context, householdID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listRecurringMemberTransactionIDs, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -196,13 +215,14 @@ func (q *Queries) ListRecurringMemberTransactionIDs(ctx context.Context) ([]uuid
 }
 
 const listRecurringSeries = `-- name: ListRecurringSeries :many
-SELECT id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at
+SELECT id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at, household_id
 FROM recurring_series
+WHERE household_id = $1
 ORDER BY display_name ASC, created_at DESC
 `
 
-func (q *Queries) ListRecurringSeries(ctx context.Context) ([]RecurringSeries, error) {
-	rows, err := q.db.Query(ctx, listRecurringSeries)
+func (q *Queries) ListRecurringSeries(ctx context.Context, householdID uuid.UUID) ([]RecurringSeries, error) {
+	rows, err := q.db.Query(ctx, listRecurringSeries, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -225,6 +245,7 @@ func (q *Queries) ListRecurringSeries(ctx context.Context) ([]RecurringSeries, e
 			&i.MemberCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.HouseholdID,
 		); err != nil {
 			return nil, err
 		}
@@ -245,14 +266,17 @@ SELECT
     t.purpose
 FROM recurring_series_members m
 JOIN transactions t ON t.id = m.transaction_id
+JOIN recurring_series s ON s.id = m.series_id
 WHERE m.series_id = $1
+  AND s.household_id = $2
 ORDER BY m.booking_date DESC, m.transaction_id DESC
-LIMIT $2
+LIMIT $3
 `
 
 type ListRecurringSeriesMembersParams struct {
-	SeriesID uuid.UUID `json:"series_id"`
-	RowLimit int32     `json:"row_limit"`
+	SeriesID    uuid.UUID `json:"series_id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+	RowLimit    int32     `json:"row_limit"`
 }
 
 type ListRecurringSeriesMembersRow struct {
@@ -264,7 +288,7 @@ type ListRecurringSeriesMembersRow struct {
 }
 
 func (q *Queries) ListRecurringSeriesMembers(ctx context.Context, arg ListRecurringSeriesMembersParams) ([]ListRecurringSeriesMembersRow, error) {
-	rows, err := q.db.Query(ctx, listRecurringSeriesMembers, arg.SeriesID, arg.RowLimit)
+	rows, err := q.db.Query(ctx, listRecurringSeriesMembers, arg.SeriesID, arg.HouseholdID, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +323,8 @@ SELECT
     booking_text,
     counterparty
 FROM transactions
-WHERE account_id IS NOT NULL
+WHERE household_id = $1
+  AND account_id IS NOT NULL
 ORDER BY booking_date ASC, id ASC
 `
 
@@ -313,8 +338,8 @@ type ListTransactionsForRecurringScanRow struct {
 	Counterparty string          `json:"counterparty"`
 }
 
-func (q *Queries) ListTransactionsForRecurringScan(ctx context.Context) ([]ListTransactionsForRecurringScanRow, error) {
-	rows, err := q.db.Query(ctx, listTransactionsForRecurringScan)
+func (q *Queries) ListTransactionsForRecurringScan(ctx context.Context, householdID uuid.UUID) ([]ListTransactionsForRecurringScanRow, error) {
+	rows, err := q.db.Query(ctx, listTransactionsForRecurringScan, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -342,14 +367,15 @@ func (q *Queries) ListTransactionsForRecurringScan(ctx context.Context) ([]ListT
 }
 
 const listUncertainRecurringSeries = `-- name: ListUncertainRecurringSeries :many
-SELECT id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at
+SELECT id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at, household_id
 FROM recurring_series
-WHERE status = 'uncertain'
+WHERE household_id = $1
+  AND status = 'uncertain'
 ORDER BY amount_typical DESC, display_name ASC
 `
 
-func (q *Queries) ListUncertainRecurringSeries(ctx context.Context) ([]RecurringSeries, error) {
-	rows, err := q.db.Query(ctx, listUncertainRecurringSeries)
+func (q *Queries) ListUncertainRecurringSeries(ctx context.Context, householdID uuid.UUID) ([]RecurringSeries, error) {
+	rows, err := q.db.Query(ctx, listUncertainRecurringSeries, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -372,6 +398,7 @@ func (q *Queries) ListUncertainRecurringSeries(ctx context.Context) ([]Recurring
 			&i.MemberCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.HouseholdID,
 		); err != nil {
 			return nil, err
 		}
@@ -389,12 +416,18 @@ SET
     status = 'ended',
     updated_at = now()
 WHERE id = $1
+  AND household_id = $2
   AND status = 'uncertain'
-RETURNING id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at
+RETURNING id, fingerprint, display_name, cadence, kind, status, amount_typical, amount_last, amount_changed, next_expected, uncertainty, member_count, created_at, updated_at, household_id
 `
 
-func (q *Queries) RejectRecurringSeries(ctx context.Context, id uuid.UUID) (RecurringSeries, error) {
-	row := q.db.QueryRow(ctx, rejectRecurringSeries, id)
+type RejectRecurringSeriesParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) RejectRecurringSeries(ctx context.Context, arg RejectRecurringSeriesParams) (RecurringSeries, error) {
+	row := q.db.QueryRow(ctx, rejectRecurringSeries, arg.ID, arg.HouseholdID)
 	var i RecurringSeries
 	err := row.Scan(
 		&i.ID,
@@ -411,6 +444,7 @@ func (q *Queries) RejectRecurringSeries(ctx context.Context, id uuid.UUID) (Recu
 		&i.MemberCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }

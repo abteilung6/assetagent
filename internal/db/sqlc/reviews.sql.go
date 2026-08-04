@@ -19,12 +19,18 @@ SET
     confirmed_at = now(),
     updated_at = now()
 WHERE id = $1
+  AND household_id = $2
   AND status IN ('draft', 'needs_confirmation')
-RETURNING id, baseline_id, period_from, period_to, status, summary, findings, data_freshness, confirmed_at, created_at, updated_at
+RETURNING id, baseline_id, period_from, period_to, status, summary, findings, data_freshness, confirmed_at, created_at, updated_at, household_id
 `
 
-func (q *Queries) ConfirmMoneyReview(ctx context.Context, id uuid.UUID) (MoneyReview, error) {
-	row := q.db.QueryRow(ctx, confirmMoneyReview, id)
+type ConfirmMoneyReviewParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) ConfirmMoneyReview(ctx context.Context, arg ConfirmMoneyReviewParams) (MoneyReview, error) {
+	row := q.db.QueryRow(ctx, confirmMoneyReview, arg.ID, arg.HouseholdID)
 	var i MoneyReview
 	err := row.Scan(
 		&i.ID,
@@ -38,18 +44,24 @@ func (q *Queries) ConfirmMoneyReview(ctx context.Context, id uuid.UUID) (MoneyRe
 		&i.ConfirmedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const getMoneyReview = `-- name: GetMoneyReview :one
-SELECT id, baseline_id, period_from, period_to, status, summary, findings, data_freshness, confirmed_at, created_at, updated_at
+SELECT id, baseline_id, period_from, period_to, status, summary, findings, data_freshness, confirmed_at, created_at, updated_at, household_id
 FROM money_reviews
-WHERE id = $1
+WHERE id = $1 AND household_id = $2
 `
 
-func (q *Queries) GetMoneyReview(ctx context.Context, id uuid.UUID) (MoneyReview, error) {
-	row := q.db.QueryRow(ctx, getMoneyReview, id)
+type GetMoneyReviewParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) GetMoneyReview(ctx context.Context, arg GetMoneyReviewParams) (MoneyReview, error) {
+	row := q.db.QueryRow(ctx, getMoneyReview, arg.ID, arg.HouseholdID)
 	var i MoneyReview
 	err := row.Scan(
 		&i.ID,
@@ -63,12 +75,14 @@ func (q *Queries) GetMoneyReview(ctx context.Context, id uuid.UUID) (MoneyReview
 		&i.ConfirmedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const insertMoneyReview = `-- name: InsertMoneyReview :one
 INSERT INTO money_reviews (
+    household_id,
     baseline_id,
     period_from,
     period_to,
@@ -77,12 +91,13 @@ INSERT INTO money_reviews (
     findings,
     data_freshness
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1, $2, $3, $4, $5, $6, $7, $8
 )
-RETURNING id, baseline_id, period_from, period_to, status, summary, findings, data_freshness, confirmed_at, created_at, updated_at
+RETURNING id, baseline_id, period_from, period_to, status, summary, findings, data_freshness, confirmed_at, created_at, updated_at, household_id
 `
 
 type InsertMoneyReviewParams struct {
+	HouseholdID   uuid.UUID   `json:"household_id"`
 	BaselineID    uuid.UUID   `json:"baseline_id"`
 	PeriodFrom    pgtype.Date `json:"period_from"`
 	PeriodTo      pgtype.Date `json:"period_to"`
@@ -94,6 +109,7 @@ type InsertMoneyReviewParams struct {
 
 func (q *Queries) InsertMoneyReview(ctx context.Context, arg InsertMoneyReviewParams) (MoneyReview, error) {
 	row := q.db.QueryRow(ctx, insertMoneyReview,
+		arg.HouseholdID,
 		arg.BaselineID,
 		arg.PeriodFrom,
 		arg.PeriodTo,
@@ -115,19 +131,26 @@ func (q *Queries) InsertMoneyReview(ctx context.Context, arg InsertMoneyReviewPa
 		&i.ConfirmedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const listMoneyReviews = `-- name: ListMoneyReviews :many
-SELECT id, baseline_id, period_from, period_to, status, summary, findings, data_freshness, confirmed_at, created_at, updated_at
+SELECT id, baseline_id, period_from, period_to, status, summary, findings, data_freshness, confirmed_at, created_at, updated_at, household_id
 FROM money_reviews
+WHERE household_id = $1
 ORDER BY created_at DESC
-LIMIT $1
+LIMIT $2
 `
 
-func (q *Queries) ListMoneyReviews(ctx context.Context, rowLimit int32) ([]MoneyReview, error) {
-	rows, err := q.db.Query(ctx, listMoneyReviews, rowLimit)
+type ListMoneyReviewsParams struct {
+	HouseholdID uuid.UUID `json:"household_id"`
+	RowLimit    int32     `json:"row_limit"`
+}
+
+func (q *Queries) ListMoneyReviews(ctx context.Context, arg ListMoneyReviewsParams) ([]MoneyReview, error) {
+	rows, err := q.db.Query(ctx, listMoneyReviews, arg.HouseholdID, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +170,7 @@ func (q *Queries) ListMoneyReviews(ctx context.Context, rowLimit int32) ([]Money
 			&i.ConfirmedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.HouseholdID,
 		); err != nil {
 			return nil, err
 		}
@@ -163,10 +187,11 @@ UPDATE money_reviews
 SET
     status = 'superseded',
     updated_at = now()
-WHERE status IN ('draft', 'needs_confirmation', 'confirmed')
+WHERE household_id = $1
+  AND status IN ('draft', 'needs_confirmation', 'confirmed')
 `
 
-func (q *Queries) SupersedeOpenMoneyReviews(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, supersedeOpenMoneyReviews)
+func (q *Queries) SupersedeOpenMoneyReviews(ctx context.Context, householdID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, supersedeOpenMoneyReviews, householdID)
 	return err
 }

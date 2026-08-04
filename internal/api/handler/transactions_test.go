@@ -68,7 +68,7 @@ func TestGetTransactions_returnsPaginatedList(t *testing.T) {
 	}
 
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(list, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(list, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})
@@ -104,7 +104,7 @@ func TestGetTransactions_returnsPaginatedList(t *testing.T) {
 
 func TestGetTransactions_invalidDate_returns400(t *testing.T) {
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(&stubListService{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(&stubListService{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})
@@ -130,7 +130,7 @@ func TestGetTransactions_mapsFilterParams(t *testing.T) {
 	list := &stubListService{result: domain.ListResult{Total: 0}}
 
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(list, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(list, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})
@@ -178,7 +178,7 @@ func TestPostTransactionOneOff_ok(t *testing.T) {
 	}
 
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(list, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(list, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})
@@ -213,7 +213,7 @@ func TestPostTransactionOneOff_notFound(t *testing.T) {
 	list := &stubListService{setOneOffErr: service.ErrTransactionNotFound}
 
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(list, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(list, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})

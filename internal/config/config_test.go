@@ -16,6 +16,17 @@ func TestLoad_defaults(t *testing.T) {
 	t.Setenv("LLM_DEFAULT_PROVIDER", "")
 	t.Setenv("LLM_PROVIDERS", "")
 	t.Setenv("OPENROUTER_BASE_URL", "")
+	t.Setenv("APP_ENV", "")
+	t.Setenv("FRONTEND_URL", "")
+	t.Setenv("CORS_ALLOWED_ORIGINS", "")
+	t.Setenv("GOOGLE_CLIENT_ID", "")
+	t.Setenv("GOOGLE_CLIENT_SECRET", "")
+	t.Setenv("GOOGLE_REDIRECT_URL", "")
+	t.Setenv("SESSION_COOKIE_NAME", "")
+	t.Setenv("SESSION_COOKIE_SECURE", "")
+	t.Setenv("SESSION_IDLE_HOURS", "")
+	t.Setenv("SESSION_ABSOLUTE_HOURS", "")
+	t.Setenv("AUTH_CLAIM_EXISTING_DATA", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -47,6 +58,33 @@ func TestLoad_defaults(t *testing.T) {
 	}
 	if cfg.OpenRouterBaseURL != "https://openrouter.ai/api/v1" {
 		t.Errorf("OpenRouterBaseURL = %q, want https://openrouter.ai/api/v1", cfg.OpenRouterBaseURL)
+	}
+	if cfg.AppEnv != "development" {
+		t.Errorf("AppEnv = %q, want development", cfg.AppEnv)
+	}
+	if cfg.FrontendURL != "http://localhost:5173" {
+		t.Errorf("FrontendURL = %q, want http://localhost:5173", cfg.FrontendURL)
+	}
+	if cfg.CORSAllowedOrigins != "http://localhost:5173" {
+		t.Errorf("CORSAllowedOrigins = %q, want http://localhost:5173", cfg.CORSAllowedOrigins)
+	}
+	if cfg.GoogleRedirectURL != "http://localhost:8080/auth/google/callback" {
+		t.Errorf("GoogleRedirectURL = %q, want default callback", cfg.GoogleRedirectURL)
+	}
+	if cfg.SessionCookieName != "session" {
+		t.Errorf("SessionCookieName = %q, want session", cfg.SessionCookieName)
+	}
+	if cfg.SessionCookieSecure {
+		t.Errorf("SessionCookieSecure = true, want false")
+	}
+	if cfg.SessionIdleHours != 336 {
+		t.Errorf("SessionIdleHours = %d, want 336", cfg.SessionIdleHours)
+	}
+	if cfg.SessionAbsoluteHours != 720 {
+		t.Errorf("SessionAbsoluteHours = %d, want 720", cfg.SessionAbsoluteHours)
+	}
+	if cfg.AuthClaimExistingData {
+		t.Errorf("AuthClaimExistingData = true, want false")
 	}
 }
 
@@ -128,6 +166,16 @@ func TestLoad_validationErrors(t *testing.T) {
 			env:    map[string]string{"OPENROUTER_BASE_URL": "ftp://openrouter.ai"},
 			errMsg: "OPENROUTER_BASE_URL",
 		},
+		{
+			name:   "invalid frontend url scheme",
+			env:    map[string]string{"FRONTEND_URL": "ftp://localhost:5173"},
+			errMsg: "FRONTEND_URL",
+		},
+		{
+			name:   "invalid session idle hours",
+			env:    map[string]string{"SESSION_IDLE_HOURS": "abc"},
+			errMsg: "SESSION_IDLE_HOURS",
+		},
 	}
 
 	for _, tt := range tests {
@@ -141,6 +189,9 @@ func TestLoad_validationErrors(t *testing.T) {
 			t.Setenv("LLM_DEFAULT_PROVIDER", "")
 			t.Setenv("LLM_PROVIDERS", "")
 			t.Setenv("OPENROUTER_BASE_URL", "")
+			t.Setenv("FRONTEND_URL", "")
+			t.Setenv("SESSION_IDLE_HOURS", "")
+			t.Setenv("SESSION_ABSOLUTE_HOURS", "")
 
 			for k, v := range tt.env {
 				t.Setenv(k, v)

@@ -13,20 +13,26 @@ import (
 )
 
 type Reports struct {
+	pool    *pgxpool.Pool
 	queries sqldb.Querier
 }
 
 func NewReports(pool *pgxpool.Pool) *Reports {
-	return &Reports{queries: sqldb.New(pool)}
+	return &Reports{pool: pool, queries: sqldb.New(pool)}
 }
 
 func (r *Reports) GetCashflow(
 	ctx context.Context,
 	from, to time.Time,
 ) (domain.CashflowReport, error) {
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return domain.CashflowReport{}, err
+	}
 	row, err := r.queries.GetCashflow(ctx, sqldb.GetCashflowParams{
-		FromDate: pgtype.Date{Time: from, Valid: true},
-		ToDate:   pgtype.Date{Time: to, Valid: true},
+		HouseholdID: householdID,
+		FromDate:    pgtype.Date{Time: from, Valid: true},
+		ToDate:      pgtype.Date{Time: to, Valid: true},
 	})
 	if err != nil {
 		return domain.CashflowReport{}, err
@@ -43,9 +49,14 @@ func (r *Reports) GetCashflowV2(
 	ctx context.Context,
 	from, to time.Time,
 ) (domain.CashflowReportV2, error) {
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return domain.CashflowReportV2{}, err
+	}
 	row, err := r.queries.GetCashflowV2(ctx, sqldb.GetCashflowV2Params{
-		FromDate: pgtype.Date{Time: from, Valid: true},
-		ToDate:   pgtype.Date{Time: to, Valid: true},
+		HouseholdID: householdID,
+		FromDate:    pgtype.Date{Time: from, Valid: true},
+		ToDate:      pgtype.Date{Time: to, Valid: true},
 	})
 	if err != nil {
 		return domain.CashflowReportV2{}, err
@@ -63,6 +74,11 @@ func (r *Reports) GetCashflowV2Evidence(
 	ctx context.Context,
 	from, to time.Time,
 ) (domain.CashflowV2Evidence, error) {
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return domain.CashflowV2Evidence{}, err
+	}
+
 	report, err := r.GetCashflowV2(ctx, from, to)
 	if err != nil {
 		return domain.CashflowV2Evidence{}, err
@@ -72,32 +88,35 @@ func (r *Reports) GetCashflowV2Evidence(
 	toDate := pgtype.Date{Time: to, Valid: true}
 
 	accounts, err := r.queries.ListAccountsInPeriod(ctx, sqldb.ListAccountsInPeriodParams{
-		FromDate: fromDate,
-		ToDate:   toDate,
+		HouseholdID: householdID,
+		FromDate:    fromDate,
+		ToDate:      toDate,
 	})
 	if err != nil {
 		return domain.CashflowV2Evidence{}, fmt.Errorf("list accounts: %w", err)
 	}
 
 	transferIDs, err := r.queries.ListConfirmedTransferIDsInPeriod(ctx, sqldb.ListConfirmedTransferIDsInPeriodParams{
-		FromDate: fromDate,
-		ToDate:   toDate,
+		HouseholdID: householdID,
+		FromDate:    fromDate,
+		ToDate:      toDate,
 	})
 	if err != nil {
 		return domain.CashflowV2Evidence{}, fmt.Errorf("list transfers: %w", err)
 	}
 
 	txIDs, err := r.queries.ListCashflowV2TransactionIDs(ctx, sqldb.ListCashflowV2TransactionIDsParams{
-		FromDate: fromDate,
-		ToDate:   toDate,
-		RowLimit: 50,
+		HouseholdID: householdID,
+		FromDate:    fromDate,
+		ToDate:      toDate,
+		RowLimit:    50,
 	})
 	if err != nil {
 		return domain.CashflowV2Evidence{}, fmt.Errorf("list evidence txs: %w", err)
 	}
 
 	freshness := ""
-	latest, err := r.queries.GetLatestBookingDate(ctx)
+	latest, err := r.queries.GetLatestBookingDate(ctx, householdID)
 	if err == nil && latest.Valid {
 		freshness = latest.Time.Format("2006-01-02")
 	}
@@ -141,10 +160,15 @@ func (r *Reports) GetTopCounterparties(
 	from, to time.Time,
 	limit int,
 ) ([]domain.CounterpartySpend, error) {
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := r.queries.GetTopCounterparties(ctx, sqldb.GetTopCounterpartiesParams{
-		FromDate: pgtype.Date{Time: from, Valid: true},
-		ToDate:   pgtype.Date{Time: to, Valid: true},
-		RowLimit: int32(limit),
+		HouseholdID: householdID,
+		FromDate:    pgtype.Date{Time: from, Valid: true},
+		ToDate:      pgtype.Date{Time: to, Valid: true},
+		RowLimit:    int32(limit),
 	})
 	if err != nil {
 		return nil, err
@@ -174,9 +198,14 @@ func (r *Reports) ListMonthlyCashflowV2(
 	ctx context.Context,
 	from, to time.Time,
 ) ([]MonthlyCashflowV2, error) {
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := r.queries.ListMonthlyCashflowV2(ctx, sqldb.ListMonthlyCashflowV2Params{
-		FromDate: pgtype.Date{Time: from, Valid: true},
-		ToDate:   pgtype.Date{Time: to, Valid: true},
+		HouseholdID: householdID,
+		FromDate:    pgtype.Date{Time: from, Valid: true},
+		ToDate:      pgtype.Date{Time: to, Valid: true},
 	})
 	if err != nil {
 		return nil, err
@@ -206,9 +235,14 @@ func (r *Reports) GetOneOffExpenseImpact(
 	ctx context.Context,
 	from, to time.Time,
 ) (OneOffExpenseImpact, error) {
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return OneOffExpenseImpact{}, err
+	}
 	row, err := r.queries.GetOneOffExpenseImpact(ctx, sqldb.GetOneOffExpenseImpactParams{
-		FromDate: pgtype.Date{Time: from, Valid: true},
-		ToDate:   pgtype.Date{Time: to, Valid: true},
+		HouseholdID: householdID,
+		FromDate:    pgtype.Date{Time: from, Valid: true},
+		ToDate:      pgtype.Date{Time: to, Valid: true},
 	})
 	if err != nil {
 		return OneOffExpenseImpact{}, err
@@ -221,10 +255,10 @@ func (r *Reports) GetOneOffExpenseImpact(
 
 // CategorySpendPoint is expense total for one category in a period.
 type CategorySpendPoint struct {
-	CategorySlug      string
-	CategoryName      string
-	Total             decimal.Decimal
-	TransactionCount  int64
+	CategorySlug     string
+	CategoryName     string
+	Total            decimal.Decimal
+	TransactionCount int64
 }
 
 func (r *Reports) ListCategorySpend(
@@ -232,6 +266,10 @@ func (r *Reports) ListCategorySpend(
 	from, to time.Time,
 	limit int,
 ) ([]CategorySpendPoint, error) {
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return nil, err
+	}
 	if limit < 1 {
 		limit = 8
 	}
@@ -239,9 +277,10 @@ func (r *Reports) ListCategorySpend(
 		limit = 50
 	}
 	rows, err := r.queries.ListCategorySpendInPeriod(ctx, sqldb.ListCategorySpendInPeriodParams{
-		FromDate: pgtype.Date{Time: from, Valid: true},
-		ToDate:   pgtype.Date{Time: to, Valid: true},
-		RowLimit: int32(limit),
+		HouseholdID: householdID,
+		FromDate:    pgtype.Date{Time: from, Valid: true},
+		ToDate:      pgtype.Date{Time: to, Valid: true},
+		RowLimit:    int32(limit),
 	})
 	if err != nil {
 		return nil, err
@@ -271,6 +310,10 @@ func (r *Reports) ListMerchantSpendInCategory(
 	categorySlug string,
 	limit int,
 ) ([]CategoryMerchantSpendPoint, error) {
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return nil, err
+	}
 	if limit < 1 {
 		limit = 8
 	}
@@ -278,6 +321,7 @@ func (r *Reports) ListMerchantSpendInCategory(
 		limit = 20
 	}
 	rows, err := r.queries.ListMerchantSpendInCategoryPeriod(ctx, sqldb.ListMerchantSpendInCategoryPeriodParams{
+		HouseholdID:  householdID,
 		FromDate:     pgtype.Date{Time: from, Valid: true},
 		ToDate:       pgtype.Date{Time: to, Valid: true},
 		CategorySlug: categorySlug,
@@ -310,6 +354,10 @@ func (r *Reports) ListMonthlyCategorySpend(
 	from, to time.Time,
 	categoryLimit int,
 ) ([]MonthlyCategorySpendPoint, error) {
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return nil, err
+	}
 	if categoryLimit < 1 {
 		categoryLimit = 5
 	}
@@ -317,6 +365,7 @@ func (r *Reports) ListMonthlyCategorySpend(
 		categoryLimit = 12
 	}
 	rows, err := r.queries.ListMonthlyCategorySpendInPeriod(ctx, sqldb.ListMonthlyCategorySpendInPeriodParams{
+		HouseholdID:   householdID,
 		FromDate:      pgtype.Date{Time: from, Valid: true},
 		ToDate:        pgtype.Date{Time: to, Valid: true},
 		CategoryLimit: int32(categoryLimit),
@@ -347,9 +396,14 @@ func (r *Reports) ListDailyExpensePace(
 	ctx context.Context,
 	from, to time.Time,
 ) ([]DailyExpensePacePoint, error) {
+	householdID, err := ResolveHouseholdID(ctx, r.pool)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := r.queries.ListDailyExpensePaceInPeriod(ctx, sqldb.ListDailyExpensePaceInPeriodParams{
-		FromDate: pgtype.Date{Time: from, Valid: true},
-		ToDate:   pgtype.Date{Time: to, Valid: true},
+		HouseholdID: householdID,
+		FromDate:    pgtype.Date{Time: from, Valid: true},
+		ToDate:      pgtype.Date{Time: to, Valid: true},
 	})
 	if err != nil {
 		return nil, err

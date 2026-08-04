@@ -17,11 +17,13 @@ func TestIntegration_ClassifyCorrectRule(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	pool := setupPostgres(t, ctx)
+	ctx, pool := setupPostgres(t, ctx)
 	t.Cleanup(pool.Close)
+	householdID := mustHouseholdID(t, ctx)
 
 	q := sqldb.New(pool)
 	acc, err := q.CreateAccount(ctx, sqldb.CreateAccountParams{
+		HouseholdID: householdID,
 		DisplayName: "Checking", Bank: "sparkasse", Currency: "EUR",
 		OrderAccount: pgtype.Text{String: "DE-R-1", Valid: true}, MaskedIdentifier: "x",
 	})
@@ -29,7 +31,7 @@ func TestIntegration_ClassifyCorrectRule(t *testing.T) {
 		t.Fatalf("account: %v", err)
 	}
 	day := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
-	amazonID := insertClassifyTx(t, ctx, q, acc.ID, "DE-R-1", "-9.99", "AMAZON DIGITAL GERMANY GMBH", "Prime", "fp-rule-amz-1", day)
+	amazonID := insertClassifyTx(t, ctx, q, householdID, acc.ID, "DE-R-1", "-9.99", "AMAZON DIGITAL GERMANY GMBH", "Prime", "fp-rule-amz-1", day)
 
 	svc := service.NewClassify(pool)
 	if _, err := svc.Run(ctx); err != nil {
@@ -47,7 +49,10 @@ func TestIntegration_ClassifyCorrectRule(t *testing.T) {
 		t.Fatalf("correct result = %+v", corrected)
 	}
 
-	class, err := q.GetTransactionClassification(ctx, amazonID)
+	class, err := q.GetTransactionClassification(ctx, sqldb.GetTransactionClassificationParams{
+		TransactionID: amazonID,
+		HouseholdID:   householdID,
+	})
 	if err != nil {
 		t.Fatalf("get class: %v", err)
 	}
@@ -55,7 +60,7 @@ func TestIntegration_ClassifyCorrectRule(t *testing.T) {
 		t.Fatalf("source = %q", class.Source)
 	}
 
-	secondID := insertClassifyTx(t, ctx, q, acc.ID, "DE-R-1", "-4.50", "Amazon Payments Europe S.C.A.", "Order", "fp-rule-amz-2", day)
+	secondID := insertClassifyTx(t, ctx, q, householdID, acc.ID, "DE-R-1", "-4.50", "Amazon Payments Europe S.C.A.", "Order", "fp-rule-amz-2", day)
 
 	rerun, err := svc.Run(ctx)
 	if err != nil {
@@ -65,7 +70,10 @@ func TestIntegration_ClassifyCorrectRule(t *testing.T) {
 		t.Fatalf("expected new tx classified, rerun=%+v", rerun)
 	}
 
-	secondClass, err := q.GetTransactionClassification(ctx, secondID)
+	secondClass, err := q.GetTransactionClassification(ctx, sqldb.GetTransactionClassificationParams{
+		TransactionID: secondID,
+		HouseholdID:   householdID,
+	})
 	if err != nil {
 		t.Fatalf("get second class: %v", err)
 	}
@@ -81,7 +89,10 @@ func TestIntegration_ClassifyCorrectRule(t *testing.T) {
 	}
 
 	// Original correction must remain user_rule (not overwritten).
-	class, err = q.GetTransactionClassification(ctx, amazonID)
+	class, err = q.GetTransactionClassification(ctx, sqldb.GetTransactionClassificationParams{
+		TransactionID: amazonID,
+		HouseholdID:   householdID,
+	})
 	if err != nil {
 		t.Fatalf("get class after rerun: %v", err)
 	}

@@ -18,11 +18,13 @@ func TestIntegration_MerchantRebuild(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	pool := setupPostgres(t, ctx)
+	ctx, pool := setupPostgres(t, ctx)
 	t.Cleanup(pool.Close)
+	householdID := mustHouseholdID(t, ctx)
 
 	q := sqldb.New(pool)
 	acc, err := q.CreateAccount(ctx, sqldb.CreateAccountParams{
+		HouseholdID:      householdID,
 		DisplayName:      "Checking",
 		Bank:             "sparkasse",
 		Currency:         "EUR",
@@ -33,9 +35,9 @@ func TestIntegration_MerchantRebuild(t *testing.T) {
 		t.Fatalf("account: %v", err)
 	}
 	day := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
-	insertMerchantTx(t, ctx, q, acc.ID, "AMAZON DIGITAL GERMANY GMBH", "Prime", "fp-amz-1", day)
-	insertMerchantTx(t, ctx, q, acc.ID, "Amazon Payments Europe S.C.A.", "Order", "fp-amz-2", day)
-	insertMerchantTx(t, ctx, q, acc.ID, "PayPal Europe S.a.r.l. et Cie S.C.A", "Shop", "fp-pp-1", day)
+	insertMerchantTx(t, ctx, q, householdID, acc.ID, "AMAZON DIGITAL GERMANY GMBH", "Prime", "fp-amz-1", day)
+	insertMerchantTx(t, ctx, q, householdID, acc.ID, "Amazon Payments Europe S.C.A.", "Order", "fp-amz-2", day)
+	insertMerchantTx(t, ctx, q, householdID, acc.ID, "PayPal Europe S.a.r.l. et Cie S.C.A", "Shop", "fp-pp-1", day)
 
 	svc := service.NewMerchants(pool)
 	first, err := svc.Rebuild(ctx)
@@ -70,12 +72,14 @@ func insertMerchantTx(
 	t *testing.T,
 	ctx context.Context,
 	q *sqldb.Queries,
+	householdID uuid.UUID,
 	accountID uuid.UUID,
 	counterparty, purpose, fingerprint string,
 	day time.Time,
 ) {
 	t.Helper()
 	_, err := q.InsertTransaction(ctx, sqldb.InsertTransactionParams{
+		HouseholdID:  householdID,
 		OrderAccount: "DE-M-1",
 		BookingDate:  pgtype.Date{Time: day, Valid: true},
 		ValueDate:    pgtype.Date{Time: day, Valid: true},

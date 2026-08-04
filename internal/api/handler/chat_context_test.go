@@ -19,7 +19,7 @@ func TestPostChat_rejectsInvalidContext(t *testing.T) {
 	}
 
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(&stubListService{}, chatSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(&stubListService{}, chatSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})
@@ -40,7 +40,7 @@ func TestPostChat_acceptsValidContext(t *testing.T) {
 	}
 
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(&stubListService{}, chatSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(&stubListService{}, chatSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil), gen.ChiServerOptions{
 		BaseRouter:       router,
 		ErrorHandlerFunc: handler.APIErrorHandler,
 	})

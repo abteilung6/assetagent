@@ -86,7 +86,7 @@ func TestDecisionCreateAndActionStatus(t *testing.T) {
 	t.Parallel()
 	svc := &stubDecisionService{}
 	router := gen.HandlerWithOptions(
-		handler.New(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, svc),
+		handler.New(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, svc, nil),
 		gen.ChiServerOptions{},
 	)
 

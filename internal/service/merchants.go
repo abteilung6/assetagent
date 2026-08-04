@@ -8,6 +8,7 @@ import (
 	"github.com/abteilung6/assetagent/internal/classify"
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
 	"github.com/abteilung6/assetagent/internal/domain"
+	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -23,8 +24,12 @@ func NewMerchants(pool *pgxpool.Pool) *Merchants {
 }
 
 func (s *Merchants) Rebuild(ctx context.Context) (domain.MerchantRebuildResult, error) {
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return domain.MerchantRebuildResult{}, err
+	}
 	q := sqldb.New(s.pool)
-	rows, err := q.ListMerchantSourceLabels(ctx)
+	rows, err := q.ListMerchantSourceLabels(ctx, householdID)
 	if err != nil {
 		return domain.MerchantRebuildResult{}, fmt.Errorf("list labels: %w", err)
 	}
@@ -44,8 +49,9 @@ func (s *Merchants) Rebuild(ctx context.Context) (domain.MerchantRebuildResult, 
 		seenPatterns[label.Pattern] = struct{}{}
 
 		existing, err := q.GetMerchantAlias(ctx, sqldb.GetMerchantAliasParams{
-			MatchType: domain.MerchantMatchNormalized,
-			Pattern:   label.Pattern,
+			MatchType:   domain.MerchantMatchNormalized,
+			Pattern:     label.Pattern,
+			HouseholdID: householdID,
 		})
 		if err == nil {
 			result.AliasesExisting++
@@ -57,6 +63,7 @@ func (s *Merchants) Rebuild(ctx context.Context) (domain.MerchantRebuildResult, 
 		}
 
 		merchant, err := q.CreateMerchant(ctx, sqldb.CreateMerchantParams{
+			HouseholdID:       householdID,
 			DisplayName:       label.DisplayName,
 			DefaultCategoryID: pgtype.UUID{},
 		})
@@ -79,7 +86,11 @@ func (s *Merchants) Rebuild(ctx context.Context) (domain.MerchantRebuildResult, 
 }
 
 func (s *Merchants) List(ctx context.Context) ([]domain.Merchant, error) {
-	rows, err := sqldb.New(s.pool).ListMerchants(ctx)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := sqldb.New(s.pool).ListMerchants(ctx, householdID)
 	if err != nil {
 		return nil, err
 	}

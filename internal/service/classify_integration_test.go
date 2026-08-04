@@ -19,11 +19,13 @@ func TestIntegration_ClassifyRun(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	pool := setupPostgres(t, ctx)
+	ctx, pool := setupPostgres(t, ctx)
 	t.Cleanup(pool.Close)
+	householdID := mustHouseholdID(t, ctx)
 
 	q := sqldb.New(pool)
 	checking, err := q.CreateAccount(ctx, sqldb.CreateAccountParams{
+		HouseholdID: householdID,
 		DisplayName: "Checking", Bank: "sparkasse", Currency: "EUR",
 		OrderAccount: pgtype.Text{String: "DE-C-1", Valid: true}, MaskedIdentifier: "A",
 	})
@@ -31,6 +33,7 @@ func TestIntegration_ClassifyRun(t *testing.T) {
 		t.Fatalf("checking: %v", err)
 	}
 	savings, err := q.CreateAccount(ctx, sqldb.CreateAccountParams{
+		HouseholdID: householdID,
 		DisplayName: "Savings", Bank: "sparkasse", Currency: "EUR",
 		OrderAccount: pgtype.Text{String: "DE-S-1", Valid: true}, MaskedIdentifier: "B",
 	})
@@ -39,20 +42,21 @@ func TestIntegration_ClassifyRun(t *testing.T) {
 	}
 
 	day := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
-	outID := insertClassifyTx(t, ctx, q, checking.ID, "DE-C-1", "-200.00", "UMBUCHUNG", "UMBUCHUNG", "fp-c-out", day)
-	inID := insertClassifyTx(t, ctx, q, savings.ID, "DE-S-1", "200.00", "UMBUCHUNG", "UMBUCHUNG", "fp-c-in", day)
-	insertClassifyTx(t, ctx, q, checking.ID, "DE-C-1", "-23.50", "REWE Dortmund", "Einkauf", "fp-c-rewe", day)
-	insertClassifyTx(t, ctx, q, checking.ID, "DE-C-1", "2500.00", "Example Employer GmbH", "Gehalt", "fp-c-salary", day)
+	outID := insertClassifyTx(t, ctx, q, householdID, checking.ID, "DE-C-1", "-200.00", "UMBUCHUNG", "UMBUCHUNG", "fp-c-out", day)
+	inID := insertClassifyTx(t, ctx, q, householdID, savings.ID, "DE-S-1", "200.00", "UMBUCHUNG", "UMBUCHUNG", "fp-c-in", day)
+	insertClassifyTx(t, ctx, q, householdID, checking.ID, "DE-C-1", "-23.50", "REWE Dortmund", "Einkauf", "fp-c-rewe", day)
+	insertClassifyTx(t, ctx, q, householdID, checking.ID, "DE-C-1", "2500.00", "Example Employer GmbH", "Gehalt", "fp-c-salary", day)
 
 	_, err = q.InsertTransferPair(ctx, sqldb.InsertTransferPairParams{
-		TxOutID: outID, TxInID: inID,
+		HouseholdID: householdID,
+		TxOutID:     outID, TxInID: inID,
 		Status: domain.TransferStatusSuggested, Confidence: domain.TransferConfidenceExact,
 		Rationale: []byte(`{}`),
 	})
 	if err != nil {
 		t.Fatalf("pair: %v", err)
 	}
-	if _, err := service.NewTransfers(pool).Confirm(ctx, mustPairID(t, ctx, q)); err != nil {
+	if _, err := service.NewTransfers(pool).Confirm(ctx, mustPairID(t, ctx, q, householdID)); err != nil {
 		t.Fatalf("confirm: %v", err)
 	}
 
@@ -90,12 +94,14 @@ func insertClassifyTx(
 	t *testing.T,
 	ctx context.Context,
 	q *sqldb.Queries,
+	householdID uuid.UUID,
 	accountID uuid.UUID,
 	order, amount, counterparty, purpose, fp string,
 	day time.Time,
 ) uuid.UUID {
 	t.Helper()
 	id, err := q.InsertTransaction(ctx, sqldb.InsertTransactionParams{
+		HouseholdID:  householdID,
 		OrderAccount: order,
 		BookingDate:  pgtype.Date{Time: day, Valid: true},
 		ValueDate:    pgtype.Date{Time: day, Valid: true},
@@ -113,9 +119,9 @@ func insertClassifyTx(
 	return id
 }
 
-func mustPairID(t *testing.T, ctx context.Context, q *sqldb.Queries) uuid.UUID {
+func mustPairID(t *testing.T, ctx context.Context, q *sqldb.Queries, householdID uuid.UUID) uuid.UUID {
 	t.Helper()
-	pairs, err := q.ListTransferPairs(ctx)
+	pairs, err := q.ListTransferPairs(ctx, householdID)
 	if err != nil || len(pairs) == 0 {
 		t.Fatalf("list pairs: %v len=%d", err, len(pairs))
 	}

@@ -13,13 +13,18 @@ import (
 )
 
 const getForecast = `-- name: GetForecast :one
-SELECT id, baseline_id, horizon_days, starting_balance, assumptions, series, min_balance, ending_balance, algorithm_version, created_at
+SELECT id, baseline_id, horizon_days, starting_balance, assumptions, series, min_balance, ending_balance, algorithm_version, created_at, household_id
 FROM forecasts
-WHERE id = $1
+WHERE id = $1 AND household_id = $2
 `
 
-func (q *Queries) GetForecast(ctx context.Context, id uuid.UUID) (Forecast, error) {
-	row := q.db.QueryRow(ctx, getForecast, id)
+type GetForecastParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) GetForecast(ctx context.Context, arg GetForecastParams) (Forecast, error) {
+	row := q.db.QueryRow(ctx, getForecast, arg.ID, arg.HouseholdID)
 	var i Forecast
 	err := row.Scan(
 		&i.ID,
@@ -32,20 +37,26 @@ func (q *Queries) GetForecast(ctx context.Context, id uuid.UUID) (Forecast, erro
 		&i.EndingBalance,
 		&i.AlgorithmVersion,
 		&i.CreatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const getLatestForecastForBaseline = `-- name: GetLatestForecastForBaseline :one
-SELECT id, baseline_id, horizon_days, starting_balance, assumptions, series, min_balance, ending_balance, algorithm_version, created_at
+SELECT id, baseline_id, horizon_days, starting_balance, assumptions, series, min_balance, ending_balance, algorithm_version, created_at, household_id
 FROM forecasts
-WHERE baseline_id = $1
+WHERE baseline_id = $1 AND household_id = $2
 ORDER BY created_at DESC
 LIMIT 1
 `
 
-func (q *Queries) GetLatestForecastForBaseline(ctx context.Context, baselineID uuid.UUID) (Forecast, error) {
-	row := q.db.QueryRow(ctx, getLatestForecastForBaseline, baselineID)
+type GetLatestForecastForBaselineParams struct {
+	BaselineID  uuid.UUID `json:"baseline_id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) GetLatestForecastForBaseline(ctx context.Context, arg GetLatestForecastForBaselineParams) (Forecast, error) {
+	row := q.db.QueryRow(ctx, getLatestForecastForBaseline, arg.BaselineID, arg.HouseholdID)
 	var i Forecast
 	err := row.Scan(
 		&i.ID,
@@ -58,18 +69,24 @@ func (q *Queries) GetLatestForecastForBaseline(ctx context.Context, baselineID u
 		&i.EndingBalance,
 		&i.AlgorithmVersion,
 		&i.CreatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const getScenario = `-- name: GetScenario :one
-SELECT id, forecast_id, kind, params, result, status, created_at
+SELECT id, forecast_id, kind, params, result, status, created_at, household_id
 FROM scenarios
-WHERE id = $1
+WHERE id = $1 AND household_id = $2
 `
 
-func (q *Queries) GetScenario(ctx context.Context, id uuid.UUID) (Scenario, error) {
-	row := q.db.QueryRow(ctx, getScenario, id)
+type GetScenarioParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) GetScenario(ctx context.Context, arg GetScenarioParams) (Scenario, error) {
+	row := q.db.QueryRow(ctx, getScenario, arg.ID, arg.HouseholdID)
 	var i Scenario
 	err := row.Scan(
 		&i.ID,
@@ -79,12 +96,14 @@ func (q *Queries) GetScenario(ctx context.Context, id uuid.UUID) (Scenario, erro
 		&i.Result,
 		&i.Status,
 		&i.CreatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const insertForecast = `-- name: InsertForecast :one
 INSERT INTO forecasts (
+    household_id,
     baseline_id,
     horizon_days,
     starting_balance,
@@ -94,12 +113,13 @@ INSERT INTO forecasts (
     ending_balance,
     algorithm_version
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
-RETURNING id, baseline_id, horizon_days, starting_balance, assumptions, series, min_balance, ending_balance, algorithm_version, created_at
+RETURNING id, baseline_id, horizon_days, starting_balance, assumptions, series, min_balance, ending_balance, algorithm_version, created_at, household_id
 `
 
 type InsertForecastParams struct {
+	HouseholdID      uuid.UUID       `json:"household_id"`
 	BaselineID       uuid.UUID       `json:"baseline_id"`
 	HorizonDays      int32           `json:"horizon_days"`
 	StartingBalance  decimal.Decimal `json:"starting_balance"`
@@ -112,6 +132,7 @@ type InsertForecastParams struct {
 
 func (q *Queries) InsertForecast(ctx context.Context, arg InsertForecastParams) (Forecast, error) {
 	row := q.db.QueryRow(ctx, insertForecast,
+		arg.HouseholdID,
 		arg.BaselineID,
 		arg.HorizonDays,
 		arg.StartingBalance,
@@ -133,33 +154,37 @@ func (q *Queries) InsertForecast(ctx context.Context, arg InsertForecastParams) 
 		&i.EndingBalance,
 		&i.AlgorithmVersion,
 		&i.CreatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const insertScenario = `-- name: InsertScenario :one
 INSERT INTO scenarios (
+    household_id,
     forecast_id,
     kind,
     params,
     result,
     status
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4, $5, $6
 )
-RETURNING id, forecast_id, kind, params, result, status, created_at
+RETURNING id, forecast_id, kind, params, result, status, created_at, household_id
 `
 
 type InsertScenarioParams struct {
-	ForecastID uuid.UUID `json:"forecast_id"`
-	Kind       string    `json:"kind"`
-	Params     []byte    `json:"params"`
-	Result     []byte    `json:"result"`
-	Status     string    `json:"status"`
+	HouseholdID uuid.UUID `json:"household_id"`
+	ForecastID  uuid.UUID `json:"forecast_id"`
+	Kind        string    `json:"kind"`
+	Params      []byte    `json:"params"`
+	Result      []byte    `json:"result"`
+	Status      string    `json:"status"`
 }
 
 func (q *Queries) InsertScenario(ctx context.Context, arg InsertScenarioParams) (Scenario, error) {
 	row := q.db.QueryRow(ctx, insertScenario,
+		arg.HouseholdID,
 		arg.ForecastID,
 		arg.Kind,
 		arg.Params,
@@ -175,19 +200,25 @@ func (q *Queries) InsertScenario(ctx context.Context, arg InsertScenarioParams) 
 		&i.Result,
 		&i.Status,
 		&i.CreatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const listScenariosForForecast = `-- name: ListScenariosForForecast :many
-SELECT id, forecast_id, kind, params, result, status, created_at
+SELECT id, forecast_id, kind, params, result, status, created_at, household_id
 FROM scenarios
-WHERE forecast_id = $1
+WHERE forecast_id = $1 AND household_id = $2
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListScenariosForForecast(ctx context.Context, forecastID uuid.UUID) ([]Scenario, error) {
-	rows, err := q.db.Query(ctx, listScenariosForForecast, forecastID)
+type ListScenariosForForecastParams struct {
+	ForecastID  uuid.UUID `json:"forecast_id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) ListScenariosForForecast(ctx context.Context, arg ListScenariosForForecastParams) ([]Scenario, error) {
+	rows, err := q.db.Query(ctx, listScenariosForForecast, arg.ForecastID, arg.HouseholdID)
 	if err != nil {
 		return nil, err
 	}
@@ -203,6 +234,7 @@ func (q *Queries) ListScenariosForForecast(ctx context.Context, forecastID uuid.
 			&i.Result,
 			&i.Status,
 			&i.CreatedAt,
+			&i.HouseholdID,
 		); err != nil {
 			return nil, err
 		}

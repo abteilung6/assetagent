@@ -14,10 +14,12 @@ import (
 )
 
 const countClassificationsBySource = `-- name: CountClassificationsBySource :many
-SELECT source, COUNT(*)::bigint AS count
-FROM transaction_classifications
-GROUP BY source
-ORDER BY source
+SELECT tc.source, COUNT(*)::bigint AS count
+FROM transaction_classifications tc
+JOIN transactions t ON t.id = tc.transaction_id
+WHERE t.household_id = $1
+GROUP BY tc.source
+ORDER BY tc.source
 `
 
 type CountClassificationsBySourceRow struct {
@@ -25,8 +27,8 @@ type CountClassificationsBySourceRow struct {
 	Count  int64  `json:"count"`
 }
 
-func (q *Queries) CountClassificationsBySource(ctx context.Context) ([]CountClassificationsBySourceRow, error) {
-	rows, err := q.db.Query(ctx, countClassificationsBySource)
+func (q *Queries) CountClassificationsBySource(ctx context.Context, householdID uuid.UUID) ([]CountClassificationsBySourceRow, error) {
+	rows, err := q.db.Query(ctx, countClassificationsBySource, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +49,7 @@ func (q *Queries) CountClassificationsBySource(ctx context.Context) ([]CountClas
 
 const createClassificationRule = `-- name: CreateClassificationRule :one
 INSERT INTO classification_rules (
+    household_id,
     priority,
     merchant_id,
     pattern,
@@ -55,12 +58,13 @@ INSERT INTO classification_rules (
     confidence,
     is_system
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1, $2, $3, $4, $5, $6, $7, $8
 )
-RETURNING id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system
+RETURNING id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system, household_id
 `
 
 type CreateClassificationRuleParams struct {
+	HouseholdID              uuid.UUID   `json:"household_id"`
 	Priority                 int32       `json:"priority"`
 	MerchantID               pgtype.UUID `json:"merchant_id"`
 	Pattern                  pgtype.Text `json:"pattern"`
@@ -72,6 +76,7 @@ type CreateClassificationRuleParams struct {
 
 func (q *Queries) CreateClassificationRule(ctx context.Context, arg CreateClassificationRuleParams) (ClassificationRule, error) {
 	row := q.db.QueryRow(ctx, createClassificationRule,
+		arg.HouseholdID,
 		arg.Priority,
 		arg.MerchantID,
 		arg.Pattern,
@@ -91,6 +96,7 @@ func (q *Queries) CreateClassificationRule(ctx context.Context, arg CreateClassi
 		&i.CreatedAt,
 		&i.Confidence,
 		&i.IsSystem,
+		&i.HouseholdID,
 	)
 	return i, err
 }
@@ -149,13 +155,18 @@ func (q *Queries) ForceUpsertTransactionClassification(ctx context.Context, arg 
 }
 
 const getClassificationRuleByMerchant = `-- name: GetClassificationRuleByMerchant :one
-SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system
+SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system, household_id
 FROM classification_rules
-WHERE merchant_id = $1
+WHERE merchant_id = $1 AND household_id = $2
 `
 
-func (q *Queries) GetClassificationRuleByMerchant(ctx context.Context, merchantID pgtype.UUID) (ClassificationRule, error) {
-	row := q.db.QueryRow(ctx, getClassificationRuleByMerchant, merchantID)
+type GetClassificationRuleByMerchantParams struct {
+	MerchantID  pgtype.UUID `json:"merchant_id"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+}
+
+func (q *Queries) GetClassificationRuleByMerchant(ctx context.Context, arg GetClassificationRuleByMerchantParams) (ClassificationRule, error) {
+	row := q.db.QueryRow(ctx, getClassificationRuleByMerchant, arg.MerchantID, arg.HouseholdID)
 	var i ClassificationRule
 	err := row.Scan(
 		&i.ID,
@@ -167,19 +178,26 @@ func (q *Queries) GetClassificationRuleByMerchant(ctx context.Context, merchantI
 		&i.CreatedAt,
 		&i.Confidence,
 		&i.IsSystem,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const getClassificationRuleByPattern = `-- name: GetClassificationRuleByPattern :one
-SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system
+SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system, household_id
 FROM classification_rules
 WHERE merchant_id IS NULL
   AND lower(pattern) = lower($1)
+  AND household_id = $2
 `
 
-func (q *Queries) GetClassificationRuleByPattern(ctx context.Context, pattern string) (ClassificationRule, error) {
-	row := q.db.QueryRow(ctx, getClassificationRuleByPattern, pattern)
+type GetClassificationRuleByPatternParams struct {
+	Pattern     string    `json:"pattern"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) GetClassificationRuleByPattern(ctx context.Context, arg GetClassificationRuleByPatternParams) (ClassificationRule, error) {
+	row := q.db.QueryRow(ctx, getClassificationRuleByPattern, arg.Pattern, arg.HouseholdID)
 	var i ClassificationRule
 	err := row.Scan(
 		&i.ID,
@@ -191,18 +209,25 @@ func (q *Queries) GetClassificationRuleByPattern(ctx context.Context, pattern st
 		&i.CreatedAt,
 		&i.Confidence,
 		&i.IsSystem,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const getTransactionClassification = `-- name: GetTransactionClassification :one
-SELECT transaction_id, category_id, merchant_id, source, confidence, algorithm_version, updated_at
-FROM transaction_classifications
-WHERE transaction_id = $1
+SELECT tc.transaction_id, tc.category_id, tc.merchant_id, tc.source, tc.confidence, tc.algorithm_version, tc.updated_at
+FROM transaction_classifications tc
+JOIN transactions t ON t.id = tc.transaction_id
+WHERE tc.transaction_id = $1 AND t.household_id = $2
 `
 
-func (q *Queries) GetTransactionClassification(ctx context.Context, transactionID uuid.UUID) (TransactionClassification, error) {
-	row := q.db.QueryRow(ctx, getTransactionClassification, transactionID)
+type GetTransactionClassificationParams struct {
+	TransactionID uuid.UUID `json:"transaction_id"`
+	HouseholdID   uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) GetTransactionClassification(ctx context.Context, arg GetTransactionClassificationParams) (TransactionClassification, error) {
+	row := q.db.QueryRow(ctx, getTransactionClassification, arg.TransactionID, arg.HouseholdID)
 	var i TransactionClassification
 	err := row.Scan(
 		&i.TransactionID,
@@ -224,8 +249,13 @@ SELECT
     booking_text,
     amount
 FROM transactions
-WHERE id = $1
+WHERE id = $1 AND household_id = $2
 `
+
+type GetTransactionForClassifyParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
 
 type GetTransactionForClassifyRow struct {
 	ID           uuid.UUID       `json:"id"`
@@ -235,8 +265,8 @@ type GetTransactionForClassifyRow struct {
 	Amount       decimal.Decimal `json:"amount"`
 }
 
-func (q *Queries) GetTransactionForClassify(ctx context.Context, id uuid.UUID) (GetTransactionForClassifyRow, error) {
-	row := q.db.QueryRow(ctx, getTransactionForClassify, id)
+func (q *Queries) GetTransactionForClassify(ctx context.Context, arg GetTransactionForClassifyParams) (GetTransactionForClassifyRow, error) {
+	row := q.db.QueryRow(ctx, getTransactionForClassify, arg.ID, arg.HouseholdID)
 	var i GetTransactionForClassifyRow
 	err := row.Scan(
 		&i.ID,
@@ -266,7 +296,8 @@ FROM transaction_classifications tc
 JOIN transactions t ON t.id = tc.transaction_id
 JOIN categories c ON c.id = tc.category_id
 LEFT JOIN merchants m ON m.id = tc.merchant_id
-WHERE tc.source <> 'user_rule'
+WHERE t.household_id = $1
+  AND tc.source <> 'user_rule'
   AND c.slug <> 'transfer'
   AND t.one_off = false
   AND (
@@ -292,8 +323,8 @@ type ListClassificationQueueRow struct {
 	MerchantName  string          `json:"merchant_name"`
 }
 
-func (q *Queries) ListClassificationQueue(ctx context.Context) ([]ListClassificationQueueRow, error) {
-	rows, err := q.db.Query(ctx, listClassificationQueue)
+func (q *Queries) ListClassificationQueue(ctx context.Context, householdID uuid.UUID) ([]ListClassificationQueueRow, error) {
+	rows, err := q.db.Query(ctx, listClassificationQueue, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -326,13 +357,14 @@ func (q *Queries) ListClassificationQueue(ctx context.Context) ([]ListClassifica
 }
 
 const listClassificationRules = `-- name: ListClassificationRules :many
-SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system
+SELECT id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system, household_id
 FROM classification_rules
+WHERE household_id = $1
 ORDER BY priority ASC, created_at ASC
 `
 
-func (q *Queries) ListClassificationRules(ctx context.Context) ([]ClassificationRule, error) {
-	rows, err := q.db.Query(ctx, listClassificationRules)
+func (q *Queries) ListClassificationRules(ctx context.Context, householdID uuid.UUID) ([]ClassificationRule, error) {
+	rows, err := q.db.Query(ctx, listClassificationRules, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -350,6 +382,7 @@ func (q *Queries) ListClassificationRules(ctx context.Context) ([]Classification
 			&i.CreatedAt,
 			&i.Confidence,
 			&i.IsSystem,
+			&i.HouseholdID,
 		); err != nil {
 			return nil, err
 		}
@@ -362,13 +395,17 @@ func (q *Queries) ListClassificationRules(ctx context.Context) ([]Classification
 }
 
 const listConfirmedTransferTransactionIDs = `-- name: ListConfirmedTransferTransactionIDs :many
-SELECT tx_out_id AS transaction_id FROM transfer_pairs WHERE status = 'confirmed'
+SELECT p.tx_out_id AS transaction_id
+FROM transfer_pairs p
+WHERE p.status = 'confirmed' AND p.household_id = $1
 UNION
-SELECT tx_in_id AS transaction_id FROM transfer_pairs WHERE status = 'confirmed'
+SELECT p.tx_in_id AS transaction_id
+FROM transfer_pairs p
+WHERE p.status = 'confirmed' AND p.household_id = $1
 `
 
-func (q *Queries) ListConfirmedTransferTransactionIDs(ctx context.Context) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, listConfirmedTransferTransactionIDs)
+func (q *Queries) ListConfirmedTransferTransactionIDs(ctx context.Context, householdID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listConfirmedTransferTransactionIDs, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -395,6 +432,7 @@ SELECT
     booking_text,
     amount
 FROM transactions
+WHERE household_id = $1
 ORDER BY booking_date ASC, id ASC
 `
 
@@ -406,8 +444,8 @@ type ListTransactionsForClassifyRow struct {
 	Amount       decimal.Decimal `json:"amount"`
 }
 
-func (q *Queries) ListTransactionsForClassify(ctx context.Context) ([]ListTransactionsForClassifyRow, error) {
-	rows, err := q.db.Query(ctx, listTransactionsForClassify)
+func (q *Queries) ListTransactionsForClassify(ctx context.Context, householdID uuid.UUID) ([]ListTransactionsForClassifyRow, error) {
+	rows, err := q.db.Query(ctx, listTransactionsForClassify, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -435,15 +473,16 @@ func (q *Queries) ListTransactionsForClassify(ctx context.Context) ([]ListTransa
 const updateClassificationRuleCategory = `-- name: UpdateClassificationRuleCategory :one
 UPDATE classification_rules
 SET
-    category_id = $2,
-    created_from_transaction_id = $3,
-    priority = $4
-WHERE id = $1
-RETURNING id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system
+    category_id = $3,
+    created_from_transaction_id = $4,
+    priority = $5
+WHERE id = $1 AND household_id = $2
+RETURNING id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system, household_id
 `
 
 type UpdateClassificationRuleCategoryParams struct {
 	ID                       uuid.UUID   `json:"id"`
+	HouseholdID              uuid.UUID   `json:"household_id"`
 	CategoryID               uuid.UUID   `json:"category_id"`
 	CreatedFromTransactionID pgtype.UUID `json:"created_from_transaction_id"`
 	Priority                 int32       `json:"priority"`
@@ -452,6 +491,7 @@ type UpdateClassificationRuleCategoryParams struct {
 func (q *Queries) UpdateClassificationRuleCategory(ctx context.Context, arg UpdateClassificationRuleCategoryParams) (ClassificationRule, error) {
 	row := q.db.QueryRow(ctx, updateClassificationRuleCategory,
 		arg.ID,
+		arg.HouseholdID,
 		arg.CategoryID,
 		arg.CreatedFromTransactionID,
 		arg.Priority,
@@ -467,36 +507,40 @@ func (q *Queries) UpdateClassificationRuleCategory(ctx context.Context, arg Upda
 		&i.CreatedAt,
 		&i.Confidence,
 		&i.IsSystem,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const updateMerchantDefaultCategory = `-- name: UpdateMerchantDefaultCategory :one
 UPDATE merchants
-SET default_category_id = $2
-WHERE id = $1
-RETURNING id, display_name, default_category_id, created_at
+SET default_category_id = $3
+WHERE id = $1 AND household_id = $2
+RETURNING id, display_name, default_category_id, created_at, household_id
 `
 
 type UpdateMerchantDefaultCategoryParams struct {
 	ID                uuid.UUID   `json:"id"`
+	HouseholdID       uuid.UUID   `json:"household_id"`
 	DefaultCategoryID pgtype.UUID `json:"default_category_id"`
 }
 
 func (q *Queries) UpdateMerchantDefaultCategory(ctx context.Context, arg UpdateMerchantDefaultCategoryParams) (Merchant, error) {
-	row := q.db.QueryRow(ctx, updateMerchantDefaultCategory, arg.ID, arg.DefaultCategoryID)
+	row := q.db.QueryRow(ctx, updateMerchantDefaultCategory, arg.ID, arg.HouseholdID, arg.DefaultCategoryID)
 	var i Merchant
 	err := row.Scan(
 		&i.ID,
 		&i.DisplayName,
 		&i.DefaultCategoryID,
 		&i.CreatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const upsertSystemPatternRule = `-- name: UpsertSystemPatternRule :one
 INSERT INTO classification_rules (
+    household_id,
     priority,
     merchant_id,
     pattern,
@@ -506,11 +550,12 @@ INSERT INTO classification_rules (
     is_system
 ) VALUES (
     $1,
-    NULL,
     $2,
-    $3,
     NULL,
+    $3,
     $4,
+    NULL,
+    $5,
     true
 )
 ON CONFLICT ((lower(pattern))) WHERE merchant_id IS NULL AND pattern IS NOT NULL
@@ -519,18 +564,20 @@ DO UPDATE SET
     category_id = EXCLUDED.category_id,
     confidence = EXCLUDED.confidence,
     is_system = true
-RETURNING id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system
+RETURNING id, priority, merchant_id, pattern, category_id, created_from_transaction_id, created_at, confidence, is_system, household_id
 `
 
 type UpsertSystemPatternRuleParams struct {
-	Priority   int32       `json:"priority"`
-	Pattern    pgtype.Text `json:"pattern"`
-	CategoryID uuid.UUID   `json:"category_id"`
-	Confidence string      `json:"confidence"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+	Priority    int32       `json:"priority"`
+	Pattern     pgtype.Text `json:"pattern"`
+	CategoryID  uuid.UUID   `json:"category_id"`
+	Confidence  string      `json:"confidence"`
 }
 
 func (q *Queries) UpsertSystemPatternRule(ctx context.Context, arg UpsertSystemPatternRuleParams) (ClassificationRule, error) {
 	row := q.db.QueryRow(ctx, upsertSystemPatternRule,
+		arg.HouseholdID,
 		arg.Priority,
 		arg.Pattern,
 		arg.CategoryID,
@@ -547,6 +594,7 @@ func (q *Queries) UpsertSystemPatternRule(ctx context.Context, arg UpsertSystemP
 		&i.CreatedAt,
 		&i.Confidence,
 		&i.IsSystem,
+		&i.HouseholdID,
 	)
 	return i, err
 }

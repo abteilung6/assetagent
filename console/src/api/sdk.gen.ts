@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type ServerSentEventsResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetActionsData, GetActionsResponses, GetBaselineCategoryMerchantsData, GetBaselineCategoryMerchantsErrors, GetBaselineCategoryMerchantsResponses, GetBaselineCategorySpendData, GetBaselineCategorySpendErrors, GetBaselineCategorySpendMonthlyData, GetBaselineCategorySpendMonthlyErrors, GetBaselineCategorySpendMonthlyResponses, GetBaselineCategorySpendResponses, GetBaselineDailyExpensePaceData, GetBaselineDailyExpensePaceErrors, GetBaselineDailyExpensePaceResponses, GetBaselineMonthlyCashflowData, GetBaselineMonthlyCashflowResponses, GetBaselineOneOffImpactData, GetBaselineOneOffImpactErrors, GetBaselineOneOffImpactResponses, GetCategoriesData, GetCategoriesResponses, GetClassificationQueueData, GetClassificationQueueResponses, GetCurrentBaselineData, GetCurrentBaselineErrors, GetCurrentBaselineResponses, GetDecisionsData, GetDecisionsResponses, GetForecastData, GetForecastErrors, GetForecastResponses, GetForecastScenariosData, GetForecastScenariosResponses, GetHealthData, GetHealthResponses, GetImportData, GetImportErrors, GetImportResponses, GetImportsData, GetImportsErrors, GetImportsResponses, GetLatestForecastData, GetLatestForecastErrors, GetLatestForecastResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetMoneyReviewData, GetMoneyReviewErrors, GetMoneyReviewResponses, GetMoneyReviewsData, GetMoneyReviewsResponses, GetRecurringData, GetRecurringMembersData, GetRecurringMembersErrors, GetRecurringMembersResponses, GetRecurringResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, GetTransferCandidatesData, GetTransferCandidatesResponses, GetUncertainRecurringData, GetUncertainRecurringResponses, PostActionStatusData, PostActionStatusErrors, PostActionStatusResponses, PostBaselineAdjustData, PostBaselineAdjustErrors, PostBaselineAdjustResponses, PostBaselineConfirmData, PostBaselineConfirmErrors, PostBaselineConfirmResponses, PostBaselinesRecomputeData, PostBaselinesRecomputeErrors, PostBaselinesRecomputeResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostClassificationApplySuggestionsData, PostClassificationApplySuggestionsResponses, PostClassificationCorrectData, PostClassificationCorrectErrors, PostClassificationCorrectResponses, PostDecisionsData, PostDecisionsErrors, PostDecisionsResponses, PostForecastScenarioData, PostForecastScenarioErrors, PostForecastScenarioResponses, PostForecastsData, PostForecastsErrors, PostForecastsResponses, PostImportRollbackData, PostImportRollbackErrors, PostImportRollbackResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses, PostMoneyReviewConfirmData, PostMoneyReviewConfirmErrors, PostMoneyReviewConfirmResponses, PostMoneyReviewsData, PostMoneyReviewsErrors, PostMoneyReviewsResponses, PostRecurringConfirmData, PostRecurringConfirmErrors, PostRecurringConfirmResponses, PostRecurringRejectData, PostRecurringRejectErrors, PostRecurringRejectResponses, PostTransactionOneOffData, PostTransactionOneOffErrors, PostTransactionOneOffResponses, PostTransferConfirmData, PostTransferConfirmErrors, PostTransferConfirmResponses, PostTransferRejectData, PostTransferRejectErrors, PostTransferRejectResponses } from './types.gen';
+import type { GetActionsData, GetActionsResponses, GetBaselineCategoryMerchantsData, GetBaselineCategoryMerchantsErrors, GetBaselineCategoryMerchantsResponses, GetBaselineCategorySpendData, GetBaselineCategorySpendErrors, GetBaselineCategorySpendMonthlyData, GetBaselineCategorySpendMonthlyErrors, GetBaselineCategorySpendMonthlyResponses, GetBaselineCategorySpendResponses, GetBaselineDailyExpensePaceData, GetBaselineDailyExpensePaceErrors, GetBaselineDailyExpensePaceResponses, GetBaselineMonthlyCashflowData, GetBaselineMonthlyCashflowResponses, GetBaselineOneOffImpactData, GetBaselineOneOffImpactErrors, GetBaselineOneOffImpactResponses, GetCategoriesData, GetCategoriesResponses, GetClassificationQueueData, GetClassificationQueueResponses, GetCurrentBaselineData, GetCurrentBaselineErrors, GetCurrentBaselineResponses, GetDecisionsData, GetDecisionsResponses, GetForecastData, GetForecastErrors, GetForecastResponses, GetForecastScenariosData, GetForecastScenariosResponses, GetHealthData, GetHealthResponses, GetImportData, GetImportErrors, GetImportResponses, GetImportsData, GetImportsErrors, GetImportsResponses, GetLatestForecastData, GetLatestForecastErrors, GetLatestForecastResponses, GetLlmModelsData, GetLlmModelsErrors, GetLlmModelsResponses, GetMeData, GetMeErrors, GetMeResponses, GetMoneyReviewData, GetMoneyReviewErrors, GetMoneyReviewResponses, GetMoneyReviewsData, GetMoneyReviewsResponses, GetRecurringData, GetRecurringMembersData, GetRecurringMembersErrors, GetRecurringMembersResponses, GetRecurringResponses, GetTransactionsData, GetTransactionsErrors, GetTransactionsResponses, GetTransferCandidatesData, GetTransferCandidatesResponses, GetUncertainRecurringData, GetUncertainRecurringResponses, PostActionStatusData, PostActionStatusErrors, PostActionStatusResponses, PostBaselineAdjustData, PostBaselineAdjustErrors, PostBaselineAdjustResponses, PostBaselineConfirmData, PostBaselineConfirmErrors, PostBaselineConfirmResponses, PostBaselinesRecomputeData, PostBaselinesRecomputeErrors, PostBaselinesRecomputeResponses, PostChatData, PostChatErrors, PostChatResponses, PostChatStreamData, PostChatStreamErrors, PostChatStreamResponse, PostChatStreamResponses, PostClassificationApplySuggestionsData, PostClassificationApplySuggestionsResponses, PostClassificationCorrectData, PostClassificationCorrectErrors, PostClassificationCorrectResponses, PostDecisionsData, PostDecisionsErrors, PostDecisionsResponses, PostForecastScenarioData, PostForecastScenarioErrors, PostForecastScenarioResponses, PostForecastsData, PostForecastsErrors, PostForecastsResponses, PostImportRollbackData, PostImportRollbackErrors, PostImportRollbackResponses, PostImportsData, PostImportsErrors, PostImportsPreviewData, PostImportsPreviewErrors, PostImportsPreviewResponses, PostImportsResponses, PostLogoutData, PostLogoutErrors, PostLogoutResponses, PostMoneyReviewConfirmData, PostMoneyReviewConfirmErrors, PostMoneyReviewConfirmResponses, PostMoneyReviewsData, PostMoneyReviewsErrors, PostMoneyReviewsResponses, PostRecurringConfirmData, PostRecurringConfirmErrors, PostRecurringConfirmResponses, PostRecurringRejectData, PostRecurringRejectErrors, PostRecurringRejectResponses, PostTransactionOneOffData, PostTransactionOneOffErrors, PostTransactionOneOffResponses, PostTransferConfirmData, PostTransferConfirmErrors, PostTransferConfirmResponses, PostTransferRejectData, PostTransferRejectErrors, PostTransferRejectResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -19,6 +19,24 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 /**
+ * Current user and household
+ */
+export const getMe = <ThrowOnError extends boolean = false>(options?: Options<GetMeData, ThrowOnError>): RequestResult<GetMeResponses, GetMeErrors, ThrowOnError> => (options?.client ?? client).get<GetMeResponses, GetMeErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/me',
+    ...options
+});
+
+/**
+ * Revoke session and clear cookie
+ */
+export const postLogout = <ThrowOnError extends boolean = false>(options?: Options<PostLogoutData, ThrowOnError>): RequestResult<PostLogoutResponses, PostLogoutErrors, ThrowOnError> => (options?.client ?? client).post<PostLogoutResponses, PostLogoutErrors, ThrowOnError>({ url: '/auth/logout', ...options });
+
+/**
  * Health check
  */
 export const getHealth = <ThrowOnError extends boolean = false>(options?: Options<GetHealthData, ThrowOnError>): RequestResult<GetHealthResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetHealthResponses, unknown, ThrowOnError>({ url: '/api/health', ...options });
@@ -26,12 +44,25 @@ export const getHealth = <ThrowOnError extends boolean = false>(options?: Option
 /**
  * List transactions
  */
-export const getTransactions = <ThrowOnError extends boolean = false>(options?: Options<GetTransactionsData, ThrowOnError>): RequestResult<GetTransactionsResponses, GetTransactionsErrors, ThrowOnError> => (options?.client ?? client).get<GetTransactionsResponses, GetTransactionsErrors, ThrowOnError>({ url: '/api/transactions', ...options });
+export const getTransactions = <ThrowOnError extends boolean = false>(options?: Options<GetTransactionsData, ThrowOnError>): RequestResult<GetTransactionsResponses, GetTransactionsErrors, ThrowOnError> => (options?.client ?? client).get<GetTransactionsResponses, GetTransactionsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/transactions',
+    ...options
+});
 
 /**
  * Mark or unmark a transaction as a one-off (excluded from typical-spend math)
  */
 export const postTransactionOneOff = <ThrowOnError extends boolean = false>(options: Options<PostTransactionOneOffData, ThrowOnError>): RequestResult<PostTransactionOneOffResponses, PostTransactionOneOffErrors, ThrowOnError> => (options.client ?? client).post<PostTransactionOneOffResponses, PostTransactionOneOffErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/transactions/{transaction_id}/one-off',
     ...options,
     headers: {
@@ -44,6 +75,11 @@ export const postTransactionOneOff = <ThrowOnError extends boolean = false>(opti
  * Send a chat message and receive a grounded finance answer
  */
 export const postChat = <ThrowOnError extends boolean = false>(options: Options<PostChatData, ThrowOnError>): RequestResult<PostChatResponses, PostChatErrors, ThrowOnError> => (options.client ?? client).post<PostChatResponses, PostChatErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/chat',
     ...options,
     headers: {
@@ -56,6 +92,11 @@ export const postChat = <ThrowOnError extends boolean = false>(options: Options<
  * Stream a grounded finance answer as server-sent events
  */
 export const postChatStream = <ThrowOnError extends boolean = false>(options: Options<PostChatStreamData, ThrowOnError, PostChatStreamResponse>): Promise<ServerSentEventsResult<PostChatStreamResponses>> => (options.client ?? client).sse.post<PostChatStreamResponses, PostChatStreamErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/chat/stream',
     ...options,
     headers: {
@@ -67,13 +108,26 @@ export const postChatStream = <ThrowOnError extends boolean = false>(options: Op
 /**
  * List available LLM models for chat
  */
-export const getLlmModels = <ThrowOnError extends boolean = false>(options?: Options<GetLlmModelsData, ThrowOnError>): RequestResult<GetLlmModelsResponses, GetLlmModelsErrors, ThrowOnError> => (options?.client ?? client).get<GetLlmModelsResponses, GetLlmModelsErrors, ThrowOnError>({ url: '/api/llm/models', ...options });
+export const getLlmModels = <ThrowOnError extends boolean = false>(options?: Options<GetLlmModelsData, ThrowOnError>): RequestResult<GetLlmModelsResponses, GetLlmModelsErrors, ThrowOnError> => (options?.client ?? client).get<GetLlmModelsResponses, GetLlmModelsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/llm/models',
+    ...options
+});
 
 /**
  * Preview a Sparkasse CSV import without writing transactions
  */
 export const postImportsPreview = <ThrowOnError extends boolean = false>(options: Options<PostImportsPreviewData, ThrowOnError>): RequestResult<PostImportsPreviewResponses, PostImportsPreviewErrors, ThrowOnError> => (options.client ?? client).post<PostImportsPreviewResponses, PostImportsPreviewErrors, ThrowOnError>({
     ...formDataBodySerializer,
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/imports/preview',
     ...options,
     headers: {
@@ -85,13 +139,26 @@ export const postImportsPreview = <ThrowOnError extends boolean = false>(options
 /**
  * List recent import runs
  */
-export const getImports = <ThrowOnError extends boolean = false>(options?: Options<GetImportsData, ThrowOnError>): RequestResult<GetImportsResponses, GetImportsErrors, ThrowOnError> => (options?.client ?? client).get<GetImportsResponses, GetImportsErrors, ThrowOnError>({ url: '/api/imports', ...options });
+export const getImports = <ThrowOnError extends boolean = false>(options?: Options<GetImportsData, ThrowOnError>): RequestResult<GetImportsResponses, GetImportsErrors, ThrowOnError> => (options?.client ?? client).get<GetImportsResponses, GetImportsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/imports',
+    ...options
+});
 
 /**
  * Commit a Sparkasse CSV import
  */
 export const postImports = <ThrowOnError extends boolean = false>(options: Options<PostImportsData, ThrowOnError>): RequestResult<PostImportsResponses, PostImportsErrors, ThrowOnError> => (options.client ?? client).post<PostImportsResponses, PostImportsErrors, ThrowOnError>({
     ...formDataBodySerializer,
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/imports',
     ...options,
     headers: {
@@ -103,72 +170,181 @@ export const postImports = <ThrowOnError extends boolean = false>(options: Optio
 /**
  * Get an import run by id
  */
-export const getImport = <ThrowOnError extends boolean = false>(options: Options<GetImportData, ThrowOnError>): RequestResult<GetImportResponses, GetImportErrors, ThrowOnError> => (options.client ?? client).get<GetImportResponses, GetImportErrors, ThrowOnError>({ url: '/api/imports/{id}', ...options });
+export const getImport = <ThrowOnError extends boolean = false>(options: Options<GetImportData, ThrowOnError>): RequestResult<GetImportResponses, GetImportErrors, ThrowOnError> => (options.client ?? client).get<GetImportResponses, GetImportErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/imports/{id}',
+    ...options
+});
 
 /**
  * Roll back a committed import run and delete its transactions
  */
-export const postImportRollback = <ThrowOnError extends boolean = false>(options: Options<PostImportRollbackData, ThrowOnError>): RequestResult<PostImportRollbackResponses, PostImportRollbackErrors, ThrowOnError> => (options.client ?? client).post<PostImportRollbackResponses, PostImportRollbackErrors, ThrowOnError>({ url: '/api/imports/{id}/rollback', ...options });
+export const postImportRollback = <ThrowOnError extends boolean = false>(options: Options<PostImportRollbackData, ThrowOnError>): RequestResult<PostImportRollbackResponses, PostImportRollbackErrors, ThrowOnError> => (options.client ?? client).post<PostImportRollbackResponses, PostImportRollbackErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/imports/{id}/rollback',
+    ...options
+});
 
 /**
  * List suggested internal transfer pairs awaiting review
  */
-export const getTransferCandidates = <ThrowOnError extends boolean = false>(options?: Options<GetTransferCandidatesData, ThrowOnError>): RequestResult<GetTransferCandidatesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetTransferCandidatesResponses, unknown, ThrowOnError>({ url: '/api/transfers/candidates', ...options });
+export const getTransferCandidates = <ThrowOnError extends boolean = false>(options?: Options<GetTransferCandidatesData, ThrowOnError>): RequestResult<GetTransferCandidatesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetTransferCandidatesResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/transfers/candidates',
+    ...options
+});
 
 /**
  * Confirm a suggested transfer pair (exclude legs from household cashflow)
  */
-export const postTransferConfirm = <ThrowOnError extends boolean = false>(options: Options<PostTransferConfirmData, ThrowOnError>): RequestResult<PostTransferConfirmResponses, PostTransferConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostTransferConfirmResponses, PostTransferConfirmErrors, ThrowOnError>({ url: '/api/transfers/{id}/confirm', ...options });
+export const postTransferConfirm = <ThrowOnError extends boolean = false>(options: Options<PostTransferConfirmData, ThrowOnError>): RequestResult<PostTransferConfirmResponses, PostTransferConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostTransferConfirmResponses, PostTransferConfirmErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/transfers/{id}/confirm',
+    ...options
+});
 
 /**
  * Reject a suggested transfer pair
  */
-export const postTransferReject = <ThrowOnError extends boolean = false>(options: Options<PostTransferRejectData, ThrowOnError>): RequestResult<PostTransferRejectResponses, PostTransferRejectErrors, ThrowOnError> => (options.client ?? client).post<PostTransferRejectResponses, PostTransferRejectErrors, ThrowOnError>({ url: '/api/transfers/{id}/reject', ...options });
+export const postTransferReject = <ThrowOnError extends boolean = false>(options: Options<PostTransferRejectData, ThrowOnError>): RequestResult<PostTransferRejectResponses, PostTransferRejectErrors, ThrowOnError> => (options.client ?? client).post<PostTransferRejectResponses, PostTransferRejectErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/transfers/{id}/reject',
+    ...options
+});
 
 /**
  * List all recurring series
  */
-export const getRecurring = <ThrowOnError extends boolean = false>(options?: Options<GetRecurringData, ThrowOnError>): RequestResult<GetRecurringResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetRecurringResponses, unknown, ThrowOnError>({ url: '/api/recurring', ...options });
+export const getRecurring = <ThrowOnError extends boolean = false>(options?: Options<GetRecurringData, ThrowOnError>): RequestResult<GetRecurringResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetRecurringResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/recurring',
+    ...options
+});
 
 /**
  * List uncertain recurring series awaiting review
  */
-export const getUncertainRecurring = <ThrowOnError extends boolean = false>(options?: Options<GetUncertainRecurringData, ThrowOnError>): RequestResult<GetUncertainRecurringResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetUncertainRecurringResponses, unknown, ThrowOnError>({ url: '/api/recurring/uncertain', ...options });
+export const getUncertainRecurring = <ThrowOnError extends boolean = false>(options?: Options<GetUncertainRecurringData, ThrowOnError>): RequestResult<GetUncertainRecurringResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetUncertainRecurringResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/recurring/uncertain',
+    ...options
+});
 
 /**
  * List sample member transactions for a recurring series
  */
-export const getRecurringMembers = <ThrowOnError extends boolean = false>(options: Options<GetRecurringMembersData, ThrowOnError>): RequestResult<GetRecurringMembersResponses, GetRecurringMembersErrors, ThrowOnError> => (options.client ?? client).get<GetRecurringMembersResponses, GetRecurringMembersErrors, ThrowOnError>({ url: '/api/recurring/{id}/members', ...options });
+export const getRecurringMembers = <ThrowOnError extends boolean = false>(options: Options<GetRecurringMembersData, ThrowOnError>): RequestResult<GetRecurringMembersResponses, GetRecurringMembersErrors, ThrowOnError> => (options.client ?? client).get<GetRecurringMembersResponses, GetRecurringMembersErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/recurring/{id}/members',
+    ...options
+});
 
 /**
  * Confirm an uncertain recurring series
  */
-export const postRecurringConfirm = <ThrowOnError extends boolean = false>(options: Options<PostRecurringConfirmData, ThrowOnError>): RequestResult<PostRecurringConfirmResponses, PostRecurringConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostRecurringConfirmResponses, PostRecurringConfirmErrors, ThrowOnError>({ url: '/api/recurring/{id}/confirm', ...options });
+export const postRecurringConfirm = <ThrowOnError extends boolean = false>(options: Options<PostRecurringConfirmData, ThrowOnError>): RequestResult<PostRecurringConfirmResponses, PostRecurringConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostRecurringConfirmResponses, PostRecurringConfirmErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/recurring/{id}/confirm',
+    ...options
+});
 
 /**
  * Dismiss an uncertain recurring series
  */
-export const postRecurringReject = <ThrowOnError extends boolean = false>(options: Options<PostRecurringRejectData, ThrowOnError>): RequestResult<PostRecurringRejectResponses, PostRecurringRejectErrors, ThrowOnError> => (options.client ?? client).post<PostRecurringRejectResponses, PostRecurringRejectErrors, ThrowOnError>({ url: '/api/recurring/{id}/reject', ...options });
+export const postRecurringReject = <ThrowOnError extends boolean = false>(options: Options<PostRecurringRejectData, ThrowOnError>): RequestResult<PostRecurringRejectResponses, PostRecurringRejectErrors, ThrowOnError> => (options.client ?? client).post<PostRecurringRejectResponses, PostRecurringRejectErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/recurring/{id}/reject',
+    ...options
+});
 
 /**
  * List system (and user) categories
  */
-export const getCategories = <ThrowOnError extends boolean = false>(options?: Options<GetCategoriesData, ThrowOnError>): RequestResult<GetCategoriesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetCategoriesResponses, unknown, ThrowOnError>({ url: '/api/categories', ...options });
+export const getCategories = <ThrowOnError extends boolean = false>(options?: Options<GetCategoriesData, ThrowOnError>): RequestResult<GetCategoriesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetCategoriesResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/categories',
+    ...options
+});
 
 /**
  * List high-impact classifications awaiting review
  */
-export const getClassificationQueue = <ThrowOnError extends boolean = false>(options?: Options<GetClassificationQueueData, ThrowOnError>): RequestResult<GetClassificationQueueResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetClassificationQueueResponses, unknown, ThrowOnError>({ url: '/api/classifications/queue', ...options });
+export const getClassificationQueue = <ThrowOnError extends boolean = false>(options?: Options<GetClassificationQueueData, ThrowOnError>): RequestResult<GetClassificationQueueResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetClassificationQueueResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/classifications/queue',
+    ...options
+});
 
 /**
  * Apply high-confidence pattern category suggestions on the Needs review queue
  */
-export const postClassificationApplySuggestions = <ThrowOnError extends boolean = false>(options?: Options<PostClassificationApplySuggestionsData, ThrowOnError>): RequestResult<PostClassificationApplySuggestionsResponses, unknown, ThrowOnError> => (options?.client ?? client).post<PostClassificationApplySuggestionsResponses, unknown, ThrowOnError>({ url: '/api/classifications/apply-suggestions', ...options });
+export const postClassificationApplySuggestions = <ThrowOnError extends boolean = false>(options?: Options<PostClassificationApplySuggestionsData, ThrowOnError>): RequestResult<PostClassificationApplySuggestionsResponses, unknown, ThrowOnError> => (options?.client ?? client).post<PostClassificationApplySuggestionsResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/classifications/apply-suggestions',
+    ...options
+});
 
 /**
  * Correct a transaction category and optionally save a merchant rule
  */
 export const postClassificationCorrect = <ThrowOnError extends boolean = false>(options: Options<PostClassificationCorrectData, ThrowOnError>): RequestResult<PostClassificationCorrectResponses, PostClassificationCorrectErrors, ThrowOnError> => (options.client ?? client).post<PostClassificationCorrectResponses, PostClassificationCorrectErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/classifications/{transaction_id}/correct',
     ...options,
     headers: {
@@ -180,22 +356,54 @@ export const postClassificationCorrect = <ThrowOnError extends boolean = false>(
 /**
  * Get the current draft or confirmed FinancialBaseline
  */
-export const getCurrentBaseline = <ThrowOnError extends boolean = false>(options?: Options<GetCurrentBaselineData, ThrowOnError>): RequestResult<GetCurrentBaselineResponses, GetCurrentBaselineErrors, ThrowOnError> => (options?.client ?? client).get<GetCurrentBaselineResponses, GetCurrentBaselineErrors, ThrowOnError>({ url: '/api/baselines/current', ...options });
+export const getCurrentBaseline = <ThrowOnError extends boolean = false>(options?: Options<GetCurrentBaselineData, ThrowOnError>): RequestResult<GetCurrentBaselineResponses, GetCurrentBaselineErrors, ThrowOnError> => (options?.client ?? client).get<GetCurrentBaselineResponses, GetCurrentBaselineErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/baselines/current',
+    ...options
+});
 
 /**
  * Transfer-aware monthly income/expense totals for baseline charts
  */
-export const getBaselineMonthlyCashflow = <ThrowOnError extends boolean = false>(options?: Options<GetBaselineMonthlyCashflowData, ThrowOnError>): RequestResult<GetBaselineMonthlyCashflowResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetBaselineMonthlyCashflowResponses, unknown, ThrowOnError>({ url: '/api/baselines/monthly-cashflow', ...options });
+export const getBaselineMonthlyCashflow = <ThrowOnError extends boolean = false>(options?: Options<GetBaselineMonthlyCashflowData, ThrowOnError>): RequestResult<GetBaselineMonthlyCashflowResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetBaselineMonthlyCashflowResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/baselines/monthly-cashflow',
+    ...options
+});
 
 /**
  * Count and total of one-off expenses in a period
  */
-export const getBaselineOneOffImpact = <ThrowOnError extends boolean = false>(options: Options<GetBaselineOneOffImpactData, ThrowOnError>): RequestResult<GetBaselineOneOffImpactResponses, GetBaselineOneOffImpactErrors, ThrowOnError> => (options.client ?? client).get<GetBaselineOneOffImpactResponses, GetBaselineOneOffImpactErrors, ThrowOnError>({ url: '/api/baselines/one-off-impact', ...options });
+export const getBaselineOneOffImpact = <ThrowOnError extends boolean = false>(options: Options<GetBaselineOneOffImpactData, ThrowOnError>): RequestResult<GetBaselineOneOffImpactResponses, GetBaselineOneOffImpactErrors, ThrowOnError> => (options.client ?? client).get<GetBaselineOneOffImpactResponses, GetBaselineOneOffImpactErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/baselines/one-off-impact',
+    ...options
+});
 
 /**
  * Category expense totals for a period (transfer-aware, excludes one-offs)
  */
-export const getBaselineCategorySpend = <ThrowOnError extends boolean = false>(options: Options<GetBaselineCategorySpendData, ThrowOnError>): RequestResult<GetBaselineCategorySpendResponses, GetBaselineCategorySpendErrors, ThrowOnError> => (options.client ?? client).get<GetBaselineCategorySpendResponses, GetBaselineCategorySpendErrors, ThrowOnError>({ url: '/api/baselines/category-spend', ...options });
+export const getBaselineCategorySpend = <ThrowOnError extends boolean = false>(options: Options<GetBaselineCategorySpendData, ThrowOnError>): RequestResult<GetBaselineCategorySpendResponses, GetBaselineCategorySpendErrors, ThrowOnError> => (options.client ?? client).get<GetBaselineCategorySpendResponses, GetBaselineCategorySpendErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/baselines/category-spend',
+    ...options
+});
 
 /**
  * Merchant expense totals within a category for a period
@@ -203,7 +411,15 @@ export const getBaselineCategorySpend = <ThrowOnError extends boolean = false>(o
  * Transfer-aware expense outflows for one category (excludes one-offs). Merchants are grouped by counterparty name.
  *
  */
-export const getBaselineCategoryMerchants = <ThrowOnError extends boolean = false>(options: Options<GetBaselineCategoryMerchantsData, ThrowOnError>): RequestResult<GetBaselineCategoryMerchantsResponses, GetBaselineCategoryMerchantsErrors, ThrowOnError> => (options.client ?? client).get<GetBaselineCategoryMerchantsResponses, GetBaselineCategoryMerchantsErrors, ThrowOnError>({ url: '/api/baselines/category-merchants', ...options });
+export const getBaselineCategoryMerchants = <ThrowOnError extends boolean = false>(options: Options<GetBaselineCategoryMerchantsData, ThrowOnError>): RequestResult<GetBaselineCategoryMerchantsResponses, GetBaselineCategoryMerchantsErrors, ThrowOnError> => (options.client ?? client).get<GetBaselineCategoryMerchantsResponses, GetBaselineCategoryMerchantsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/baselines/category-merchants',
+    ...options
+});
 
 /**
  * Monthly expense totals for top categories in a period
@@ -211,7 +427,15 @@ export const getBaselineCategoryMerchants = <ThrowOnError extends boolean = fals
  * Transfer-aware expense outflows by calendar month for the top N categories by period total (excludes one-offs).
  *
  */
-export const getBaselineCategorySpendMonthly = <ThrowOnError extends boolean = false>(options: Options<GetBaselineCategorySpendMonthlyData, ThrowOnError>): RequestResult<GetBaselineCategorySpendMonthlyResponses, GetBaselineCategorySpendMonthlyErrors, ThrowOnError> => (options.client ?? client).get<GetBaselineCategorySpendMonthlyResponses, GetBaselineCategorySpendMonthlyErrors, ThrowOnError>({ url: '/api/baselines/category-spend-monthly', ...options });
+export const getBaselineCategorySpendMonthly = <ThrowOnError extends boolean = false>(options: Options<GetBaselineCategorySpendMonthlyData, ThrowOnError>): RequestResult<GetBaselineCategorySpendMonthlyResponses, GetBaselineCategorySpendMonthlyErrors, ThrowOnError> => (options.client ?? client).get<GetBaselineCategorySpendMonthlyResponses, GetBaselineCategorySpendMonthlyErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/baselines/category-spend-monthly',
+    ...options
+});
 
 /**
  * Daily expense totals and booking counts for month pacing charts
@@ -219,12 +443,25 @@ export const getBaselineCategorySpendMonthly = <ThrowOnError extends boolean = f
  * Transfer-aware expense outflows by booking day (includes one-offs). Confirmed internal transfers are excluded. Days with no spend are omitted; clients should fill the calendar range when drawing a cumulative curve.
  *
  */
-export const getBaselineDailyExpensePace = <ThrowOnError extends boolean = false>(options: Options<GetBaselineDailyExpensePaceData, ThrowOnError>): RequestResult<GetBaselineDailyExpensePaceResponses, GetBaselineDailyExpensePaceErrors, ThrowOnError> => (options.client ?? client).get<GetBaselineDailyExpensePaceResponses, GetBaselineDailyExpensePaceErrors, ThrowOnError>({ url: '/api/baselines/daily-expense-pace', ...options });
+export const getBaselineDailyExpensePace = <ThrowOnError extends boolean = false>(options: Options<GetBaselineDailyExpensePaceData, ThrowOnError>): RequestResult<GetBaselineDailyExpensePaceResponses, GetBaselineDailyExpensePaceErrors, ThrowOnError> => (options.client ?? client).get<GetBaselineDailyExpensePaceResponses, GetBaselineDailyExpensePaceErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/baselines/daily-expense-pace',
+    ...options
+});
 
 /**
  * Recompute and persist a draft FinancialBaseline
  */
 export const postBaselinesRecompute = <ThrowOnError extends boolean = false>(options?: Options<PostBaselinesRecomputeData, ThrowOnError>): RequestResult<PostBaselinesRecomputeResponses, PostBaselinesRecomputeErrors, ThrowOnError> => (options?.client ?? client).post<PostBaselinesRecomputeResponses, PostBaselinesRecomputeErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/baselines/recompute',
     ...options,
     headers: {
@@ -236,12 +473,25 @@ export const postBaselinesRecompute = <ThrowOnError extends boolean = false>(opt
 /**
  * Confirm a draft FinancialBaseline
  */
-export const postBaselineConfirm = <ThrowOnError extends boolean = false>(options: Options<PostBaselineConfirmData, ThrowOnError>): RequestResult<PostBaselineConfirmResponses, PostBaselineConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostBaselineConfirmResponses, PostBaselineConfirmErrors, ThrowOnError>({ url: '/api/baselines/{id}/confirm', ...options });
+export const postBaselineConfirm = <ThrowOnError extends boolean = false>(options: Options<PostBaselineConfirmData, ThrowOnError>): RequestResult<PostBaselineConfirmResponses, PostBaselineConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostBaselineConfirmResponses, PostBaselineConfirmErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/baselines/{id}/confirm',
+    ...options
+});
 
 /**
  * Correct one baseline metric and create a new draft version
  */
 export const postBaselineAdjust = <ThrowOnError extends boolean = false>(options: Options<PostBaselineAdjustData, ThrowOnError>): RequestResult<PostBaselineAdjustResponses, PostBaselineAdjustErrors, ThrowOnError> => (options.client ?? client).post<PostBaselineAdjustResponses, PostBaselineAdjustErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/baselines/{id}/adjust',
     ...options,
     headers: {
@@ -253,12 +503,25 @@ export const postBaselineAdjust = <ThrowOnError extends boolean = false>(options
 /**
  * List Money Reviews (newest first)
  */
-export const getMoneyReviews = <ThrowOnError extends boolean = false>(options?: Options<GetMoneyReviewsData, ThrowOnError>): RequestResult<GetMoneyReviewsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetMoneyReviewsResponses, unknown, ThrowOnError>({ url: '/api/reviews', ...options });
+export const getMoneyReviews = <ThrowOnError extends boolean = false>(options?: Options<GetMoneyReviewsData, ThrowOnError>): RequestResult<GetMoneyReviewsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetMoneyReviewsResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/reviews',
+    ...options
+});
 
 /**
  * Generate a Money Review pinned to the current (or given) baseline
  */
 export const postMoneyReviews = <ThrowOnError extends boolean = false>(options?: Options<PostMoneyReviewsData, ThrowOnError>): RequestResult<PostMoneyReviewsResponses, PostMoneyReviewsErrors, ThrowOnError> => (options?.client ?? client).post<PostMoneyReviewsResponses, PostMoneyReviewsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/reviews',
     ...options,
     headers: {
@@ -270,17 +533,38 @@ export const postMoneyReviews = <ThrowOnError extends boolean = false>(options?:
 /**
  * Get a Money Review by id
  */
-export const getMoneyReview = <ThrowOnError extends boolean = false>(options: Options<GetMoneyReviewData, ThrowOnError>): RequestResult<GetMoneyReviewResponses, GetMoneyReviewErrors, ThrowOnError> => (options.client ?? client).get<GetMoneyReviewResponses, GetMoneyReviewErrors, ThrowOnError>({ url: '/api/reviews/{id}', ...options });
+export const getMoneyReview = <ThrowOnError extends boolean = false>(options: Options<GetMoneyReviewData, ThrowOnError>): RequestResult<GetMoneyReviewResponses, GetMoneyReviewErrors, ThrowOnError> => (options.client ?? client).get<GetMoneyReviewResponses, GetMoneyReviewErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/reviews/{id}',
+    ...options
+});
 
 /**
  * Confirm a Money Review
  */
-export const postMoneyReviewConfirm = <ThrowOnError extends boolean = false>(options: Options<PostMoneyReviewConfirmData, ThrowOnError>): RequestResult<PostMoneyReviewConfirmResponses, PostMoneyReviewConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostMoneyReviewConfirmResponses, PostMoneyReviewConfirmErrors, ThrowOnError>({ url: '/api/reviews/{id}/confirm', ...options });
+export const postMoneyReviewConfirm = <ThrowOnError extends boolean = false>(options: Options<PostMoneyReviewConfirmData, ThrowOnError>): RequestResult<PostMoneyReviewConfirmResponses, PostMoneyReviewConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostMoneyReviewConfirmResponses, PostMoneyReviewConfirmErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/reviews/{id}/confirm',
+    ...options
+});
 
 /**
  * Create a 90-day liquidity forecast from the current baseline
  */
 export const postForecasts = <ThrowOnError extends boolean = false>(options: Options<PostForecastsData, ThrowOnError>): RequestResult<PostForecastsResponses, PostForecastsErrors, ThrowOnError> => (options.client ?? client).post<PostForecastsResponses, PostForecastsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/forecasts',
     ...options,
     headers: {
@@ -292,22 +576,51 @@ export const postForecasts = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * Get the latest forecast for the current baseline
  */
-export const getLatestForecast = <ThrowOnError extends boolean = false>(options?: Options<GetLatestForecastData, ThrowOnError>): RequestResult<GetLatestForecastResponses, GetLatestForecastErrors, ThrowOnError> => (options?.client ?? client).get<GetLatestForecastResponses, GetLatestForecastErrors, ThrowOnError>({ url: '/api/forecasts/latest', ...options });
+export const getLatestForecast = <ThrowOnError extends boolean = false>(options?: Options<GetLatestForecastData, ThrowOnError>): RequestResult<GetLatestForecastResponses, GetLatestForecastErrors, ThrowOnError> => (options?.client ?? client).get<GetLatestForecastResponses, GetLatestForecastErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/forecasts/latest',
+    ...options
+});
 
 /**
  * Get a forecast by id
  */
-export const getForecast = <ThrowOnError extends boolean = false>(options: Options<GetForecastData, ThrowOnError>): RequestResult<GetForecastResponses, GetForecastErrors, ThrowOnError> => (options.client ?? client).get<GetForecastResponses, GetForecastErrors, ThrowOnError>({ url: '/api/forecasts/{id}', ...options });
+export const getForecast = <ThrowOnError extends boolean = false>(options: Options<GetForecastData, ThrowOnError>): RequestResult<GetForecastResponses, GetForecastErrors, ThrowOnError> => (options.client ?? client).get<GetForecastResponses, GetForecastErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/forecasts/{id}',
+    ...options
+});
 
 /**
  * List scenarios for a forecast
  */
-export const getForecastScenarios = <ThrowOnError extends boolean = false>(options: Options<GetForecastScenariosData, ThrowOnError>): RequestResult<GetForecastScenariosResponses, unknown, ThrowOnError> => (options.client ?? client).get<GetForecastScenariosResponses, unknown, ThrowOnError>({ url: '/api/forecasts/{id}/scenarios', ...options });
+export const getForecastScenarios = <ThrowOnError extends boolean = false>(options: Options<GetForecastScenariosData, ThrowOnError>): RequestResult<GetForecastScenariosResponses, unknown, ThrowOnError> => (options.client ?? client).get<GetForecastScenariosResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/forecasts/{id}/scenarios',
+    ...options
+});
 
 /**
  * Run a typed scenario against a forecast
  */
 export const postForecastScenario = <ThrowOnError extends boolean = false>(options: Options<PostForecastScenarioData, ThrowOnError>): RequestResult<PostForecastScenarioResponses, PostForecastScenarioErrors, ThrowOnError> => (options.client ?? client).post<PostForecastScenarioResponses, PostForecastScenarioErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/forecasts/{id}/scenarios',
     ...options,
     headers: {
@@ -319,12 +632,25 @@ export const postForecastScenario = <ThrowOnError extends boolean = false>(optio
 /**
  * List decisions (newest first)
  */
-export const getDecisions = <ThrowOnError extends boolean = false>(options?: Options<GetDecisionsData, ThrowOnError>): RequestResult<GetDecisionsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetDecisionsResponses, unknown, ThrowOnError>({ url: '/api/decisions', ...options });
+export const getDecisions = <ThrowOnError extends boolean = false>(options?: Options<GetDecisionsData, ThrowOnError>): RequestResult<GetDecisionsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetDecisionsResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/decisions',
+    ...options
+});
 
 /**
  * Create a decision with one measurable action
  */
 export const postDecisions = <ThrowOnError extends boolean = false>(options: Options<PostDecisionsData, ThrowOnError>): RequestResult<PostDecisionsResponses, PostDecisionsErrors, ThrowOnError> => (options.client ?? client).post<PostDecisionsResponses, PostDecisionsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/decisions',
     ...options,
     headers: {
@@ -336,12 +662,25 @@ export const postDecisions = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * List actions (optionally by status)
  */
-export const getActions = <ThrowOnError extends boolean = false>(options?: Options<GetActionsData, ThrowOnError>): RequestResult<GetActionsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetActionsResponses, unknown, ThrowOnError>({ url: '/api/actions', ...options });
+export const getActions = <ThrowOnError extends boolean = false>(options?: Options<GetActionsData, ThrowOnError>): RequestResult<GetActionsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetActionsResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/actions',
+    ...options
+});
 
 /**
  * Update an action status
  */
 export const postActionStatus = <ThrowOnError extends boolean = false>(options: Options<PostActionStatusData, ThrowOnError>): RequestResult<PostActionStatusResponses, PostActionStatusErrors, ThrowOnError> => (options.client ?? client).post<PostActionStatusResponses, PostActionStatusErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/actions/{id}/status',
     ...options,
     headers: {

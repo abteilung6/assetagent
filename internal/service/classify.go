@@ -13,6 +13,7 @@ import (
 	"github.com/abteilung6/assetagent/internal/classify"
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
 	"github.com/abteilung6/assetagent/internal/domain"
+	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -59,6 +60,10 @@ type CategorySuggestion struct {
 }
 
 func (s *Classify) Run(ctx context.Context) (domain.ClassifyRunResult, error) {
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return domain.ClassifyRunResult{}, err
+	}
 	q := sqldb.New(s.pool)
 
 	if _, err := NewMerchants(s.pool).Rebuild(ctx); err != nil {
@@ -76,7 +81,7 @@ func (s *Classify) Run(ctx context.Context) (domain.ClassifyRunResult, error) {
 		slugByID[c.ID] = c.Slug
 	}
 
-	rules, err := q.ListClassificationRules(ctx)
+	rules, err := q.ListClassificationRules(ctx, householdID)
 	if err != nil {
 		return domain.ClassifyRunResult{}, fmt.Errorf("list rules: %w", err)
 	}
@@ -102,7 +107,7 @@ func (s *Classify) Run(ctx context.Context) (domain.ClassifyRunResult, error) {
 		})
 	}
 
-	transferRows, err := q.ListConfirmedTransferTransactionIDs(ctx)
+	transferRows, err := q.ListConfirmedTransferTransactionIDs(ctx, householdID)
 	if err != nil {
 		return domain.ClassifyRunResult{}, fmt.Errorf("list transfers: %w", err)
 	}
@@ -111,7 +116,7 @@ func (s *Classify) Run(ctx context.Context) (domain.ClassifyRunResult, error) {
 		transfers[id] = struct{}{}
 	}
 
-	txs, err := q.ListTransactionsForClassify(ctx)
+	txs, err := q.ListTransactionsForClassify(ctx, householdID)
 	if err != nil {
 		return domain.ClassifyRunResult{}, fmt.Errorf("list txs: %w", err)
 	}
@@ -130,8 +135,9 @@ func (s *Classify) Run(ctx context.Context) (domain.ClassifyRunResult, error) {
 		if label, ok := classify.NormalizeMerchantLabel(tx.Counterparty, tx.Purpose); ok {
 			merchantPattern = label.Pattern
 			alias, err := q.GetMerchantAlias(ctx, sqldb.GetMerchantAliasParams{
-				MatchType: domain.MerchantMatchNormalized,
-				Pattern:   label.Pattern,
+				MatchType:   domain.MerchantMatchNormalized,
+				Pattern:     label.Pattern,
+				HouseholdID: householdID,
 			})
 			if err == nil {
 				merchantID = pgtype.UUID{Bytes: alias.MerchantID, Valid: true}
@@ -209,6 +215,10 @@ func (s *Classify) Correct(
 	txID uuid.UUID,
 	opts domain.ClassifyCorrectOptions,
 ) (domain.ClassifyCorrectResult, error) {
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return domain.ClassifyCorrectResult{}, err
+	}
 	q := sqldb.New(s.pool)
 
 	slug := opts.CategorySlug
@@ -220,7 +230,10 @@ func (s *Classify) Correct(
 		return domain.ClassifyCorrectResult{}, err
 	}
 
-	tx, err := q.GetTransactionForClassify(ctx, txID)
+	tx, err := q.GetTransactionForClassify(ctx, sqldb.GetTransactionForClassifyParams{
+		ID:          txID,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ClassifyCorrectResult{}, fmt.Errorf("transaction not found")
@@ -234,8 +247,9 @@ func (s *Classify) Correct(
 			return domain.ClassifyCorrectResult{}, err
 		}
 		alias, err := q.GetMerchantAlias(ctx, sqldb.GetMerchantAliasParams{
-			MatchType: domain.MerchantMatchNormalized,
-			Pattern:   label.Pattern,
+			MatchType:   domain.MerchantMatchNormalized,
+			Pattern:     label.Pattern,
+			HouseholdID: householdID,
 		})
 		if err == nil {
 			merchantID = pgtype.UUID{Bytes: alias.MerchantID, Valid: true}
@@ -263,11 +277,15 @@ func (s *Classify) Correct(
 	if opts.ApplyToMerchant && merchantID.Valid {
 		mid := uuid.UUID(merchantID.Bytes)
 		result.MerchantID = &mid
-		existing, err := q.GetClassificationRuleByMerchant(ctx, merchantID)
+		existing, err := q.GetClassificationRuleByMerchant(ctx, sqldb.GetClassificationRuleByMerchantParams{
+			MerchantID:  merchantID,
+			HouseholdID: householdID,
+		})
 		switch {
 		case err == nil:
 			if _, err := q.UpdateClassificationRuleCategory(ctx, sqldb.UpdateClassificationRuleCategoryParams{
 				ID:                       existing.ID,
+				HouseholdID:              householdID,
 				CategoryID:               category.ID,
 				CreatedFromTransactionID: pgtype.UUID{Bytes: txID, Valid: true},
 				Priority:                 10,
@@ -277,6 +295,7 @@ func (s *Classify) Correct(
 			result.RuleCreated = true
 		case errors.Is(err, pgx.ErrNoRows):
 			if _, err := q.CreateClassificationRule(ctx, sqldb.CreateClassificationRuleParams{
+				HouseholdID:              householdID,
 				Priority:                 10,
 				MerchantID:               merchantID,
 				Pattern:                  pgtype.Text{},
@@ -294,6 +313,7 @@ func (s *Classify) Correct(
 
 		if _, err := q.UpdateMerchantDefaultCategory(ctx, sqldb.UpdateMerchantDefaultCategoryParams{
 			ID:                mid,
+			HouseholdID:       householdID,
 			DefaultCategoryID: pgtype.UUID{Bytes: category.ID, Valid: true},
 		}); err != nil {
 			return domain.ClassifyCorrectResult{}, err
@@ -309,7 +329,11 @@ func (s *Classify) ListQueue(ctx context.Context) ([]domain.ClassificationQueueI
 		return nil, fmt.Errorf("classify before queue: %w", err)
 	}
 
-	rows, err := sqldb.New(s.pool).ListClassificationQueue(ctx)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := sqldb.New(s.pool).ListClassificationQueue(ctx, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -339,6 +363,10 @@ func (s *Classify) ListQueue(ctx context.Context) ([]domain.ClassificationQueueI
 }
 
 func (s *Classify) loadPatternRules(ctx context.Context) ([]classify.PatternRule, error) {
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
 	q := sqldb.New(s.pool)
 	categories, err := q.ListCategories(ctx)
 	if err != nil {
@@ -348,7 +376,7 @@ func (s *Classify) loadPatternRules(ctx context.Context) ([]classify.PatternRule
 	for _, c := range categories {
 		slugByID[c.ID] = c.Slug
 	}
-	rules, err := q.ListClassificationRules(ctx)
+	rules, err := q.ListClassificationRules(ctx, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -466,6 +494,10 @@ func (s *Classify) ImportPatternRulesCSV(ctx context.Context, path string) (Patt
 	}
 
 	q := sqldb.New(s.pool)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return PatternRuleImportResult{}, err
+	}
 	categories, err := q.ListCategories(ctx)
 	if err != nil {
 		return PatternRuleImportResult{}, err
@@ -509,10 +541,11 @@ func (s *Classify) ImportPatternRulesCSV(ctx context.Context, path string) (Patt
 		}
 
 		if _, err := q.UpsertSystemPatternRule(ctx, sqldb.UpsertSystemPatternRuleParams{
-			Priority:   int32(priority),
-			Pattern:    pgtype.Text{String: pattern, Valid: true},
-			CategoryID: categoryID,
-			Confidence: confidence,
+			HouseholdID: householdID,
+			Priority:    int32(priority),
+			Pattern:     pgtype.Text{String: pattern, Valid: true},
+			CategoryID:  categoryID,
+			Confidence:  confidence,
 		}); err != nil {
 			return PatternRuleImportResult{}, fmt.Errorf("upsert pattern %q: %w", pattern, err)
 		}

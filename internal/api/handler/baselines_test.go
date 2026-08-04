@@ -134,7 +134,7 @@ func TestPostBaselineAdjustValidation(t *testing.T) {
 
 func newBaselineTestRouter(baseline handler.BaselineService) chi.Router {
 	router := chi.NewRouter()
-	gen.HandlerWithOptions(handler.New(nil, nil, nil, nil, nil, nil, nil, nil, baseline, nil, nil, nil), gen.ChiServerOptions{
+	gen.HandlerWithOptions(handler.New(nil, nil, nil, nil, nil, nil, nil, nil, baseline, nil, nil, nil, nil), gen.ChiServerOptions{
 		BaseRouter: router,
 	})
 	return router

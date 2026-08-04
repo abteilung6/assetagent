@@ -86,7 +86,11 @@ func (s *BaselineService) RecomputeAndSave(ctx context.Context, from, to *time.T
 
 // Current returns the preferred open baseline (confirmed over draft, newest).
 func (s *BaselineService) Current(ctx context.Context) (ComputedBaseline, error) {
-	row, err := sqldb.New(s.pool).GetCurrentFinancialBaseline(ctx)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return ComputedBaseline{}, err
+	}
+	row, err := sqldb.New(s.pool).GetCurrentFinancialBaseline(ctx, householdID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ComputedBaseline{}, ErrBaselineNone
@@ -98,11 +102,21 @@ func (s *BaselineService) Current(ctx context.Context) (ComputedBaseline, error)
 
 // Confirm marks a draft baseline as confirmed (idempotent if already confirmed).
 func (s *BaselineService) Confirm(ctx context.Context, id uuid.UUID) (ComputedBaseline, error) {
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return ComputedBaseline{}, err
+	}
 	q := sqldb.New(s.pool)
-	row, err := q.ConfirmFinancialBaseline(ctx, id)
+	row, err := q.ConfirmFinancialBaseline(ctx, sqldb.ConfirmFinancialBaselineParams{
+		ID:          id,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			existing, getErr := q.GetFinancialBaseline(ctx, id)
+			existing, getErr := q.GetFinancialBaseline(ctx, sqldb.GetFinancialBaselineParams{
+				ID:          id,
+				HouseholdID: householdID,
+			})
 			if errors.Is(getErr, pgx.ErrNoRows) {
 				return ComputedBaseline{}, ErrBaselineNotFound
 			}
@@ -137,7 +151,14 @@ func (s *BaselineService) Adjust(
 	}
 
 	q := sqldb.New(s.pool)
-	existing, err := q.GetFinancialBaseline(ctx, id)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return ComputedBaseline{}, err
+	}
+	existing, err := q.GetFinancialBaseline(ctx, sqldb.GetFinancialBaselineParams{
+		ID:          id,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ComputedBaseline{}, ErrBaselineNotFound
@@ -170,11 +191,11 @@ func (s *BaselineService) Adjust(
 	defer func() { _ = tx.Rollback(ctx) }()
 	qtx := sqldb.New(tx)
 
-	if err := qtx.SupersedeOpenFinancialBaselines(ctx); err != nil {
+	if err := qtx.SupersedeOpenFinancialBaselines(ctx, householdID); err != nil {
 		return ComputedBaseline{}, fmt.Errorf("supersede: %w", err)
 	}
 
-	saved, err := insertBaselineRow(ctx, qtx, adjusted)
+	saved, err := insertBaselineRow(ctx, qtx, householdID, adjusted)
 	if err != nil {
 		return ComputedBaseline{}, err
 	}
@@ -196,6 +217,10 @@ func (s *BaselineService) Adjust(
 }
 
 func (s *BaselineService) insertDraft(ctx context.Context, computed ComputedBaseline) (ComputedBaseline, error) {
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return ComputedBaseline{}, err
+	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return ComputedBaseline{}, err
@@ -203,12 +228,12 @@ func (s *BaselineService) insertDraft(ctx context.Context, computed ComputedBase
 	defer func() { _ = tx.Rollback(ctx) }()
 	qtx := sqldb.New(tx)
 
-	if err := qtx.SupersedeOpenFinancialBaselines(ctx); err != nil {
+	if err := qtx.SupersedeOpenFinancialBaselines(ctx, householdID); err != nil {
 		return ComputedBaseline{}, fmt.Errorf("supersede: %w", err)
 	}
 	computed.Status = BaselineStatusDraft
 	computed.ConfirmedAt = nil
-	saved, err := insertBaselineRow(ctx, qtx, computed)
+	saved, err := insertBaselineRow(ctx, qtx, householdID, computed)
 	if err != nil {
 		return ComputedBaseline{}, err
 	}
@@ -218,7 +243,7 @@ func (s *BaselineService) insertDraft(ctx context.Context, computed ComputedBase
 	return saved, nil
 }
 
-func insertBaselineRow(ctx context.Context, q *sqldb.Queries, b ComputedBaseline) (ComputedBaseline, error) {
+func insertBaselineRow(ctx context.Context, q *sqldb.Queries, householdID uuid.UUID, b ComputedBaseline) (ComputedBaseline, error) {
 	assumptions, err := json.Marshal(b.Assumptions)
 	if err != nil {
 		return ComputedBaseline{}, err
@@ -228,6 +253,7 @@ func insertBaselineRow(ctx context.Context, q *sqldb.Queries, b ComputedBaseline
 		return ComputedBaseline{}, err
 	}
 	row, err := q.InsertFinancialBaseline(ctx, sqldb.InsertFinancialBaselineParams{
+		HouseholdID:             householdID,
 		PeriodFrom:              pgtype.Date{Time: dateOnlyUTC(b.PeriodFrom), Valid: true},
 		PeriodTo:                pgtype.Date{Time: dateOnlyUTC(b.PeriodTo), Valid: true},
 		AlgorithmVersion:        b.AlgorithmVersion,
@@ -308,7 +334,11 @@ func (s *BaselineService) compute(ctx context.Context, from, to *time.Time) (Com
 }
 
 func (s *BaselineService) latestBooking(ctx context.Context) (time.Time, error) {
-	latest, err := sqldb.New(s.pool).GetLatestBookingDate(ctx)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return time.Time{}, err
+	}
+	latest, err := sqldb.New(s.pool).GetLatestBookingDate(ctx, householdID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return time.Time{}, nil
@@ -529,7 +559,11 @@ func (s *BaselineService) MonthlyCashflow(ctx context.Context, months int) ([]Mo
 	if months > 12 {
 		months = 12
 	}
-	latest, err := sqldb.New(s.pool).GetLatestBookingDate(ctx)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
+	latest, err := sqldb.New(s.pool).GetLatestBookingDate(ctx, householdID)
 	if err != nil {
 		return nil, err
 	}

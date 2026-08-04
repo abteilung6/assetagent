@@ -1,5 +1,6 @@
 -- name: InsertForecast :one
 INSERT INTO forecasts (
+    household_id,
     baseline_id,
     horizon_days,
     starting_balance,
@@ -9,41 +10,42 @@ INSERT INTO forecasts (
     ending_balance,
     algorithm_version
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
 RETURNING *;
 
 -- name: GetForecast :one
 SELECT *
 FROM forecasts
-WHERE id = $1;
+WHERE id = $1 AND household_id = $2;
 
 -- name: GetLatestForecastForBaseline :one
 SELECT *
 FROM forecasts
-WHERE baseline_id = $1
+WHERE baseline_id = $1 AND household_id = $2
 ORDER BY created_at DESC
 LIMIT 1;
 
 -- name: InsertScenario :one
 INSERT INTO scenarios (
+    household_id,
     forecast_id,
     kind,
     params,
     result,
     status
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4, $5, $6
 )
 RETURNING *;
 
 -- name: ListScenariosForForecast :many
 SELECT *
 FROM scenarios
-WHERE forecast_id = $1
+WHERE forecast_id = $1 AND household_id = $2
 ORDER BY created_at DESC;
 
 -- name: GetScenario :one
 SELECT *
 FROM scenarios
-WHERE id = $1;
+WHERE id = $1 AND household_id = $2;

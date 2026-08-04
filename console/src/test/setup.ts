@@ -27,6 +27,21 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Authenticated session for AuthGate in routed tests.
+  vi.spyOn(sdk, "getMe").mockResolvedValue(
+    mockApiResponse({
+      user: {
+        id: "00000000-0000-4000-8000-000000000001",
+        display_name: "Test User",
+        email: "test@example.com",
+      },
+      household: {
+        id: "00000000-0000-4000-8000-000000000002",
+        name: "Test household",
+      },
+      membership: { role: "owner" as const },
+    }),
+  );
   // Soft inbox badge queries run on every layout mount.
   vi.spyOn(sdk, "getTransferCandidates").mockResolvedValue(
     mockApiResponse({ data: [] }),

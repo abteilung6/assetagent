@@ -1,23 +1,25 @@
 -- name: InsertDecision :one
 INSERT INTO decisions (
+    household_id,
     review_id,
     scenario_id,
     title,
     assumptions,
     target_value
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4, $5, $6
 )
 RETURNING *;
 
 -- name: GetDecision :one
 SELECT *
 FROM decisions
-WHERE id = $1;
+WHERE id = $1 AND household_id = $2;
 
 -- name: ListDecisions :many
 SELECT *
 FROM decisions
+WHERE household_id = sqlc.arg('household_id')
 ORDER BY decided_at DESC
 LIMIT sqlc.arg('row_limit');
 
@@ -35,29 +37,36 @@ INSERT INTO actions (
 RETURNING *;
 
 -- name: GetAction :one
-SELECT *
-FROM actions
-WHERE id = $1;
+SELECT a.*
+FROM actions a
+JOIN decisions d ON d.id = a.decision_id
+WHERE a.id = $1 AND d.household_id = $2;
 
 -- name: ListActions :many
-SELECT *
-FROM actions
-WHERE (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status'))
-ORDER BY due_on ASC, created_at DESC
+SELECT a.*
+FROM actions a
+JOIN decisions d ON d.id = a.decision_id
+WHERE d.household_id = sqlc.arg('household_id')
+  AND (sqlc.narg('status')::text IS NULL OR a.status = sqlc.narg('status'))
+ORDER BY a.due_on ASC, a.created_at DESC
 LIMIT sqlc.arg('row_limit');
 
 -- name: ListActionsForDecision :many
-SELECT *
-FROM actions
-WHERE decision_id = $1
-ORDER BY created_at ASC;
+SELECT a.*
+FROM actions a
+JOIN decisions d ON d.id = a.decision_id
+WHERE a.decision_id = $1 AND d.household_id = $2
+ORDER BY a.created_at ASC;
 
 -- name: UpdateActionStatus :one
-UPDATE actions
+UPDATE actions a
 SET
-    status = $2,
-    outcome_note = $3,
-    verified_at = $4,
+    status = $3,
+    outcome_note = $4,
+    verified_at = $5,
     updated_at = now()
-WHERE id = $1
-RETURNING *;
+FROM decisions d
+WHERE a.id = $1
+  AND d.id = a.decision_id
+  AND d.household_id = $2
+RETURNING a.*;

@@ -14,13 +14,19 @@ import (
 )
 
 const getAction = `-- name: GetAction :one
-SELECT id, decision_id, title, expected_annual_effect, due_on, status, outcome_note, verified_at, created_at, updated_at
-FROM actions
-WHERE id = $1
+SELECT a.id, a.decision_id, a.title, a.expected_annual_effect, a.due_on, a.status, a.outcome_note, a.verified_at, a.created_at, a.updated_at
+FROM actions a
+JOIN decisions d ON d.id = a.decision_id
+WHERE a.id = $1 AND d.household_id = $2
 `
 
-func (q *Queries) GetAction(ctx context.Context, id uuid.UUID) (Action, error) {
-	row := q.db.QueryRow(ctx, getAction, id)
+type GetActionParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) GetAction(ctx context.Context, arg GetActionParams) (Action, error) {
+	row := q.db.QueryRow(ctx, getAction, arg.ID, arg.HouseholdID)
 	var i Action
 	err := row.Scan(
 		&i.ID,
@@ -38,13 +44,18 @@ func (q *Queries) GetAction(ctx context.Context, id uuid.UUID) (Action, error) {
 }
 
 const getDecision = `-- name: GetDecision :one
-SELECT id, review_id, scenario_id, title, assumptions, target_value, decided_at, created_at
+SELECT id, review_id, scenario_id, title, assumptions, target_value, decided_at, created_at, household_id
 FROM decisions
-WHERE id = $1
+WHERE id = $1 AND household_id = $2
 `
 
-func (q *Queries) GetDecision(ctx context.Context, id uuid.UUID) (Decision, error) {
-	row := q.db.QueryRow(ctx, getDecision, id)
+type GetDecisionParams struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) GetDecision(ctx context.Context, arg GetDecisionParams) (Decision, error) {
+	row := q.db.QueryRow(ctx, getDecision, arg.ID, arg.HouseholdID)
 	var i Decision
 	err := row.Scan(
 		&i.ID,
@@ -55,6 +66,7 @@ func (q *Queries) GetDecision(ctx context.Context, id uuid.UUID) (Decision, erro
 		&i.TargetValue,
 		&i.DecidedAt,
 		&i.CreatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
@@ -109,18 +121,20 @@ func (q *Queries) InsertAction(ctx context.Context, arg InsertActionParams) (Act
 
 const insertDecision = `-- name: InsertDecision :one
 INSERT INTO decisions (
+    household_id,
     review_id,
     scenario_id,
     title,
     assumptions,
     target_value
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4, $5, $6
 )
-RETURNING id, review_id, scenario_id, title, assumptions, target_value, decided_at, created_at
+RETURNING id, review_id, scenario_id, title, assumptions, target_value, decided_at, created_at, household_id
 `
 
 type InsertDecisionParams struct {
+	HouseholdID uuid.UUID      `json:"household_id"`
 	ReviewID    pgtype.UUID    `json:"review_id"`
 	ScenarioID  pgtype.UUID    `json:"scenario_id"`
 	Title       string         `json:"title"`
@@ -130,6 +144,7 @@ type InsertDecisionParams struct {
 
 func (q *Queries) InsertDecision(ctx context.Context, arg InsertDecisionParams) (Decision, error) {
 	row := q.db.QueryRow(ctx, insertDecision,
+		arg.HouseholdID,
 		arg.ReviewID,
 		arg.ScenarioID,
 		arg.Title,
@@ -146,25 +161,29 @@ func (q *Queries) InsertDecision(ctx context.Context, arg InsertDecisionParams) 
 		&i.TargetValue,
 		&i.DecidedAt,
 		&i.CreatedAt,
+		&i.HouseholdID,
 	)
 	return i, err
 }
 
 const listActions = `-- name: ListActions :many
-SELECT id, decision_id, title, expected_annual_effect, due_on, status, outcome_note, verified_at, created_at, updated_at
-FROM actions
-WHERE ($1::text IS NULL OR status = $1)
-ORDER BY due_on ASC, created_at DESC
-LIMIT $2
+SELECT a.id, a.decision_id, a.title, a.expected_annual_effect, a.due_on, a.status, a.outcome_note, a.verified_at, a.created_at, a.updated_at
+FROM actions a
+JOIN decisions d ON d.id = a.decision_id
+WHERE d.household_id = $1
+  AND ($2::text IS NULL OR a.status = $2)
+ORDER BY a.due_on ASC, a.created_at DESC
+LIMIT $3
 `
 
 type ListActionsParams struct {
-	Status   pgtype.Text `json:"status"`
-	RowLimit int32       `json:"row_limit"`
+	HouseholdID uuid.UUID   `json:"household_id"`
+	Status      pgtype.Text `json:"status"`
+	RowLimit    int32       `json:"row_limit"`
 }
 
 func (q *Queries) ListActions(ctx context.Context, arg ListActionsParams) ([]Action, error) {
-	rows, err := q.db.Query(ctx, listActions, arg.Status, arg.RowLimit)
+	rows, err := q.db.Query(ctx, listActions, arg.HouseholdID, arg.Status, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -195,14 +214,20 @@ func (q *Queries) ListActions(ctx context.Context, arg ListActionsParams) ([]Act
 }
 
 const listActionsForDecision = `-- name: ListActionsForDecision :many
-SELECT id, decision_id, title, expected_annual_effect, due_on, status, outcome_note, verified_at, created_at, updated_at
-FROM actions
-WHERE decision_id = $1
-ORDER BY created_at ASC
+SELECT a.id, a.decision_id, a.title, a.expected_annual_effect, a.due_on, a.status, a.outcome_note, a.verified_at, a.created_at, a.updated_at
+FROM actions a
+JOIN decisions d ON d.id = a.decision_id
+WHERE a.decision_id = $1 AND d.household_id = $2
+ORDER BY a.created_at ASC
 `
 
-func (q *Queries) ListActionsForDecision(ctx context.Context, decisionID uuid.UUID) ([]Action, error) {
-	rows, err := q.db.Query(ctx, listActionsForDecision, decisionID)
+type ListActionsForDecisionParams struct {
+	DecisionID  uuid.UUID `json:"decision_id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+}
+
+func (q *Queries) ListActionsForDecision(ctx context.Context, arg ListActionsForDecisionParams) ([]Action, error) {
+	rows, err := q.db.Query(ctx, listActionsForDecision, arg.DecisionID, arg.HouseholdID)
 	if err != nil {
 		return nil, err
 	}
@@ -233,14 +258,20 @@ func (q *Queries) ListActionsForDecision(ctx context.Context, decisionID uuid.UU
 }
 
 const listDecisions = `-- name: ListDecisions :many
-SELECT id, review_id, scenario_id, title, assumptions, target_value, decided_at, created_at
+SELECT id, review_id, scenario_id, title, assumptions, target_value, decided_at, created_at, household_id
 FROM decisions
+WHERE household_id = $1
 ORDER BY decided_at DESC
-LIMIT $1
+LIMIT $2
 `
 
-func (q *Queries) ListDecisions(ctx context.Context, rowLimit int32) ([]Decision, error) {
-	rows, err := q.db.Query(ctx, listDecisions, rowLimit)
+type ListDecisionsParams struct {
+	HouseholdID uuid.UUID `json:"household_id"`
+	RowLimit    int32     `json:"row_limit"`
+}
+
+func (q *Queries) ListDecisions(ctx context.Context, arg ListDecisionsParams) ([]Decision, error) {
+	rows, err := q.db.Query(ctx, listDecisions, arg.HouseholdID, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -257,6 +288,7 @@ func (q *Queries) ListDecisions(ctx context.Context, rowLimit int32) ([]Decision
 			&i.TargetValue,
 			&i.DecidedAt,
 			&i.CreatedAt,
+			&i.HouseholdID,
 		); err != nil {
 			return nil, err
 		}
@@ -269,18 +301,22 @@ func (q *Queries) ListDecisions(ctx context.Context, rowLimit int32) ([]Decision
 }
 
 const updateActionStatus = `-- name: UpdateActionStatus :one
-UPDATE actions
+UPDATE actions a
 SET
-    status = $2,
-    outcome_note = $3,
-    verified_at = $4,
+    status = $3,
+    outcome_note = $4,
+    verified_at = $5,
     updated_at = now()
-WHERE id = $1
-RETURNING id, decision_id, title, expected_annual_effect, due_on, status, outcome_note, verified_at, created_at, updated_at
+FROM decisions d
+WHERE a.id = $1
+  AND d.id = a.decision_id
+  AND d.household_id = $2
+RETURNING a.id, a.decision_id, a.title, a.expected_annual_effect, a.due_on, a.status, a.outcome_note, a.verified_at, a.created_at, a.updated_at
 `
 
 type UpdateActionStatusParams struct {
 	ID          uuid.UUID          `json:"id"`
+	HouseholdID uuid.UUID          `json:"household_id"`
 	Status      string             `json:"status"`
 	OutcomeNote string             `json:"outcome_note"`
 	VerifiedAt  pgtype.Timestamptz `json:"verified_at"`
@@ -289,6 +325,7 @@ type UpdateActionStatusParams struct {
 func (q *Queries) UpdateActionStatus(ctx context.Context, arg UpdateActionStatusParams) (Action, error) {
 	row := q.db.QueryRow(ctx, updateActionStatus,
 		arg.ID,
+		arg.HouseholdID,
 		arg.Status,
 		arg.OutcomeNote,
 		arg.VerifiedAt,

@@ -27,9 +27,11 @@ export async function streamChat({
   signal,
   onEvent,
 }: StreamChatOptions): Promise<void> {
-  const response = await fetch("/api/chat/stream", {
+  const base = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+  const response = await fetch(`${base}/api/chat/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify({
       messages,
       provider: selection.provider,

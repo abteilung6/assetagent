@@ -67,10 +67,16 @@ func NewMoneyReview(pool *pgxpool.Pool) *MoneyReviewService {
 
 // Create generates a review pinned to the current baseline (or baselineID if set).
 func (s *MoneyReviewService) Create(ctx context.Context, baselineID *uuid.UUID) (MoneyReview, error) {
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return MoneyReview{}, err
+	}
 	var baseline ComputedBaseline
-	var err error
 	if baselineID != nil {
-		row, getErr := sqldb.New(s.pool).GetFinancialBaseline(ctx, *baselineID)
+		row, getErr := sqldb.New(s.pool).GetFinancialBaseline(ctx, sqldb.GetFinancialBaselineParams{
+			ID:          *baselineID,
+			HouseholdID: householdID,
+		})
 		if getErr != nil {
 			if errors.Is(getErr, pgx.ErrNoRows) {
 				return MoneyReview{}, ErrBaselineNotFound
@@ -134,7 +140,14 @@ func (s *MoneyReviewService) Create(ctx context.Context, baselineID *uuid.UUID) 
 }
 
 func (s *MoneyReviewService) Get(ctx context.Context, id uuid.UUID) (MoneyReview, error) {
-	row, err := sqldb.New(s.pool).GetMoneyReview(ctx, id)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return MoneyReview{}, err
+	}
+	row, err := sqldb.New(s.pool).GetMoneyReview(ctx, sqldb.GetMoneyReviewParams{
+		ID:          id,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return MoneyReview{}, ErrMoneyReviewNotFound
@@ -148,7 +161,14 @@ func (s *MoneyReviewService) List(ctx context.Context, limit int) ([]MoneyReview
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	rows, err := sqldb.New(s.pool).ListMoneyReviews(ctx, int32(limit))
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := sqldb.New(s.pool).ListMoneyReviews(ctx, sqldb.ListMoneyReviewsParams{
+		HouseholdID: householdID,
+		RowLimit:    int32(limit),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -164,11 +184,21 @@ func (s *MoneyReviewService) List(ctx context.Context, limit int) ([]MoneyReview
 }
 
 func (s *MoneyReviewService) Confirm(ctx context.Context, id uuid.UUID) (MoneyReview, error) {
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return MoneyReview{}, err
+	}
 	q := sqldb.New(s.pool)
-	row, err := q.ConfirmMoneyReview(ctx, id)
+	row, err := q.ConfirmMoneyReview(ctx, sqldb.ConfirmMoneyReviewParams{
+		ID:          id,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			existing, getErr := q.GetMoneyReview(ctx, id)
+			existing, getErr := q.GetMoneyReview(ctx, sqldb.GetMoneyReviewParams{
+				ID:          id,
+				HouseholdID: householdID,
+			})
 			if errors.Is(getErr, pgx.ErrNoRows) {
 				return MoneyReview{}, ErrMoneyReviewNotFound
 			}
@@ -191,6 +221,11 @@ func (s *MoneyReviewService) insert(ctx context.Context, artifact MoneyReview) (
 		return MoneyReview{}, err
 	}
 
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return MoneyReview{}, err
+	}
+
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return MoneyReview{}, err
@@ -198,11 +233,12 @@ func (s *MoneyReviewService) insert(ctx context.Context, artifact MoneyReview) (
 	defer func() { _ = tx.Rollback(ctx) }()
 	qtx := sqldb.New(tx)
 
-	if err := qtx.SupersedeOpenMoneyReviews(ctx); err != nil {
+	if err := qtx.SupersedeOpenMoneyReviews(ctx, householdID); err != nil {
 		return MoneyReview{}, fmt.Errorf("supersede: %w", err)
 	}
 
 	row, err := qtx.InsertMoneyReview(ctx, sqldb.InsertMoneyReviewParams{
+		HouseholdID:   householdID,
 		BaselineID:    artifact.BaselineID,
 		PeriodFrom:    pgtype.Date{Time: dateOnlyUTC(artifact.PeriodFrom), Valid: true},
 		PeriodTo:      pgtype.Date{Time: dateOnlyUTC(artifact.PeriodTo), Valid: true},
@@ -268,6 +304,10 @@ func (s *MoneyReviewService) largeExpenses(
 }
 
 func (s *MoneyReviewService) needsReviewCount(ctx context.Context) (int, error) {
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return 0, err
+	}
 	transfers, err := NewTransfers(s.pool).ListCandidates(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("transfer candidates: %w", err)
@@ -277,7 +317,7 @@ func (s *MoneyReviewService) needsReviewCount(ctx context.Context) (int, error) 
 		return 0, fmt.Errorf("classification queue: %w", err)
 	}
 	// Avoid Scan side-effect spam: count uncertain from list after lightweight query if possible.
-	uncertain, err := sqldb.New(s.pool).ListUncertainRecurringSeries(ctx)
+	uncertain, err := sqldb.New(s.pool).ListUncertainRecurringSeries(ctx, householdID)
 	if err != nil {
 		return 0, fmt.Errorf("uncertain recurring: %w", err)
 	}

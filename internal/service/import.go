@@ -16,9 +16,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/abteilung6/assetagent/internal/domain"
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
+	"github.com/abteilung6/assetagent/internal/domain"
 	"github.com/abteilung6/assetagent/internal/parser/sparkasse"
+	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -134,6 +135,11 @@ func (s *Import) commitTransactions(
 		}
 	}
 
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return domain.ImportResult{}, err
+	}
+
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return domain.ImportResult{}, fmt.Errorf("begin tx: %w", err)
@@ -144,7 +150,10 @@ func (s *Import) commitTransactions(
 
 	var account sqldb.Account
 	if opts.AccountID != uuid.Nil {
-		account, err = q.GetAccountByID(ctx, opts.AccountID)
+		account, err = q.GetAccountByID(ctx, sqldb.GetAccountByIDParams{
+			ID:          opts.AccountID,
+			HouseholdID: householdID,
+		})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return domain.ImportResult{}, ErrAccountNotFound
@@ -152,7 +161,7 @@ func (s *Import) commitTransactions(
 			return domain.ImportResult{}, fmt.Errorf("get account: %w", err)
 		}
 	} else {
-		account, err = ensureAccount(ctx, q, orderAccount, displayName)
+		account, err = ensureAccount(ctx, q, householdID, orderAccount, displayName)
 		if err != nil {
 			return domain.ImportResult{}, err
 		}
@@ -170,6 +179,7 @@ func (s *Import) commitTransactions(
 
 	now := pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true}
 	run, err := q.CreateImportRun(ctx, sqldb.CreateImportRunParams{
+		HouseholdID:    householdID,
 		AccountID:      account.ID,
 		SourceFilename: sourceFilename,
 		FileHash:       hashBytes(data),
@@ -195,7 +205,7 @@ func (s *Import) commitTransactions(
 
 	inserted, duplicates := 0, 0
 	for _, row := range transactions {
-		params := insertIfNewParams(row, domain.Fingerprint(row), accountUUID, runUUID)
+		params := insertIfNewParams(householdID, row, domain.Fingerprint(row), accountUUID, runUUID)
 		_, err := q.InsertTransactionIfNew(ctx, params)
 		if errors.Is(err, pgx.ErrNoRows) {
 			duplicates++
@@ -209,6 +219,7 @@ func (s *Import) commitTransactions(
 
 	run, err = q.UpdateImportRunCounts(ctx, sqldb.UpdateImportRunCountsParams{
 		ID:           run.ID,
+		HouseholdID:  householdID,
 		RowInserted:  int32(inserted),
 		RowDuplicate: int32(duplicates),
 	})
@@ -241,7 +252,15 @@ func (s *Import) ListRuns(ctx context.Context, limit int) ([]domain.ImportRunSum
 		limit = 100
 	}
 
-	rows, err := sqldb.New(s.pool).ListImportRuns(ctx, int32(limit))
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := sqldb.New(s.pool).ListImportRuns(ctx, sqldb.ListImportRunsParams{
+		HouseholdID: householdID,
+		Limit:       int32(limit),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("list import runs: %w", err)
 	}
@@ -261,7 +280,15 @@ func (s *Import) GetRun(ctx context.Context, runID uuid.UUID) (domain.ImportRunS
 		return domain.ImportRunSummary{}, fmt.Errorf("%w: empty id", ErrImportRunNotFound)
 	}
 
-	run, err := sqldb.New(s.pool).GetImportRun(ctx, runID)
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return domain.ImportRunSummary{}, err
+	}
+
+	run, err := sqldb.New(s.pool).GetImportRun(ctx, sqldb.GetImportRunParams{
+		ID:          runID,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ImportRunSummary{}, ErrImportRunNotFound
@@ -279,8 +306,16 @@ func (s *Import) Rollback(ctx context.Context, runID uuid.UUID) (domain.ImportRo
 		return domain.ImportRollbackResult{}, fmt.Errorf("%w: empty id", ErrImportRunNotFound)
 	}
 
+	householdID, err := repository.ResolveHouseholdID(ctx, s.pool)
+	if err != nil {
+		return domain.ImportRollbackResult{}, err
+	}
+
 	q := sqldb.New(s.pool)
-	run, err := q.GetImportRun(ctx, runID)
+	run, err := q.GetImportRun(ctx, sqldb.GetImportRunParams{
+		ID:          runID,
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ImportRollbackResult{}, ErrImportRunNotFound
@@ -304,12 +339,18 @@ func (s *Import) Rollback(ctx context.Context, runID uuid.UUID) (domain.ImportRo
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	tq := sqldb.New(tx)
-	deleted, err := tq.DeleteTransactionsByImportRun(ctx, pgtype.UUID{Bytes: runID, Valid: true})
+	deleted, err := tq.DeleteTransactionsByImportRun(ctx, sqldb.DeleteTransactionsByImportRunParams{
+		ImportRunID: pgtype.UUID{Bytes: runID, Valid: true},
+		HouseholdID: householdID,
+	})
 	if err != nil {
 		return domain.ImportRollbackResult{}, fmt.Errorf("delete transactions: %w", err)
 	}
 
-	if _, err := tq.MarkImportRunRolledBack(ctx, runID); err != nil {
+	if _, err := tq.MarkImportRunRolledBack(ctx, sqldb.MarkImportRunRolledBackParams{
+		ID:          runID,
+		HouseholdID: householdID,
+	}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ImportRollbackResult{}, ErrImportRunAlreadyRolledBack
 		}
@@ -355,11 +396,15 @@ func importRunToSummary(row sqldb.ImportRun) domain.ImportRunSummary {
 func ensureAccount(
 	ctx context.Context,
 	q *sqldb.Queries,
+	householdID uuid.UUID,
 	orderAccount string,
 	displayName string,
 ) (sqldb.Account, error) {
 	if orderAccount != "" {
-		account, err := q.GetAccountByOrderAccount(ctx, pgtype.Text{String: orderAccount, Valid: true})
+		account, err := q.GetAccountByOrderAccount(ctx, sqldb.GetAccountByOrderAccountParams{
+			OrderAccount: pgtype.Text{String: orderAccount, Valid: true},
+			HouseholdID:  householdID,
+		})
 		if err == nil {
 			return account, nil
 		}
@@ -369,6 +414,7 @@ func ensureAccount(
 	}
 
 	account, err := q.CreateAccount(ctx, sqldb.CreateAccountParams{
+		HouseholdID:      householdID,
 		DisplayName:      displayName,
 		Bank:             parserNameSparkasse,
 		Currency:         "EUR",
@@ -382,12 +428,14 @@ func ensureAccount(
 }
 
 func insertIfNewParams(
+	householdID uuid.UUID,
 	tx domain.Transaction,
 	fingerprint string,
 	accountID pgtype.UUID,
 	importRunID pgtype.UUID,
 ) sqldb.InsertTransactionIfNewParams {
 	return sqldb.InsertTransactionIfNewParams{
+		HouseholdID:                    householdID,
 		OrderAccount:                   tx.OrderAccount,
 		BookingDate:                    pgtype.Date{Time: tx.BookingDate, Valid: true},
 		ValueDate:                      pgtype.Date{Time: tx.ValueDate, Valid: true},
