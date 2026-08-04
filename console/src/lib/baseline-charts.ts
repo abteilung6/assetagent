@@ -14,9 +14,27 @@ export type CompositionSegmentKey =
   | "deficit";
 
 /** Click targets on the composition bar / income row. */
-export type CompositionEvidenceKey =
-  | "income"
-  | CompositionSegmentKey;
+export type CompositionEvidenceKey = "income" | CompositionSegmentKey;
+
+export type TypicalMonthLevels = {
+  income: number;
+  expenses: number;
+};
+
+/** Typical income and total costs from a confirmed/draft baseline. */
+export function buildTypicalMonthLevels(input: {
+  income: number;
+  fixed: number;
+  irregular: number;
+  variable: number;
+}): TypicalMonthLevels {
+  const income = Math.max(0, input.income);
+  const expenses =
+    Math.max(0, input.fixed) +
+    Math.max(0, input.irregular) +
+    Math.max(0, input.variable);
+  return { income, expenses };
+}
 
 export type CompositionEvidenceMetricKey =
   | "regular_monthly_income"

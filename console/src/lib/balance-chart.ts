@@ -211,6 +211,8 @@ export type DualSeriesChartLayout = {
   xs: number[];
   primaryYs: number[];
   secondaryYs: number[];
+  /** Horizontal guides (e.g. typical income / expenses). */
+  referenceLines: Array<{ key: string; value: number; y: number }>;
 };
 
 /** Two series on one chart (e.g. income + expenses over months). */
@@ -222,6 +224,8 @@ export function buildDualSeriesChartLayout(
     padX?: number;
     padTop?: number;
     padBottom?: number;
+    /** Named reference levels included in the Y scale (e.g. typical month). */
+    references?: Array<{ key: string; value: number }>;
   },
 ): DualSeriesChartLayout | null {
   if (!points.length) {
@@ -243,7 +247,13 @@ export function buildDualSeriesChartLayout(
   const innerW = width - padX * 2;
   const innerH = height - padTop - padBottom;
 
-  const values = points.flatMap((p) => [p.primary, p.secondary]);
+  const references = (options?.references ?? []).filter(
+    (ref) => Number.isFinite(ref.value) && !Number.isNaN(ref.value),
+  );
+  const values = [
+    ...points.flatMap((p) => [p.primary, p.secondary]),
+    ...references.map((ref) => ref.value),
+  ];
   const min = Math.min(...values, 0);
   const max = Math.max(...values, 0);
   const span = max - min || 1;
@@ -284,5 +294,10 @@ export function buildDualSeriesChartLayout(
     xs,
     primaryYs: primaryCoords.map((c) => c.y),
     secondaryYs: secondaryCoords.map((c) => c.y),
+    referenceLines: references.map((ref) => ({
+      key: ref.key,
+      value: ref.value,
+      y: yForValue(ref.value, min, span, padTop, innerH),
+    })),
   };
 }

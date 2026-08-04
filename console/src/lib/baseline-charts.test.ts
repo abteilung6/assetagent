@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildBaselineComposition,
   buildMonthStory,
+  buildTypicalMonthLevels,
   detectUnusualMonth,
   formatCompactMoney,
   formatMonthHeadline,
@@ -64,6 +65,19 @@ describe("detectUnusualMonth", () => {
     expect(got.monthStart).toBe("2026-01-01");
     expect(got.ratio).toBeGreaterThanOrEqual(2);
     expect(got.message).toMatch(/baseline month/i);
+  });
+});
+
+describe("buildTypicalMonthLevels", () => {
+  it("sums fixed irregular and variable into typical expenses", () => {
+    expect(
+      buildTypicalMonthLevels({
+        income: 3500,
+        fixed: 1200,
+        irregular: 50,
+        variable: 450,
+      }),
+    ).toEqual({ income: 3500, expenses: 1700 });
   });
 });
 

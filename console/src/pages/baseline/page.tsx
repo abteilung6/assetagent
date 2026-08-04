@@ -28,6 +28,7 @@ import {
 } from "@/lib/balance-chart";
 import {
   buildBaselineComposition,
+  buildTypicalMonthLevels,
   detectUnusualMonth,
   formatCompactMoney,
   formatMonthHeadline,
@@ -321,6 +322,12 @@ const BaselineCharts: React.FC<{
     variable: Number.parseFloat(baseline.avg_variable_spend) || 0,
     freeCashflow: Number.parseFloat(baseline.sustainable_free_cashflow) || 0,
   });
+  const typical = buildTypicalMonthLevels({
+    income: Number.parseFloat(baseline.regular_monthly_income) || 0,
+    fixed: Number.parseFloat(baseline.monthly_fixed_costs) || 0,
+    irregular: Number.parseFloat(baseline.monthly_irregular_costs) || 0,
+    variable: Number.parseFloat(baseline.avg_variable_spend) || 0,
+  });
 
   const openEvidence = (key: CompositionEvidenceKey) => {
     setEvidenceKey(key);
@@ -349,6 +356,12 @@ const BaselineCharts: React.FC<{
       primary: m.income,
       secondary: m.expenses,
     })),
+    {
+      references: [
+        { key: "typical_income", value: typical.income },
+        { key: "typical_expenses", value: typical.expenses },
+      ],
+    },
   );
 
   return (
@@ -475,7 +488,8 @@ const BaselineCharts: React.FC<{
                 Income & expenses over time
               </h2>
               <p className="text-sm text-muted-foreground">
-                Transfer-aware totals by month. Click a month for detail.
+                Each month versus your baseline typical. Click a month for
+                detail.
               </p>
             </div>
             <div className="flex gap-1 rounded-lg border p-1">
@@ -506,7 +520,7 @@ const BaselineCharts: React.FC<{
                 viewBox={`0 0 ${dualLayout.width} ${dualLayout.height}`}
                 className="h-52 w-full text-foreground"
                 role="img"
-                aria-label="Monthly income and expenses over time"
+                aria-label="Monthly income and expenses over time with typical month guides"
               >
                 {dualLayout.moneyLabels.map((label) => (
                   <g key={`money-${label.value}`}>
@@ -530,9 +544,28 @@ const BaselineCharts: React.FC<{
                     </text>
                   </g>
                 ))}
+                {dualLayout.referenceLines.map((ref) => (
+                  <g key={ref.key}>
+                    <line
+                      x1={dualLayout.padX}
+                      x2={dualLayout.width - dualLayout.padX}
+                      y1={ref.y}
+                      y2={ref.y}
+                      className={
+                        ref.key === "typical_income"
+                          ? "stroke-emerald-700/35 dark:stroke-emerald-400/35"
+                          : "stroke-red-700/35 dark:stroke-red-400/35"
+                      }
+                      strokeWidth={1.5}
+                      strokeDasharray={
+                        ref.key === "typical_expenses" ? "2 4" : "6 4"
+                      }
+                    />
+                  </g>
+                ))}
                 <path
                   d={dualLayout.primaryPath}
-                  className="stroke-foreground"
+                  className="stroke-emerald-700 dark:stroke-emerald-400"
                   fill="none"
                   strokeWidth={2}
                   strokeLinejoin="round"
@@ -540,7 +573,7 @@ const BaselineCharts: React.FC<{
                 />
                 <path
                   d={dualLayout.secondaryPath}
-                  className="stroke-foreground/40"
+                  className="stroke-red-700/80 dark:stroke-red-400/80"
                   fill="none"
                   strokeWidth={2}
                   strokeDasharray="5 4"
@@ -604,13 +637,13 @@ const BaselineCharts: React.FC<{
                         cx={x}
                         cy={primaryY}
                         r={hovered ? 4 : 2.5}
-                        className="fill-foreground pointer-events-none"
+                        className="fill-emerald-700 pointer-events-none dark:fill-emerald-400"
                       />
                       <circle
                         cx={x}
                         cy={secondaryY}
                         r={hovered ? 4 : 2.5}
-                        className="fill-foreground/50 pointer-events-none"
+                        className="fill-red-700/80 pointer-events-none dark:fill-red-400/80"
                       />
                       {hovered ? (
                         <text
@@ -629,12 +662,20 @@ const BaselineCharts: React.FC<{
               </svg>
               <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <li className="flex items-center gap-1.5">
-                  <span className="inline-block h-0.5 w-3 bg-foreground" />
-                  Income
+                  <span className="inline-block h-0.5 w-3 bg-emerald-700 dark:bg-emerald-400" />
+                  Income · each month
                 </li>
                 <li className="flex items-center gap-1.5">
-                  <span className="inline-block h-0.5 w-3 border-t-2 border-dashed border-foreground/50" />
-                  Expenses
+                  <span className="inline-block h-0.5 w-3 border-t-2 border-dashed border-red-700/80 dark:border-red-400/80" />
+                  Expenses · each month
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="inline-block h-px w-3 border-t border-dashed border-emerald-700/40 dark:border-emerald-400/40" />
+                  Income · typical ({formatChartMoney(typical.income)})
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="inline-block h-px w-3 border-t border-dotted border-red-700/40 dark:border-red-400/40" />
+                  Expenses · typical ({formatChartMoney(typical.expenses)})
                 </li>
               </ul>
             </div>

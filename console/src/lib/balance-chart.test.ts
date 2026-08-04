@@ -119,5 +119,28 @@ describe("buildDualSeriesChartLayout", () => {
     expect(layout!.secondaryPath.startsWith("M ")).toBe(true);
     expect(layout!.max).toBe(8000);
     expect(layout!.xs).toHaveLength(2);
+    expect(layout!.referenceLines).toEqual([]);
+  });
+
+  it("includes typical reference lines in the scale", () => {
+    const layout = buildDualSeriesChartLayout(
+      [
+        { date: "2026-01-01", primary: 3000, secondary: 2000 },
+        { date: "2026-02-01", primary: 3100, secondary: 2200 },
+      ],
+      {
+        references: [
+          { key: "typical_income", value: 3500 },
+          { key: "typical_expenses", value: 1700 },
+        ],
+      },
+    );
+    expect(layout).not.toBeNull();
+    expect(layout!.max).toBe(3500);
+    expect(layout!.referenceLines).toHaveLength(2);
+    expect(layout!.referenceLines[0]!.key).toBe("typical_income");
+    expect(layout!.referenceLines[0]!.y).toBeLessThan(
+      layout!.referenceLines[1]!.y,
+    );
   });
 });

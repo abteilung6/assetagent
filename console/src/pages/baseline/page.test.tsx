@@ -213,9 +213,11 @@ describe("Baseline page", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("img", {
-        name: /Monthly income and expenses over time/i,
+        name: /Monthly income and expenses over time with typical month guides/i,
       }),
     ).toBeInTheDocument();
+    expect(screen.getByText(/Income · typical/i)).toBeInTheDocument();
+    expect(screen.getByText(/Expenses · typical/i)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /12 mo/i }));
     await waitFor(() => {
       expect(sdk.getBaselineMonthlyCashflow).toHaveBeenCalledWith(
