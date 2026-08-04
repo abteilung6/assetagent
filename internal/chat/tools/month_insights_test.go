@@ -76,7 +76,7 @@ func TestMonthCashflowTool_yyyyMM(t *testing.T) {
 	if err := json.Unmarshal(raw, &result); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if result["ok"] != true || result["yyyy_mm"] != "2026-03" || result["deep_link"] != "/baseline/months/2026-03" {
+	if result["ok"] != true || result["yyyy_mm"] != "2026-03" || result["deep_link"] != "/insights/months/2026-03" {
 		t.Fatalf("result = %+v", result)
 	}
 	period, _ := result["period"].(map[string]any)
@@ -113,7 +113,7 @@ func TestCategorySpendAndOneOffTools(t *testing.T) {
 		t.Fatalf("unmarshal spend: %v", err)
 	}
 	items, _ := spend["items"].([]any)
-	if spend["ok"] != true || len(items) != 1 || spend["deep_link"] != "/baseline/months/2026-03" {
+	if spend["ok"] != true || len(items) != 1 || spend["deep_link"] != "/insights/months/2026-03" {
 		t.Fatalf("spend = %+v", spend)
 	}
 

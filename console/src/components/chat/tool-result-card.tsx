@@ -200,7 +200,7 @@ function PlanSourceLink({
         to="/baseline"
         className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
       >
-        Open Baseline
+        Open Cashflow
       </Link>
     );
   }
@@ -257,12 +257,17 @@ function MonthSourceLink({
 }) {
   const deepLink =
     typeof result.deep_link === "string" ? result.deep_link : null;
-  if (deepLink?.startsWith("/baseline/months/")) {
-    const yyyyMm = deepLink.slice("/baseline/months/".length);
+  const monthPrefix = deepLink?.startsWith("/insights/months/")
+    ? "/insights/months/"
+    : deepLink?.startsWith("/baseline/months/")
+      ? "/baseline/months/"
+      : null;
+  if (monthPrefix && deepLink) {
+    const yyyyMm = deepLink.slice(monthPrefix.length);
     if (yyyyMm) {
       return (
         <Link
-          to="/baseline/months/$yyyyMm"
+          to="/insights/months/$yyyyMm"
           params={{ yyyyMm }}
           className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
         >

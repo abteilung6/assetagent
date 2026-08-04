@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  parseBaselineMonthSearchParams,
-  parseBaselineMonthTab,
   parseBaselineSearchParams,
   parseLegacyBaselineTab,
 } from "./search-params";
@@ -28,20 +26,5 @@ describe("parseBaselineSearchParams", () => {
 
   it("returns empty object without tab", () => {
     expect(parseBaselineSearchParams({})).toEqual({});
-  });
-});
-
-describe("parseBaselineMonthSearchParams", () => {
-  it("parses overview and activity", () => {
-    expect(parseBaselineMonthTab("overview")).toBe("overview");
-    expect(parseBaselineMonthTab("activity")).toBe("activity");
-    expect(parseBaselineMonthSearchParams({ tab: "activity" })).toEqual({
-      tab: "activity",
-    });
-  });
-
-  it("defaults to empty (Overview) for missing or unknown tab", () => {
-    expect(parseBaselineMonthSearchParams({})).toEqual({});
-    expect(parseBaselineMonthSearchParams({ tab: "counts" })).toEqual({});
   });
 });

@@ -41,8 +41,8 @@ export function defaultStarters(now = new Date()): ChatStarter[] {
   return [
     {
       id: "typical-month",
-      label: "What’s my typical month?",
-      prompt: "What’s my typical month?",
+      label: "What’s my Cashflow?",
+      prompt: "What’s my typical monthly cashflow?",
     },
     {
       id: "last-month-spend",
@@ -163,16 +163,16 @@ export function followUpsForTool(toolName: string | undefined): FollowUpChip[] {
         },
         {
           id: "baseline-after-forecast",
-          label: "Typical month?",
-          prompt: "What’s my typical month?",
+          label: "Cashflow?",
+          prompt: "What’s my typical monthly cashflow?",
         },
       ];
     default:
       return [
         {
           id: "typical-follow",
-          label: "Typical month?",
-          prompt: "What’s my typical month?",
+          label: "Cashflow?",
+          prompt: "What’s my typical monthly cashflow?",
         },
         {
           id: "review-follow",

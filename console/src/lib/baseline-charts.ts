@@ -193,6 +193,45 @@ export type MonthlyCashflowPoint = {
   net: number;
 };
 
+export type BaselinePerformanceRow = {
+  monthStart: string;
+  income: number;
+  expenses: number;
+  net: number;
+  /** Actual income − typical income. */
+  incomeDelta: number;
+  /** Actual expenses − typical expenses. */
+  expensesDelta: number;
+  /** Actual net − typical net (income − expenses). */
+  netDelta: number;
+  /** Expenses clearly above the Cashflow norm. */
+  overspent: boolean;
+};
+
+/** Score recent months against Cashflow typical levels (Baseline → Performance). */
+export function buildBaselinePerformanceRows(
+  months: MonthlyCashflowPoint[],
+  typical: TypicalMonthLevels,
+): BaselinePerformanceRow[] {
+  const typicalNet = typical.income - typical.expenses;
+  return months.map((m) => {
+    const expensesDelta = m.expenses - typical.expenses;
+    return {
+      monthStart: m.monthStart,
+      income: m.income,
+      expenses: m.expenses,
+      net: m.net,
+      incomeDelta: m.income - typical.income,
+      expensesDelta,
+      netDelta: m.net - typicalNet,
+      overspent:
+        typical.expenses > 0
+          ? m.expenses >= typical.expenses * 1.25
+          : m.expenses > 0,
+    };
+  });
+}
+
 export type UnusualMonthInsight = {
   unusual: boolean;
   monthStart: string | null;

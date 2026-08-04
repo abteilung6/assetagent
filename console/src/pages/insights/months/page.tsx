@@ -136,18 +136,18 @@ const BaselineHistoryPage: React.FC = () => {
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">
               What income and expenses looked like recently — bank months, not
-              the modeled typical month.
+              your Cashflow model.
             </p>
             <Link
               to="/baseline"
               className="text-sm text-foreground underline-offset-4 hover:underline"
             >
-              Open typical month
+              Open Cashflow
             </Link>
           </div>
           <AskAboutThis
             prompt="What looks unusual in recent months?"
-            context={{ route: "/baseline/history" }}
+            context={{ route: "/insights/months" }}
           />
         </div>
 
@@ -160,9 +160,9 @@ const BaselineHistoryPage: React.FC = () => {
               to="/baseline"
               className="underline underline-offset-4 hover:text-foreground"
             >
-              typical month
+              Cashflow
             </Link>{" "}
-            first so we can draw typical guides on this chart.
+            baseline first so we can draw typical guides on this chart.
           </p>
         ) : null}
 
@@ -173,8 +173,8 @@ const BaselineHistoryPage: React.FC = () => {
                 Income & expenses over time
               </h2>
               <p className="text-sm text-muted-foreground">
-                Each month versus your baseline typical. Click a month for
-                drivers and detail.
+                Each month versus your Cashflow norm. Click a month for drivers
+                and detail.
               </p>
             </div>
             <div className="flex gap-1 rounded-lg border p-1">
@@ -205,7 +205,7 @@ const BaselineHistoryPage: React.FC = () => {
                 viewBox={`0 0 ${dualLayout.width} ${dualLayout.height}`}
                 className="h-52 w-full text-foreground"
                 role="img"
-                aria-label="Monthly income and expenses over time with typical month guides"
+                aria-label="Monthly income and expenses over time with Cashflow norm guides"
               >
                 {dualLayout.moneyLabels.map((label) => (
                   <g key={`money-${label.value}`}>
@@ -311,7 +311,7 @@ const BaselineHistoryPage: React.FC = () => {
                         onBlur={() => setHoveredTrendIndex(null)}
                         onClick={() => {
                           void navigate({
-                            to: "/baseline/months/$yyyyMm",
+                            to: "/insights/months/$yyyyMm",
                             params: {
                               yyyyMm: yyyyMmFromMonthStart(point.monthStart),
                             },
@@ -430,7 +430,7 @@ const BaselineHistoryPage: React.FC = () => {
             </ul>
           )}
           <Link
-            to="/baseline/months/$yyyyMm"
+            to="/insights/months/$yyyyMm"
             params={{ yyyyMm: driverWindow.yyyyMm }}
             className="text-sm text-foreground underline-offset-4 hover:underline"
           >
@@ -475,7 +475,7 @@ const UnusualMonthsStrip: React.FC<{
             return (
               <Link
                 key={m.monthStart}
-                to="/baseline/months/$yyyyMm"
+                to="/insights/months/$yyyyMm"
                 params={{ yyyyMm: yyyyMmFromMonthStart(m.monthStart) }}
                 className="group flex min-w-0 flex-1 flex-col items-center gap-1.5 underline-offset-4 hover:underline"
                 title={`${formatMonthLabel(m.monthStart)} · expenses ${formatEuro(m.expenses)}`}

@@ -4,6 +4,7 @@ import {
   ClipboardListIcon,
   GaugeIcon,
   InboxIcon,
+  LineChartIcon,
   MessageSquareIcon,
   Table2Icon,
   TrendingUpIcon,
@@ -47,10 +48,14 @@ export const AppSidebar: React.FC = () => {
     (classificationQuery.data?.data.length ?? 0) +
     (recurringQuery.data?.data.length ?? 0);
 
-  const typicalActive = pathActive(pathname, "/baseline", true);
+  const cashflowActive = pathActive(pathname, "/baseline", true);
+  const performanceActive = pathActive(pathname, "/baseline/performance", true);
+  const baselineActive = cashflowActive || performanceActive;
   const monthsActive =
-    pathActive(pathname, "/baseline/history", true) ||
+    pathActive(pathname, "/insights/months") ||
+    pathActive(pathname, "/baseline/history") ||
     pathActive(pathname, "/baseline/months");
+  const insightsActive = pathActive(pathname, "/insights") || monthsActive;
 
   return (
     <Sidebar collapsible="icon">
@@ -86,7 +91,7 @@ export const AppSidebar: React.FC = () => {
               <SidebarMenuButton
                 render={<Link to="/baseline" />}
                 tooltip="Baseline"
-                isActive={typicalActive || monthsActive}
+                isActive={baselineActive}
               >
                 <GaugeIcon />
                 <span>Baseline</span>
@@ -95,14 +100,35 @@ export const AppSidebar: React.FC = () => {
                 <SidebarMenuSubItem>
                   <SidebarMenuSubButton
                     render={<Link to="/baseline" />}
-                    isActive={typicalActive}
+                    isActive={cashflowActive}
                   >
-                    Typical month
+                    Cashflow
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
                 <SidebarMenuSubItem>
                   <SidebarMenuSubButton
-                    render={<Link to="/baseline/history" />}
+                    render={<Link to="/baseline/performance" />}
+                    isActive={performanceActive}
+                  >
+                    Performance
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              </SidebarMenuSub>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={<Link to="/insights/months" />}
+                tooltip="Insights"
+                isActive={insightsActive}
+              >
+                <LineChartIcon />
+                <span>Insights</span>
+              </SidebarMenuButton>
+              <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton
+                    render={<Link to="/insights/months" />}
                     isActive={monthsActive}
                   >
                     Months

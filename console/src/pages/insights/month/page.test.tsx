@@ -128,7 +128,7 @@ describe("Baseline month page", () => {
 
   it("shows Overview chrome, pace, and categories without payment lists", async () => {
     const txs = mockMonthTransactions();
-    testRender({ route: "/baseline/months/2026-03" });
+    testRender({ route: "/insights/months/2026-03" });
 
     expect(
       await screen.findByRole("heading", { name: "March 2026" }),
@@ -158,7 +158,7 @@ describe("Baseline month page", () => {
 
   it("loads Activity payments via tab and deep link", async () => {
     mockMonthTransactions();
-    testRender({ route: "/baseline/months/2026-03" });
+    testRender({ route: "/insights/months/2026-03" });
 
     expect(
       await screen.findByRole("heading", { name: "March 2026" }),
@@ -187,7 +187,7 @@ describe("Baseline month page", () => {
 
   it("opens Activity from ?tab=activity", async () => {
     mockMonthTransactions();
-    testRender({ route: "/baseline/months/2026-03?tab=activity" });
+    testRender({ route: "/insights/months/2026-03?tab=activity" });
 
     expect(
       await screen.findByText("Landlord GmbH"),

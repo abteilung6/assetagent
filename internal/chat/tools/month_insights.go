@@ -176,7 +176,7 @@ func runMonthCashflow(ctx context.Context, reports Reports, raw json.RawMessage)
 	toStr := to.Format("2006-01-02")
 	deepLink := ""
 	if yyyyMM != "" {
-		deepLink = "/baseline/months/" + yyyyMM
+		deepLink = "/insights/months/" + yyyyMM
 	}
 
 	return monthCashflowResult{
@@ -237,7 +237,7 @@ func runCategorySpend(ctx context.Context, insights BaselineInsights, raw json.R
 	yyyyMM := yyyyMMIfCalendarMonth(from, to)
 	deepLink := ""
 	if yyyyMM != "" {
-		deepLink = "/baseline/months/" + yyyyMM
+		deepLink = "/insights/months/" + yyyyMM
 	}
 
 	return categorySpendResult{
@@ -275,7 +275,7 @@ func runOneOffImpact(ctx context.Context, insights BaselineInsights, raw json.Ra
 	yyyyMM := yyyyMMIfCalendarMonth(from, to)
 	deepLink := ""
 	if yyyyMM != "" {
-		deepLink = "/baseline/months/" + yyyyMM
+		deepLink = "/insights/months/" + yyyyMM
 	}
 
 	return oneOffImpactResult{

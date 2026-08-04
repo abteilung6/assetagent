@@ -8,19 +8,18 @@ import {
 
 import { AppLayout } from "@/app/layout";
 import BaselinePage from "@/pages/baseline/page";
-import BaselineHistoryPage from "@/pages/baseline/history/page";
-import BaselineMonthPage from "@/pages/baseline/month/page";
+import BaselinePerformancePage from "@/pages/baseline/performance/page";
 import ChatPage from "@/pages/chat/page";
 import ImportsPage from "@/pages/imports/page";
+import InsightsMonthPage from "@/pages/insights/month/page";
+import InsightsMonthsPage from "@/pages/insights/months/page";
 import PlanPage from "@/pages/plan/page";
 import ReviewPage from "@/pages/review/page";
 import ReviewDetailPage from "@/pages/reviews/detail";
 import ReviewsPage from "@/pages/reviews/page";
 import TransactionsPage from "@/pages/transactions/page";
-import {
-  parseBaselineMonthSearchParams,
-  parseBaselineSearchParams,
-} from "@/pages/baseline/search-params";
+import { parseBaselineSearchParams } from "@/pages/baseline/search-params";
+import { parseInsightsMonthSearchParams } from "@/pages/insights/search-params";
 import { parseChatSearchParams } from "@/pages/chat/search-params";
 import { parseReviewSearchParams } from "@/pages/review/search-params";
 import { parseTransactionSearchParams } from "@/pages/transactions/search-params";
@@ -53,35 +52,75 @@ const baselineRoute = createRoute({
   path: "/baseline",
   component: BaselinePage,
   staticData: {
-    title: "Typical month",
+    title: "Cashflow",
   },
   validateSearch: (search) =>
     parseBaselineSearchParams(search as Record<string, unknown>),
   beforeLoad: ({ search }) => {
     if (search.tab === "over-time") {
-      throw redirect({ to: "/baseline/history" });
+      throw redirect({ to: "/insights/months" });
     }
   },
 });
 
-const baselineHistoryRoute = createRoute({
+const baselinePerformanceRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/baseline/history",
-  component: BaselineHistoryPage,
+  path: "/baseline/performance",
+  component: BaselinePerformancePage,
+  staticData: {
+    title: "Performance",
+  },
+});
+
+const insightsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/insights",
+  beforeLoad: () => {
+    throw redirect({ to: "/insights/months" });
+  },
+});
+
+const insightsMonthsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/insights/months",
+  component: InsightsMonthsPage,
   staticData: {
     title: "Months",
   },
 });
 
-const baselineMonthRoute = createRoute({
+const insightsMonthRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/baseline/months/$yyyyMm",
-  component: BaselineMonthPage,
+  path: "/insights/months/$yyyyMm",
+  component: InsightsMonthPage,
   staticData: {
     title: "Months",
   },
   validateSearch: (search) =>
-    parseBaselineMonthSearchParams(search as Record<string, unknown>),
+    parseInsightsMonthSearchParams(search as Record<string, unknown>),
+});
+
+/** Legacy Baseline IA paths → Insights. */
+const legacyBaselineHistoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/baseline/history",
+  beforeLoad: () => {
+    throw redirect({ to: "/insights/months" });
+  },
+});
+
+const legacyBaselineMonthRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/baseline/months/$yyyyMm",
+  beforeLoad: ({ params, search }) => {
+    throw redirect({
+      to: "/insights/months/$yyyyMm",
+      params: { yyyyMm: params.yyyyMm },
+      search,
+    });
+  },
+  validateSearch: (search) =>
+    parseInsightsMonthSearchParams(search as Record<string, unknown>),
 });
 
 const importsRoute = createRoute({
@@ -143,11 +182,12 @@ const transactionsRoute = createRoute({
 });
 
 export {
-  baselineHistoryRoute,
-  baselineMonthRoute,
+  baselinePerformanceRoute,
   baselineRoute,
   chatRoute,
   importsRoute,
+  insightsMonthRoute,
+  insightsMonthsRoute,
   planRoute,
   reviewDetailRoute,
   reviewRoute,
@@ -159,8 +199,12 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   chatRoute,
   baselineRoute,
-  baselineHistoryRoute,
-  baselineMonthRoute,
+  baselinePerformanceRoute,
+  insightsRoute,
+  insightsMonthsRoute,
+  insightsMonthRoute,
+  legacyBaselineHistoryRoute,
+  legacyBaselineMonthRoute,
   planRoute,
   transactionsRoute,
   importsRoute,

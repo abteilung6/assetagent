@@ -240,10 +240,10 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
       <p className="text-sm text-muted-foreground">
         Want calendar months and who drove spend?{" "}
         <Link
-          to="/baseline/history"
+          to="/insights/months"
           className="text-foreground underline-offset-4 hover:underline"
         >
-          Open Months
+          Open Insights
         </Link>
       </p>
 
@@ -371,7 +371,7 @@ const TypicalMonthSplit: React.FC<{
           <div
             className="flex h-10 w-full overflow-hidden rounded-lg border bg-muted/30"
             role="img"
-            aria-label="Typical month income split by cost type"
+            aria-label="Cashflow income split by cost type"
           >
             {composition.segments.map((seg) => (
               <button
@@ -414,7 +414,7 @@ const TypicalMonthSplit: React.FC<{
           </ul>
           <p className="text-xs text-muted-foreground">
             Variable is a residual after Fixed and Irregular recurring costs —
-            not a merchant list. For who you paid, open Months.
+            not a merchant list. For who you paid, open Insights → Months.
           </p>
         </div>
       </div>
@@ -525,7 +525,7 @@ const BaselineReadiness: React.FC<{
               </Link>
             ) : (
               <Link
-                to="/baseline/months/$yyyyMm"
+                to="/insights/months/$yyyyMm"
                 params={{ yyyyMm: item.href.yyyyMm }}
                 className="flex items-center justify-between gap-3 py-2.5 text-sm underline-offset-4 hover:underline"
               >

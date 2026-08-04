@@ -38,22 +38,22 @@ import {
   formatChartMoney,
 } from "@/lib/balance-chart";
 import {
-  parseBaselineMonthTab,
-  type BaselineMonthSearchParams,
-  type BaselineMonthTab,
-} from "@/pages/baseline/search-params";
+  parseInsightsMonthTab,
+  type InsightsMonthSearchParams,
+  type InsightsMonthTab,
+} from "@/pages/insights/search-params";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
 import { cn } from "@/lib/utils";
 
 const BaselineMonthPage: React.FC = () => {
-  const { yyyyMm } = useParams({ from: "/baseline/months/$yyyyMm" });
-  const search = useSearch({ from: "/baseline/months/$yyyyMm" });
+  const { yyyyMm } = useParams({ from: "/insights/months/$yyyyMm" });
+  const search = useSearch({ from: "/insights/months/$yyyyMm" });
   const navigate = useNavigate();
-  const activeTab: BaselineMonthTab = search.tab ?? "overview";
+  const activeTab: InsightsMonthTab = search.tab ?? "overview";
   const activityEnabled = activeTab === "activity";
   const monthStart = monthStartFromYyyyMm(yyyyMm);
   const invalid = monthStart == null;
-  const monthSearch: BaselineMonthSearchParams =
+  const monthSearch: InsightsMonthSearchParams =
     search.tab != null ? { tab: search.tab } : {};
 
   const cashflowQuery = useBaselineMonthlyCashflow(6);
@@ -207,9 +207,9 @@ const BaselineMonthPage: React.FC = () => {
   };
 
   const setTab = (value: string | null) => {
-    const tab = parseBaselineMonthTab(value) ?? "overview";
+    const tab = parseInsightsMonthTab(value) ?? "overview";
     void navigate({
-      to: "/baseline/months/$yyyyMm",
+      to: "/insights/months/$yyyyMm",
       params: { yyyyMm },
       search: tab === "overview" ? {} : { tab },
       replace: true,
@@ -229,13 +229,13 @@ const BaselineMonthPage: React.FC = () => {
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pb-10">
           <Link
-            to="/baseline/history"
+            to="/insights/months"
             className="text-xs text-muted-foreground underline-offset-4 hover:underline"
           >
             ← Months
           </Link>
           <p className="text-sm text-destructive" role="alert">
-            Invalid month. Use a path like /baseline/months/2026-03.
+            Invalid month. Use a path like /insights/months/2026-03.
           </p>
         </div>
       </div>
@@ -249,7 +249,7 @@ const BaselineMonthPage: React.FC = () => {
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 pb-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
-            to="/baseline/history"
+            to="/insights/months"
             className="text-xs text-muted-foreground underline-offset-4 hover:underline"
           >
             ← Months
@@ -257,7 +257,7 @@ const BaselineMonthPage: React.FC = () => {
           <div className="flex gap-2">
             {hasPrev ? (
               <Link
-                to="/baseline/months/$yyyyMm"
+                to="/insights/months/$yyyyMm"
                 params={{ yyyyMm: prevYyyyMm }}
                 search={monthSearch}
                 className={cn(
@@ -270,7 +270,7 @@ const BaselineMonthPage: React.FC = () => {
             ) : null}
             {hasNext ? (
               <Link
-                to="/baseline/months/$yyyyMm"
+                to="/insights/months/$yyyyMm"
                 params={{ yyyyMm: nextYyyyMm }}
                 search={monthSearch}
                 className={cn(
@@ -308,7 +308,7 @@ const BaselineMonthPage: React.FC = () => {
                 <AskAboutThis
                   prompt="Why was this month unusual?"
                   context={{
-                    route: `/baseline/months/${yyyyMm}`,
+                    route: `/insights/months/${yyyyMm}`,
                     yyyy_mm: yyyyMm,
                     from: monthStart,
                     to: monthEnd,

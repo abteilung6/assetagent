@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBaselineComposition,
+  buildBaselinePerformanceRows,
   buildBaselineReadinessItems,
   buildExpensePaceSeries,
   buildMonthStory,
@@ -243,5 +244,22 @@ describe("buildExpensePaceSeries", () => {
     });
     expect(series[2]?.cumulativeExpenses).toBeCloseTo(150.5);
     expect(series[3]?.cumulativeExpenses).toBeCloseTo(150.5);
+  });
+});
+
+describe("buildBaselinePerformanceRows", () => {
+  it("scores months against Cashflow typical levels", () => {
+    const rows = buildBaselinePerformanceRows(
+      [
+        { monthStart: "2026-01-01", income: 3500, expenses: 1700, net: 1800 },
+        { monthStart: "2026-02-01", income: 3500, expenses: 3000, net: 500 },
+      ],
+      { income: 3500, expenses: 1700 },
+    );
+    expect(rows[0]?.overspent).toBe(false);
+    expect(rows[0]?.expensesDelta).toBe(0);
+    expect(rows[1]?.overspent).toBe(true);
+    expect(rows[1]?.expensesDelta).toBe(1300);
+    expect(rows[1]?.netDelta).toBe(500 - (3500 - 1700));
   });
 });

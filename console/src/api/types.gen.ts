@@ -75,7 +75,7 @@ export type ChatRequest = {
  */
 export type ChatPageContext = {
     /**
-     * Console path, e.g. /baseline/months/2026-03
+     * Console path, e.g. /insights/months/2026-03
      */
     route?: string;
     baseline_id?: string;

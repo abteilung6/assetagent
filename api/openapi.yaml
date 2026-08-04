@@ -1322,7 +1322,7 @@ components:
         route:
           type: string
           maxLength: 200
-          description: Console path, e.g. /baseline/months/2026-03
+          description: Console path, e.g. /insights/months/2026-03
         baseline_id:
           type: string
           format: uuid

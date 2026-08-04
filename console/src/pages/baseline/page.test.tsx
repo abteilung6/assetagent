@@ -172,7 +172,7 @@ describe("Baseline page", () => {
     testRender({ route: "/baseline" });
 
     expect(
-      await screen.findByRole("heading", { name: "Typical month", exact: true }),
+      await screen.findByRole("heading", { name: "Cashflow", exact: true }),
     ).toBeInTheDocument();
     expect(await screen.findByText(/No baseline yet/i)).toBeInTheDocument();
 
@@ -202,7 +202,7 @@ describe("Baseline page", () => {
       await screen.findByText(/Sustainable free cashflow/i),
     ).toBeInTheDocument();
     expect(await screen.findByText(/Income split/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /^Open Months$/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Open Insights$/i })).toBeInTheDocument();
     expect(screen.queryByText(/Recent months/i)).not.toBeInTheDocument();
     expect(screen.getByText(/1\.800,00/)).toBeInTheDocument();
 
@@ -279,7 +279,7 @@ describe("Baseline page", () => {
     ).toBeInTheDocument();
     expect(
       await screen.findByRole("img", {
-        name: /Monthly income and expenses over time with typical month guides/i,
+        name: /Monthly income and expenses over time with Cashflow norm guides/i,
       }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Top cost drivers/i)).toBeInTheDocument();
@@ -293,7 +293,7 @@ describe("Baseline page", () => {
     testRender({ route: "/baseline" });
 
     expect(await screen.findByText(/Income split/i)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("link", { name: /^Open Months$/i }));
+    await userEvent.click(screen.getByRole("link", { name: /^Open Insights$/i }));
     expect(
       await screen.findByText(/Income & expenses over time/i),
     ).toBeInTheDocument();

@@ -128,7 +128,7 @@ describe("ToolResultCard", () => {
 
     expect(screen.getByText("Baseline")).toBeInTheDocument();
     expect(screen.getByText(/Free cashflow/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /open baseline/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /open cashflow/i })).toHaveAttribute(
       "href",
       "/baseline",
     );

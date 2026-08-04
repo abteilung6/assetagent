@@ -9,7 +9,7 @@ import (
 
 func TestValidatePageContext_acceptsValid(t *testing.T) {
 	err := chat.ValidatePageContext(chat.PageContext{
-		Route:      "/baseline/months/2026-03",
+		Route:      "/insights/months/2026-03",
 		BaselineID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 		YYYYMM:     "2026-03",
 		From:       "2026-03-01",
@@ -37,7 +37,7 @@ func TestValidatePageContext_rejectsBadYYYYMM(t *testing.T) {
 
 func TestFormatContextAppendix_includesRouteAndDates(t *testing.T) {
 	appendix := chat.FormatContextAppendix(chat.PageContext{
-		Route:  "/baseline/months/2026-03",
+		Route:  "/insights/months/2026-03",
 		YYYYMM: "2026-03",
 		From:   "2026-03-01",
 		To:     "2026-03-31",
@@ -45,7 +45,7 @@ func TestFormatContextAppendix_includesRouteAndDates(t *testing.T) {
 	if !strings.Contains(appendix, "use tools for numbers") {
 		t.Fatalf("missing tools disclaimer: %q", appendix)
 	}
-	if !strings.Contains(appendix, "route: /baseline/months/2026-03") {
+	if !strings.Contains(appendix, "route: /insights/months/2026-03") {
 		t.Fatalf("missing route: %q", appendix)
 	}
 	if !strings.Contains(appendix, "from: 2026-03-01") {
