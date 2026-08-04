@@ -8,6 +8,7 @@ import {
 
 import { AppLayout } from "@/app/layout";
 import BaselinePage from "@/pages/baseline/page";
+import BaselineHistoryPage from "@/pages/baseline/history/page";
 import BaselineMonthPage from "@/pages/baseline/month/page";
 import ChatPage from "@/pages/chat/page";
 import ImportsPage from "@/pages/imports/page";
@@ -49,10 +50,24 @@ const baselineRoute = createRoute({
   path: "/baseline",
   component: BaselinePage,
   staticData: {
-    title: "Baseline",
+    title: "Typical month",
   },
   validateSearch: (search) =>
     parseBaselineSearchParams(search as Record<string, unknown>),
+  beforeLoad: ({ search }) => {
+    if (search.tab === "over-time") {
+      throw redirect({ to: "/baseline/history" });
+    }
+  },
+});
+
+const baselineHistoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/baseline/history",
+  component: BaselineHistoryPage,
+  staticData: {
+    title: "Months",
+  },
 });
 
 const baselineMonthRoute = createRoute({
@@ -60,10 +75,8 @@ const baselineMonthRoute = createRoute({
   path: "/baseline/months/$yyyyMm",
   component: BaselineMonthPage,
   staticData: {
-    title: "Baseline",
+    title: "Months",
   },
-  validateSearch: (search) =>
-    parseBaselineSearchParams(search as Record<string, unknown>),
 });
 
 const importsRoute = createRoute({
@@ -125,6 +138,7 @@ const transactionsRoute = createRoute({
 });
 
 export {
+  baselineHistoryRoute,
   baselineMonthRoute,
   baselineRoute,
   chatRoute,
@@ -140,6 +154,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   chatRoute,
   baselineRoute,
+  baselineHistoryRoute,
   baselineMonthRoute,
   planRoute,
   transactionsRoute,

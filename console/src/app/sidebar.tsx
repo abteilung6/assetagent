@@ -1,5 +1,5 @@
 import type React from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   ClipboardListIcon,
   GaugeIcon,
@@ -20,6 +20,9 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { useClassificationQueue } from "@/hooks/use-classification-queue";
@@ -27,7 +30,15 @@ import { useUncertainRecurring } from "@/hooks/use-recurring-uncertain";
 import { useTransferCandidates } from "@/hooks/use-transfer-candidates";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
 
+function pathActive(pathname: string, target: string, exact = false): boolean {
+  if (exact) {
+    return pathname === target;
+  }
+  return pathname === target || pathname.startsWith(`${target}/`);
+}
+
 export const AppSidebar: React.FC = () => {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const candidatesQuery = useTransferCandidates();
   const classificationQuery = useClassificationQueue();
   const recurringQuery = useUncertainRecurring();
@@ -35,6 +46,11 @@ export const AppSidebar: React.FC = () => {
     (candidatesQuery.data?.data.length ?? 0) +
     (classificationQuery.data?.data.length ?? 0) +
     (recurringQuery.data?.data.length ?? 0);
+
+  const typicalActive = pathActive(pathname, "/baseline", true);
+  const monthsActive =
+    pathActive(pathname, "/baseline/history", true) ||
+    pathActive(pathname, "/baseline/months");
 
   return (
     <Sidebar collapsible="icon">
@@ -59,24 +75,47 @@ export const AppSidebar: React.FC = () => {
               <SidebarMenuButton
                 render={<Link to="/chat" />}
                 tooltip="Chat"
+                isActive={pathActive(pathname, "/chat", true)}
               >
                 <MessageSquareIcon />
                 <span>Chat</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
+
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={<Link to="/baseline" />}
                 tooltip="Baseline"
+                isActive={typicalActive || monthsActive}
               >
                 <GaugeIcon />
                 <span>Baseline</span>
               </SidebarMenuButton>
+              <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton
+                    render={<Link to="/baseline" />}
+                    isActive={typicalActive}
+                  >
+                    Typical month
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton
+                    render={<Link to="/baseline/history" />}
+                    isActive={monthsActive}
+                  >
+                    Months
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              </SidebarMenuSub>
             </SidebarMenuItem>
+
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={<Link to="/reviews" />}
                 tooltip="Money Reviews"
+                isActive={pathActive(pathname, "/reviews")}
               >
                 <ClipboardListIcon />
                 <span>Money Reviews</span>
@@ -86,6 +125,7 @@ export const AppSidebar: React.FC = () => {
               <SidebarMenuButton
                 render={<Link to="/plan" />}
                 tooltip="Plan"
+                isActive={pathActive(pathname, "/plan", true)}
               >
                 <TrendingUpIcon />
                 <span>Plan</span>
@@ -100,6 +140,7 @@ export const AppSidebar: React.FC = () => {
                   />
                 }
                 tooltip="Transactions"
+                isActive={pathActive(pathname, "/transactions", true)}
               >
                 <Table2Icon />
                 <span>Transactions</span>
@@ -109,6 +150,7 @@ export const AppSidebar: React.FC = () => {
               <SidebarMenuButton
                 render={<Link to="/imports" />}
                 tooltip="Import"
+                isActive={pathActive(pathname, "/imports", true)}
               >
                 <UploadIcon />
                 <span>Import</span>
@@ -118,6 +160,7 @@ export const AppSidebar: React.FC = () => {
               <SidebarMenuButton
                 render={<Link to="/review" />}
                 tooltip="Needs review"
+                isActive={pathActive(pathname, "/review", true)}
               >
                 <InboxIcon />
                 <span>Needs review</span>

@@ -172,7 +172,7 @@ describe("Baseline page", () => {
     testRender({ route: "/baseline" });
 
     expect(
-      await screen.findByRole("heading", { name: "Baseline", exact: true }),
+      await screen.findByRole("heading", { name: "Typical month", exact: true }),
     ).toBeInTheDocument();
     expect(await screen.findByText(/No baseline yet/i)).toBeInTheDocument();
 
@@ -201,41 +201,10 @@ describe("Baseline page", () => {
     expect(
       await screen.findByText(/Sustainable free cashflow/i),
     ).toBeInTheDocument();
-    expect(await screen.findByText(/Typical month/i)).toBeInTheDocument();
-    expect(screen.getByText(/Recent months/i)).toBeInTheDocument();
-    expect(screen.getByText(/Click a month for detail/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Income split/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Open Months$/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Recent months/i)).not.toBeInTheDocument();
     expect(screen.getByText(/1\.800,00/)).toBeInTheDocument();
-
-    const marchLink = screen.getByRole("link", {
-      name: /2\.2k €/i,
-    });
-    expect(marchLink).toHaveAttribute(
-      "href",
-      "/baseline/months/2026-03?tab=composition",
-    );
-
-    await userEvent.click(
-      screen.getByRole("tab", { name: /Income & expenses/i }),
-    );
-    expect(
-      await screen.findByText(/Income & expenses over time/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("img", {
-        name: /Monthly income and expenses over time with typical month guides/i,
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Income · typical/i)).toBeInTheDocument();
-    expect(screen.getByText(/Expenses · typical/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("tab", { name: /Income & expenses/i }),
-    ).toHaveAttribute("data-active", "");
-    await userEvent.click(screen.getByRole("button", { name: /12 mo/i }));
-    await waitFor(() => {
-      expect(sdk.getBaselineMonthlyCashflow).toHaveBeenCalledWith(
-        expect.objectContaining({ query: { months: 12 } }),
-      );
-    });
 
     await userEvent.click(
       screen.getByRole("button", { name: /Confirm baseline/i }),
@@ -298,7 +267,7 @@ describe("Baseline page", () => {
     });
   });
 
-  it("restores the over-time tab from the URL", async () => {
+  it("redirects legacy over-time tab to Months history", async () => {
     vi.spyOn(sdk, "getCurrentBaseline").mockResolvedValue(
       mockApiResponse(sampleBaseline),
     );
@@ -309,8 +278,25 @@ describe("Baseline page", () => {
       await screen.findByText(/Income & expenses over time/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("tab", { name: /Income & expenses/i }),
-    ).toHaveAttribute("data-active", "");
+      await screen.findByRole("img", {
+        name: /Monthly income and expenses over time with typical month guides/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Top cost drivers/i)).toBeInTheDocument();
+  });
+
+  it("opens Months history from typical month", async () => {
+    vi.spyOn(sdk, "getCurrentBaseline").mockResolvedValue(
+      mockApiResponse(sampleBaseline),
+    );
+
+    testRender({ route: "/baseline" });
+
+    expect(await screen.findByText(/Income split/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("link", { name: /^Open Months$/i }));
+    expect(
+      await screen.findByText(/Income & expenses over time/i),
+    ).toBeInTheDocument();
   });
 
   it("opens fixed composition evidence with recurring series", async () => {
@@ -320,7 +306,7 @@ describe("Baseline page", () => {
 
     testRender({ route: "/baseline" });
 
-    expect(await screen.findByText(/Typical month/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Income split/i)).toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("button", { name: /Fixed\s+1\.2k/i }),
     );
@@ -426,7 +412,7 @@ describe("Baseline page", () => {
 
     testRender({ route: "/baseline" });
 
-    expect(await screen.findByText(/Typical month/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Income split/i)).toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("button", { name: /Variable\s+450/i }),
     );

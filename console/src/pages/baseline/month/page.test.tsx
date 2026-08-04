@@ -116,7 +116,9 @@ describe("Baseline month page", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Expenses above typical/i)).toBeInTheDocument();
     expect(screen.getByText(/Why this month/i)).toBeInTheDocument();
-    expect(screen.getByText(/What drove spend/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /^Cost drivers$/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^Recurring$/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^One-time$/i })).toBeInTheDocument();
     expect(screen.getByText("Landlord GmbH")).toBeInTheDocument();

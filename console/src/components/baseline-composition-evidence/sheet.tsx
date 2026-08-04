@@ -125,7 +125,7 @@ const VariableBody: React.FC<{
         <p className="text-sm text-muted-foreground">
           Variable spend is the residual after Fixed and Irregular recurring
           costs are removed from transfer-aware expenses in the baseline period.
-          It is not a list of named series.
+          It is not a list of named merchants — open Months for who you paid.
         </p>
         {metric.assumptions?.length ? (
           <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">

@@ -20,12 +20,10 @@ import {
   type MonthlyCashflowPoint,
 } from "@/lib/baseline-charts";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
-import { baselineMonthRoute } from "@/router";
 import { cn } from "@/lib/utils";
 
 const BaselineMonthPage: React.FC = () => {
   const { yyyyMm } = useParams({ from: "/baseline/months/$yyyyMm" });
-  const { tab } = baselineMonthRoute.useSearch();
   const monthStart = monthStartFromYyyyMm(yyyyMm);
   const invalid = monthStart == null;
 
@@ -137,11 +135,10 @@ const BaselineMonthPage: React.FC = () => {
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pb-10">
           <Link
-            to="/baseline"
-            search={{ tab }}
+            to="/baseline/history"
             className="text-xs text-muted-foreground underline-offset-4 hover:underline"
           >
-            ← Baseline
+            ← Months
           </Link>
           <p className="text-sm text-destructive" role="alert">
             Invalid month. Use a path like /baseline/months/2026-03.
@@ -161,18 +158,16 @@ const BaselineMonthPage: React.FC = () => {
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 pb-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
-            to="/baseline"
-            search={{ tab }}
+            to="/baseline/history"
             className="text-xs text-muted-foreground underline-offset-4 hover:underline"
           >
-            ← Baseline
+            ← Months
           </Link>
           <div className="flex gap-2">
             {hasPrev ? (
               <Link
                 to="/baseline/months/$yyyyMm"
                 params={{ yyyyMm: prevYyyyMm }}
-                search={{ tab }}
                 className={cn(
                   buttonVariants({ variant: "ghost", size: "sm" }),
                   "h-7 px-2",
@@ -185,7 +180,6 @@ const BaselineMonthPage: React.FC = () => {
               <Link
                 to="/baseline/months/$yyyyMm"
                 params={{ yyyyMm: nextYyyyMm }}
-                search={{ tab }}
                 className={cn(
                   buttonVariants({ variant: "ghost", size: "sm" }),
                   "h-7 px-2",
@@ -293,7 +287,7 @@ const BaselineMonthPage: React.FC = () => {
             <section className="space-y-5">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold tracking-tight">
-                  What drove spend
+                  Cost drivers
                 </h3>
                 {topOutflows.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
@@ -401,7 +395,9 @@ const CategorySpendSection: React.FC<{
   if (loading) {
     return (
       <section className="space-y-2">
-        <h3 className="text-sm font-semibold tracking-tight">By category</h3>
+        <h3 className="text-sm font-semibold tracking-tight">
+          Cost drivers by category
+        </h3>
         <p className="text-sm text-muted-foreground">Loading categories…</p>
       </section>
     );
@@ -416,7 +412,9 @@ const CategorySpendSection: React.FC<{
   return (
     <section className="space-y-3">
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold tracking-tight">By category</h3>
+        <h3 className="text-sm font-semibold tracking-tight">
+          Cost drivers by category
+        </h3>
         <p className="text-sm text-muted-foreground">
           What kind of month this was — excluding one-offs and transfers.
         </p>

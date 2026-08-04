@@ -2,25 +2,29 @@ import { describe, expect, it } from "vitest";
 
 import {
   parseBaselineSearchParams,
-  parseBaselineTab,
-} from "@/pages/baseline/search-params";
+  parseLegacyBaselineTab,
+} from "./search-params";
 
-describe("parseBaselineTab", () => {
-  it("accepts composition and over-time", () => {
-    expect(parseBaselineTab("composition")).toBe("composition");
-    expect(parseBaselineTab("over-time")).toBe("over-time");
+describe("parseLegacyBaselineTab", () => {
+  it("accepts legacy composition and over-time", () => {
+    expect(parseLegacyBaselineTab("composition")).toBe("composition");
+    expect(parseLegacyBaselineTab("over-time")).toBe("over-time");
   });
 
-  it("defaults unknown values to composition", () => {
-    expect(parseBaselineTab(undefined)).toBe("composition");
-    expect(parseBaselineTab("nope")).toBe("composition");
+  it("ignores unknown values", () => {
+    expect(parseLegacyBaselineTab(undefined)).toBeUndefined();
+    expect(parseLegacyBaselineTab("nope")).toBeUndefined();
   });
 });
 
 describe("parseBaselineSearchParams", () => {
-  it("parses tab from search", () => {
+  it("parses legacy tab from search", () => {
     expect(parseBaselineSearchParams({ tab: "over-time" })).toEqual({
       tab: "over-time",
     });
+  });
+
+  it("returns empty object without tab", () => {
+    expect(parseBaselineSearchParams({})).toEqual({});
   });
 });
