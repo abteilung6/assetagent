@@ -13,6 +13,10 @@ export const defaultTransactionListQuery: NonNullable<
 
 export function useTransactions(
   query: NonNullable<GetTransactionsData["query"]> = defaultTransactionListQuery,
+  options?: { enabled?: boolean },
 ) {
-  return useQuery(getTransactionsOptions({ query }));
+  return useQuery({
+    ...getTransactionsOptions({ query }),
+    enabled: options?.enabled ?? true,
+  });
 }

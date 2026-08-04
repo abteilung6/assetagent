@@ -88,7 +88,7 @@ describe("Baseline month page", () => {
     vi.restoreAllMocks();
   });
 
-  it("shows headline, why bullets, and top expenses", async () => {
+  function mockMonthTransactions() {
     const groceries = sampleTransaction({
       id: "11111111-1111-1111-1111-111111111111",
       counterparty: "REWE",
@@ -111,7 +111,7 @@ describe("Baseline month page", () => {
       recurring: true,
     });
 
-    vi.spyOn(sdk, "getTransactions").mockImplementation(async (options) => {
+    return vi.spyOn(sdk, "getTransactions").mockImplementation(async (options) => {
       const order = options?.query?.order;
       if (order === "desc") {
         return mockApiResponse({
@@ -124,12 +124,17 @@ describe("Baseline month page", () => {
         pagination: { limit: 50, offset: 0, total: 3 },
       });
     });
+  }
 
+  it("shows Overview chrome, pace, and categories without payment lists", async () => {
+    const txs = mockMonthTransactions();
     testRender({ route: "/baseline/months/2026-03" });
 
     expect(
       await screen.findByRole("heading", { name: "March 2026" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Activity" })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /Spending pace/i }),
     ).toBeInTheDocument();
@@ -140,29 +145,56 @@ describe("Baseline month page", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Expenses above typical/i)).toBeInTheDocument();
     expect(screen.getByText(/Why this month/i)).toBeInTheDocument();
+    expect(screen.getByText(/By category/i)).toBeInTheDocument();
+    expect(screen.getByText("Housing")).toBeInTheDocument();
+    expect(screen.getByText("Groceries")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: /^Cost drivers$/i }),
+      screen.getByRole("link", { name: /Open Needs review/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Landlord GmbH")).not.toBeInTheDocument();
+    expect(screen.queryByText("REWE")).not.toBeInTheDocument();
+    expect(txs).not.toHaveBeenCalled();
+  });
+
+  it("loads Activity payments via tab and deep link", async () => {
+    mockMonthTransactions();
+    testRender({ route: "/baseline/months/2026-03" });
+
+    expect(
+      await screen.findByRole("heading", { name: "March 2026" }),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Activity" }));
+
+    expect(
+      await screen.findByRole("heading", { name: /^Cost drivers$/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^Recurring$/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^One-time$/i })).toBeInTheDocument();
     expect(screen.getByText("Landlord GmbH")).toBeInTheDocument();
     expect(screen.getByText("REWE")).toBeInTheDocument();
-    expect(screen.getByText(/Recurring bills versus one-time/i)).toBeInTheDocument();
     expect(screen.getByText(/Income sources/i)).toBeInTheDocument();
     expect(screen.getByText("Employer GmbH")).toBeInTheDocument();
-    expect(screen.getByText(/By category/i)).toBeInTheDocument();
-    expect(screen.getByText("Housing")).toBeInTheDocument();
-    expect(screen.getByText("Groceries")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /See all 3 transactions/i }),
     ).toHaveAttribute("href", expect.stringContaining("/transactions"));
-    expect(
-      screen.getByRole("link", { name: /Open Needs review/i }),
-    ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /Landlord GmbH/i }));
     await waitFor(() => {
       expect(screen.getByText(/Treat as one-off/i)).toBeInTheDocument();
     });
+  });
+
+  it("opens Activity from ?tab=activity", async () => {
+    mockMonthTransactions();
+    testRender({ route: "/baseline/months/2026-03?tab=activity" });
+
+    expect(
+      await screen.findByText("Landlord GmbH"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Activity" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 });

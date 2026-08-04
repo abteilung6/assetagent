@@ -1,15 +1,22 @@
 import type React from "react";
 import { useMemo, useState } from "react";
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 
 import type { Transaction } from "@/api/types.gen";
 import { AskAboutThis } from "@/components/chat/ask-about-this";
 import { TransactionDetailSheet } from "@/components/transaction-detail/sheet";
 import { buttonVariants } from "@/components/ui/button";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   useBaselineCategorySpend,
   useBaselineDailyExpensePace,
   useBaselineMonthlyCashflow,
+  useBaselineOneOffImpact,
 } from "@/hooks/use-baseline";
 import { useTransactions } from "@/hooks/use-transactions";
 import {
@@ -30,13 +37,24 @@ import {
   formatChartDate,
   formatChartMoney,
 } from "@/lib/balance-chart";
+import {
+  parseBaselineMonthTab,
+  type BaselineMonthSearchParams,
+  type BaselineMonthTab,
+} from "@/pages/baseline/search-params";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
 import { cn } from "@/lib/utils";
 
 const BaselineMonthPage: React.FC = () => {
   const { yyyyMm } = useParams({ from: "/baseline/months/$yyyyMm" });
+  const search = useSearch({ from: "/baseline/months/$yyyyMm" });
+  const navigate = useNavigate();
+  const activeTab: BaselineMonthTab = search.tab ?? "overview";
+  const activityEnabled = activeTab === "activity";
   const monthStart = monthStartFromYyyyMm(yyyyMm);
   const invalid = monthStart == null;
+  const monthSearch: BaselineMonthSearchParams =
+    search.tab != null ? { tab: search.tab } : {};
 
   const cashflowQuery = useBaselineMonthlyCashflow(6);
   const monthEnd = monthStart ? endOfMonthISO(monthStart) : "";
@@ -47,6 +65,11 @@ const BaselineMonthPage: React.FC = () => {
     Boolean(monthStart),
   );
   const paceQuery = useBaselineDailyExpensePace(
+    monthStart ?? "",
+    monthEnd,
+    Boolean(monthStart),
+  );
+  const oneOffQuery = useBaselineOneOffImpact(
     monthStart ?? "",
     monthEnd,
     Boolean(monthStart),
@@ -68,6 +91,7 @@ const BaselineMonthPage: React.FC = () => {
           sort: "booking_date",
           order: "desc",
         },
+    { enabled: Boolean(monthStart) && activityEnabled },
   );
   const incomeQuery = useTransactions(
     monthStart
@@ -85,6 +109,7 @@ const BaselineMonthPage: React.FC = () => {
           sort: "booking_date",
           order: "desc",
         },
+    { enabled: Boolean(monthStart) && activityEnabled },
   );
 
   const [selected, setSelected] = useState<Transaction | null>(null);
@@ -103,21 +128,19 @@ const BaselineMonthPage: React.FC = () => {
 
   const expenseRows = expensesQuery.data?.data ?? [];
   const incomeRows = incomeQuery.data?.data ?? [];
-  const oneOffs = expenseRows.filter((tx) => tx.one_off);
-  const oneOffExpenseTotal = oneOffs.reduce((sum, tx) => {
-    const amount = Number.parseFloat(tx.amount);
-    return sum + (Number.isNaN(amount) || amount >= 0 ? 0 : Math.abs(amount));
-  }, 0);
+  const oneOffCount = oneOffQuery.data?.count ?? 0;
+  const oneOffExpenseTotal =
+    Number.parseFloat(oneOffQuery.data?.expense_total ?? "0") || 0;
 
   const story = useMemo(
     () =>
       monthStart
         ? buildMonthStory(months, monthStart, {
-            oneOffCount: oneOffs.length,
+            oneOffCount,
             oneOffExpenseTotal,
           })
         : null,
-    [months, monthStart, oneOffs.length, oneOffExpenseTotal],
+    [months, monthStart, oneOffCount, oneOffExpenseTotal],
   );
 
   const topOutflows = expenseRows
@@ -161,7 +184,10 @@ const BaselineMonthPage: React.FC = () => {
 
   const paceTotals = useMemo(() => {
     const last = paceSeries[paceSeries.length - 1];
-    const txCount = paceSeries.reduce((sum, day) => sum + day.transactionCount, 0);
+    const txCount = paceSeries.reduce(
+      (sum, day) => sum + day.transactionCount,
+      0,
+    );
     return {
       cumulative: last?.cumulativeExpenses ?? 0,
       txCount,
@@ -178,6 +204,24 @@ const BaselineMonthPage: React.FC = () => {
   const openTx = (tx: Transaction) => {
     setSelected(tx);
     setSheetOpen(true);
+  };
+
+  const setTab = (value: string | null) => {
+    const tab = parseBaselineMonthTab(value) ?? "overview";
+    void navigate({
+      to: "/baseline/months/$yyyyMm",
+      params: { yyyyMm },
+      search: tab === "overview" ? {} : { tab },
+      replace: true,
+    });
+  };
+
+  const transactionsSearch = {
+    ...defaultTransactionSearchParams,
+    from: monthStart ?? undefined,
+    to: monthEnd || undefined,
+    sort: "amount" as const,
+    order: "asc" as const,
   };
 
   if (invalid) {
@@ -198,10 +242,7 @@ const BaselineMonthPage: React.FC = () => {
     );
   }
 
-  const loading =
-    cashflowQuery.isLoading ||
-    expensesQuery.isLoading ||
-    incomeQuery.isLoading;
+  const loading = cashflowQuery.isLoading;
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -218,6 +259,7 @@ const BaselineMonthPage: React.FC = () => {
               <Link
                 to="/baseline/months/$yyyyMm"
                 params={{ yyyyMm: prevYyyyMm }}
+                search={monthSearch}
                 className={cn(
                   buttonVariants({ variant: "ghost", size: "sm" }),
                   "h-7 px-2",
@@ -230,6 +272,7 @@ const BaselineMonthPage: React.FC = () => {
               <Link
                 to="/baseline/months/$yyyyMm"
                 params={{ yyyyMm: nextYyyyMm }}
+                search={monthSearch}
                 className={cn(
                   buttonVariants({ variant: "ghost", size: "sm" }),
                   "h-7 px-2",
@@ -269,6 +312,7 @@ const BaselineMonthPage: React.FC = () => {
                     yyyy_mm: yyyyMm,
                     from: monthStart,
                     to: monthEnd,
+                    tab: activeTab,
                   }}
                 />
               </div>
@@ -316,109 +360,157 @@ const BaselineMonthPage: React.FC = () => {
               ) : null}
             </header>
 
-            <ExpensePaceSection
-              loading={paceQuery.isLoading}
-              layout={paceLayout}
-              series={paceSeries}
-              totals={paceTotals}
-            />
+            <Tabs
+              value={activeTab}
+              onValueChange={setTab}
+              className="gap-6"
+            >
+              <TabsList variant="line" className="w-full justify-start">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="activity">Activity</TabsTrigger>
+              </TabsList>
 
-            {story.whyBullets.length > 0 ? (
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold tracking-tight">
-                  Why this month
-                </h3>
-                <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                  {story.whyBullets.map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
+              <TabsContent value="overview" className="flex flex-col gap-8">
+                <ExpensePaceSection
+                  loading={paceQuery.isLoading}
+                  layout={paceLayout}
+                  series={paceSeries}
+                  totals={paceTotals}
+                />
 
-            <CategorySpendSection
-              loading={categoryQuery.isLoading}
-              points={categoryQuery.data?.data ?? []}
-            />
+                {story.whyBullets.length > 0 ? (
+                  <section className="space-y-2">
+                    <h3 className="text-sm font-semibold tracking-tight">
+                      Why this month
+                    </h3>
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                      {story.whyBullets.map((bullet) => (
+                        <li key={bullet}>{bullet}</li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
 
-            <section className="space-y-5">
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold tracking-tight">
-                  Cost drivers
-                </h3>
-                {topOutflows.length === 0 ? (
+                <CategorySpendSection
+                  loading={categoryQuery.isLoading}
+                  points={categoryQuery.data?.data ?? []}
+                />
+
+                <section className="flex flex-col gap-3">
+                  <h3 className="text-sm font-semibold tracking-tight">
+                    Next actions
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    No expenses in this month.
+                    Jump to payments on Activity, or open Needs review if
+                    something looks wrong.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {story.unusual ? (
+                      <Link
+                        to="/review"
+                        className={cn(buttonVariants({ variant: "secondary" }))}
+                      >
+                        Open Needs review
+                      </Link>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={cn(buttonVariants({ variant: "outline" }))}
+                      onClick={() => setTab("activity")}
+                    >
+                      View activity
+                    </button>
+                    <Link
+                      to="/transactions"
+                      search={transactionsSearch}
+                      className={cn(
+                        buttonVariants({ variant: "ghost", size: "sm" }),
+                        "text-muted-foreground",
+                      )}
+                    >
+                      See all transactions
+                    </Link>
+                  </div>
+                </section>
+              </TabsContent>
+
+              <TabsContent value="activity" className="flex flex-col gap-8">
+                {expensesQuery.isLoading || incomeQuery.isLoading ? (
+                  <p className="text-sm text-muted-foreground">
+                    Loading payments…
                   </p>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Recurring bills versus one-time payments.
-                  </p>
+                  <>
+                    <section className="space-y-5">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-semibold tracking-tight">
+                          Cost drivers
+                        </h3>
+                        {topOutflows.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            No expenses in this month.
+                          </p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            Recurring bills versus one-time payments.
+                          </p>
+                        )}
+                      </div>
+                      {topOutflows.length > 0 ? (
+                        <>
+                          {spendPartition.recurring.length > 0 ? (
+                            <TxSection
+                              title="Recurring"
+                              empty="No recurring payments in the top expenses."
+                              transactions={spendPartition.recurring}
+                              onOpen={openTx}
+                              tag="Recurring"
+                            />
+                          ) : null}
+                          {spendPartition.oneTime.length > 0 ? (
+                            <TxSection
+                              title="One-time"
+                              empty="No one-time expenses in the top list."
+                              transactions={spendPartition.oneTime}
+                              onOpen={openTx}
+                            />
+                          ) : null}
+                        </>
+                      ) : null}
+                    </section>
+
+                    <TxSection
+                      title="Income sources"
+                      empty="No income in this month."
+                      transactions={topInflows}
+                      onOpen={openTx}
+                      headingLevel="h3"
+                    />
+
+                    <section className="flex flex-col gap-3">
+                      <h3 className="text-sm font-semibold tracking-tight">
+                        All transactions
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Open a payment to mark it as a one-off, or browse the
+                        full list.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          to="/transactions"
+                          search={transactionsSearch}
+                          className={cn(
+                            buttonVariants({ variant: "secondary" }),
+                          )}
+                        >
+                          See all {totalCount} transactions
+                        </Link>
+                      </div>
+                    </section>
+                  </>
                 )}
-              </div>
-              {topOutflows.length > 0 ? (
-                <>
-                  {spendPartition.recurring.length > 0 ? (
-                    <TxSection
-                      title="Recurring"
-                      empty="No recurring payments in the top expenses."
-                      transactions={spendPartition.recurring}
-                      onOpen={openTx}
-                      tag="Recurring"
-                    />
-                  ) : null}
-                  {spendPartition.oneTime.length > 0 ? (
-                    <TxSection
-                      title="One-time"
-                      empty="No one-time expenses in the top list."
-                      transactions={spendPartition.oneTime}
-                      onOpen={openTx}
-                    />
-                  ) : null}
-                </>
-              ) : null}
-            </section>
-
-            <TxSection
-              title="Income sources"
-              empty="No income in this month."
-              transactions={topInflows}
-              onOpen={openTx}
-              headingLevel="h3"
-            />
-
-            <section className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold tracking-tight">
-                Next actions
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Open a payment to mark it as a one-off, or jump to Needs review
-                if something looks wrong.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {story.unusual ? (
-                  <Link
-                    to="/review"
-                    className={cn(buttonVariants({ variant: "secondary" }))}
-                  >
-                    Open Needs review
-                  </Link>
-                ) : null}
-                <Link
-                  to="/transactions"
-                  search={{
-                    ...defaultTransactionSearchParams,
-                    from: monthStart,
-                    to: monthEnd,
-                    sort: "amount",
-                    order: "asc",
-                  }}
-                  className={cn(buttonVariants({ variant: "outline" }))}
-                >
-                  See all {totalCount} transactions
-                </Link>
-              </div>
-            </section>
+              </TabsContent>
+            </Tabs>
           </>
         )}
 
@@ -589,7 +681,10 @@ const ExpensePaceSection: React.FC<{
           {hoverDay && hovered != null ? (
             <text
               x={layout.xs[hovered]!}
-              y={Math.max(layout.padTop + 12, layout.cumulativeYs[hovered]! - 10)}
+              y={Math.max(
+                layout.padTop + 12,
+                layout.cumulativeYs[hovered]! - 10,
+              )}
               textAnchor="middle"
               className="fill-foreground pointer-events-none"
               fontSize={11}

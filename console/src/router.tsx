@@ -17,7 +17,10 @@ import ReviewPage from "@/pages/review/page";
 import ReviewDetailPage from "@/pages/reviews/detail";
 import ReviewsPage from "@/pages/reviews/page";
 import TransactionsPage from "@/pages/transactions/page";
-import { parseBaselineSearchParams } from "@/pages/baseline/search-params";
+import {
+  parseBaselineMonthSearchParams,
+  parseBaselineSearchParams,
+} from "@/pages/baseline/search-params";
 import { parseChatSearchParams } from "@/pages/chat/search-params";
 import { parseReviewSearchParams } from "@/pages/review/search-params";
 import { parseTransactionSearchParams } from "@/pages/transactions/search-params";
@@ -77,6 +80,8 @@ const baselineMonthRoute = createRoute({
   staticData: {
     title: "Months",
   },
+  validateSearch: (search) =>
+    parseBaselineMonthSearchParams(search as Record<string, unknown>),
 });
 
 const importsRoute = createRoute({

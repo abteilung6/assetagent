@@ -24,11 +24,26 @@ export function parseLegacyBaselineTab(
   return undefined;
 }
 
-/** Month detail pages no longer carry a parent tab. */
-export type BaselineMonthSearchParams = Record<string, never>;
+export const BASELINE_MONTH_TABS = ["overview", "activity"] as const;
+
+export type BaselineMonthTab = (typeof BASELINE_MONTH_TABS)[number];
+
+export type BaselineMonthSearchParams = {
+  tab?: BaselineMonthTab;
+};
 
 export function parseBaselineMonthSearchParams(
-  _search: Record<string, unknown>,
+  search: Record<string, unknown>,
 ): BaselineMonthSearchParams {
-  return {};
+  const tab = parseBaselineMonthTab(search.tab);
+  return tab ? { tab } : {};
+}
+
+export function parseBaselineMonthTab(
+  value: unknown,
+): BaselineMonthTab | undefined {
+  if (value === "overview" || value === "activity") {
+    return value;
+  }
+  return undefined;
 }
