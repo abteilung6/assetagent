@@ -36,6 +36,68 @@ export function buildTypicalMonthLevels(input: {
   return { income, expenses };
 }
 
+export type BaselineReadinessItem = {
+  id: "transfers" | "categories" | "recurring" | "unusual_month";
+  label: string;
+  /** Optional count for display, when relevant. */
+  count?: number;
+  href:
+    | { kind: "review"; tab: "transfers" | "categories" | "recurring" }
+    | { kind: "month"; yyyyMm: string };
+};
+
+/** Open review/trust items before confirming a draft baseline. */
+export function buildBaselineReadinessItems(input: {
+  transferCount: number;
+  categoryCount: number;
+  recurringCount: number;
+  unusualMonthStart: string | null;
+}): BaselineReadinessItem[] {
+  const items: BaselineReadinessItem[] = [];
+  if (input.transferCount > 0) {
+    items.push({
+      id: "transfers",
+      count: input.transferCount,
+      label:
+        input.transferCount === 1
+          ? "1 transfer to review"
+          : `${input.transferCount} transfers to review`,
+      href: { kind: "review", tab: "transfers" },
+    });
+  }
+  if (input.categoryCount > 0) {
+    items.push({
+      id: "categories",
+      count: input.categoryCount,
+      label:
+        input.categoryCount === 1
+          ? "1 category to check"
+          : `${input.categoryCount} categories to check`,
+      href: { kind: "review", tab: "categories" },
+    });
+  }
+  if (input.recurringCount > 0) {
+    items.push({
+      id: "recurring",
+      count: input.recurringCount,
+      label:
+        input.recurringCount === 1
+          ? "1 recurring payment to confirm"
+          : `${input.recurringCount} recurring payments to confirm`,
+      href: { kind: "review", tab: "recurring" },
+    });
+  }
+  if (input.unusualMonthStart) {
+    const yyyyMm = input.unusualMonthStart.slice(0, 7);
+    items.push({
+      id: "unusual_month",
+      label: `Unusual expenses in ${formatMonthLabel(input.unusualMonthStart)}`,
+      href: { kind: "month", yyyyMm },
+    });
+  }
+  return items;
+}
+
 export type CompositionEvidenceMetricKey =
   | "regular_monthly_income"
   | "monthly_fixed_costs"

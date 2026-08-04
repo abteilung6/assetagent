@@ -1,6 +1,6 @@
 import type React from "react";
 import { useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -33,10 +33,13 @@ import {
   useTransferReject,
   type TransferCandidate,
 } from "@/hooks/use-transfer-candidates";
+import {
+  parseReviewTab,
+  type ReviewTab,
+} from "@/pages/review/search-params";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
+import { reviewRoute } from "@/router";
 import { cn } from "@/lib/utils";
-
-type ReviewTab = "transfers" | "categories" | "recurring";
 
 function defaultReviewTab(
   transfers: number,
@@ -56,6 +59,8 @@ function defaultReviewTab(
 }
 
 const ReviewPage: React.FC = () => {
+  const navigate = useNavigate();
+  const search = reviewRoute.useSearch();
   const candidatesQuery = useTransferCandidates();
   const queueQuery = useClassificationQueue();
   const categoriesQuery = useCategories();
@@ -68,7 +73,6 @@ const ReviewPage: React.FC = () => {
   const recurringRejectMutation = useRecurringReject();
   const [actionError, setActionError] = useState<string | null>(null);
   const [applySummary, setApplySummary] = useState<string | null>(null);
-  const [tabOverride, setTabOverride] = useState<ReviewTab | null>(null);
   const [pendingTransferID, setPendingTransferID] = useState<string | null>(
     null,
   );
@@ -109,7 +113,7 @@ const ReviewPage: React.FC = () => {
       defaultReviewTab(candidates.length, queue.length, recurring.length),
     [candidates.length, queue.length, recurring.length],
   );
-  const activeTab = tabOverride ?? autoTab;
+  const activeTab = search.tab ?? autoTab;
 
   const onConfirm = async (id: string) => {
     setActionError(null);
@@ -247,13 +251,15 @@ const ReviewPage: React.FC = () => {
           <Tabs
             value={activeTab}
             onValueChange={(value) => {
-              if (
-                value === "transfers" ||
-                value === "categories" ||
-                value === "recurring"
-              ) {
-                setTabOverride(value);
+              const tab = parseReviewTab(value);
+              if (!tab) {
+                return;
               }
+              void navigate({
+                to: "/review",
+                search: { tab },
+                replace: true,
+              });
             }}
             className="gap-6"
           >

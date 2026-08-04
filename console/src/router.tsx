@@ -17,6 +17,7 @@ import ReviewDetailPage from "@/pages/reviews/detail";
 import ReviewsPage from "@/pages/reviews/page";
 import TransactionsPage from "@/pages/transactions/page";
 import { parseBaselineSearchParams } from "@/pages/baseline/search-params";
+import { parseReviewSearchParams } from "@/pages/review/search-params";
 import { parseTransactionSearchParams } from "@/pages/transactions/search-params";
 
 const rootRoute = createRootRoute({
@@ -78,6 +79,8 @@ const reviewRoute = createRoute({
   staticData: {
     title: "Needs review",
   },
+  validateSearch: (search) =>
+    parseReviewSearchParams(search as Record<string, unknown>),
 });
 
 const reviewsRoute = createRoute({

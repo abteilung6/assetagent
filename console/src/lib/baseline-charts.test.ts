@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBaselineComposition,
+  buildBaselineReadinessItems,
   buildMonthStory,
   buildTypicalMonthLevels,
   detectUnusualMonth,
@@ -78,6 +79,36 @@ describe("buildTypicalMonthLevels", () => {
         variable: 450,
       }),
     ).toEqual({ income: 3500, expenses: 1700 });
+  });
+});
+
+describe("buildBaselineReadinessItems", () => {
+  it("returns review and unusual-month items with labels", () => {
+    const items = buildBaselineReadinessItems({
+      transferCount: 2,
+      categoryCount: 1,
+      recurringCount: 0,
+      unusualMonthStart: "2026-03-01",
+    });
+    expect(items.map((i) => i.id)).toEqual([
+      "transfers",
+      "categories",
+      "unusual_month",
+    ]);
+    expect(items[0]?.label).toMatch(/2 transfers/i);
+    expect(items[1]?.href).toEqual({ kind: "review", tab: "categories" });
+    expect(items[2]?.href).toEqual({ kind: "month", yyyyMm: "2026-03" });
+  });
+
+  it("returns empty when nothing is open", () => {
+    expect(
+      buildBaselineReadinessItems({
+        transferCount: 0,
+        categoryCount: 0,
+        recurringCount: 0,
+        unusualMonthStart: null,
+      }),
+    ).toEqual([]);
   });
 });
 

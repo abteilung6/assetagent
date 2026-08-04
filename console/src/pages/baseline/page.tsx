@@ -28,6 +28,7 @@ import {
 } from "@/lib/balance-chart";
 import {
   buildBaselineComposition,
+  buildBaselineReadinessItems,
   buildTypicalMonthLevels,
   detectUnusualMonth,
   formatCompactMoney,
@@ -40,6 +41,9 @@ import {
 } from "@/lib/baseline-charts";
 import type { BaselineTab } from "@/pages/baseline/search-params";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
+import { useClassificationQueue } from "@/hooks/use-classification-queue";
+import { useUncertainRecurring } from "@/hooks/use-recurring-uncertain";
+import { useTransferCandidates } from "@/hooks/use-transfer-candidates";
 import { baselineRoute } from "@/router";
 import { cn } from "@/lib/utils";
 
@@ -275,6 +279,8 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
           })}
         </ul>
       </section>
+
+      <BaselineReadiness baseline={baseline} confirmed={confirmed} />
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button
@@ -789,6 +795,103 @@ const UnusualMonthsStrip: React.FC<{
         </p>
       ) : null}
     </div>
+  );
+};
+
+const BaselineReadiness: React.FC<{
+  baseline: FinancialBaseline;
+  confirmed: boolean;
+}> = ({ baseline, confirmed }) => {
+  const transfersQuery = useTransferCandidates();
+  const categoriesQuery = useClassificationQueue();
+  const recurringQuery = useUncertainRecurring();
+  const monthsQuery = useBaselineMonthlyCashflow(6);
+
+  const months: MonthlyCashflowPoint[] = (monthsQuery.data?.data ?? []).map(
+    (row) => ({
+      monthStart: row.month_start.slice(0, 10),
+      income: Number.parseFloat(row.income) || 0,
+      expenses: Number.parseFloat(row.expenses) || 0,
+      net: Number.parseFloat(row.net) || 0,
+    }),
+  );
+  const unusual = detectUnusualMonth(months, baseline.period_from.slice(0, 10));
+  const items = buildBaselineReadinessItems({
+    transferCount: transfersQuery.data?.data.length ?? 0,
+    categoryCount: categoriesQuery.data?.data.length ?? 0,
+    recurringCount: recurringQuery.data?.data.length ?? 0,
+    unusualMonthStart: unusual.unusual ? unusual.monthStart : null,
+  });
+
+  const loading =
+    transfersQuery.isLoading ||
+    categoriesQuery.isLoading ||
+    recurringQuery.isLoading ||
+    monthsQuery.isLoading;
+
+  if (loading) {
+    return null;
+  }
+
+  if (items.length === 0) {
+    if (confirmed) {
+      return null;
+    }
+    return (
+      <section className="space-y-1">
+        <h2 className="text-sm font-semibold tracking-tight">
+          Before you confirm
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Nothing open in Needs review — this baseline looks ready to confirm.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-3">
+      <div className="space-y-1">
+        <h2 className="text-sm font-semibold tracking-tight">
+          {confirmed ? "Still open" : "Before you confirm"}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {confirmed
+            ? "These items can still improve trust in the numbers."
+            : "Clear these when you can — they are the usual sources of distorted baselines."}
+        </p>
+      </div>
+      <ul className="divide-y border-y">
+        {items.map((item) => (
+          <li key={item.id}>
+            {item.href.kind === "review" ? (
+              <Link
+                to="/review"
+                search={{ tab: item.href.tab }}
+                className="flex items-center justify-between gap-3 py-2.5 text-sm underline-offset-4 hover:underline"
+              >
+                <span>{item.label}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  Needs review
+                </span>
+              </Link>
+            ) : (
+              <Link
+                to="/baseline/months/$yyyyMm"
+                params={{ yyyyMm: item.href.yyyyMm }}
+                search={{ tab: "composition" }}
+                className="flex items-center justify-between gap-3 py-2.5 text-sm underline-offset-4 hover:underline"
+              >
+                <span>{item.label}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  Open month
+                </span>
+              </Link>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 };
 

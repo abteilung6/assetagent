@@ -328,6 +328,70 @@ describe("Baseline page", () => {
     ).toBeInTheDocument();
   });
 
+  it("lists readiness checklist items before confirm", async () => {
+    vi.spyOn(sdk, "getCurrentBaseline").mockResolvedValue(
+      mockApiResponse(sampleBaseline),
+    );
+    vi.spyOn(sdk, "getTransferCandidates").mockResolvedValue(
+      mockApiResponse({
+        data: [
+          {
+            id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            status: "suggested" as const,
+            confidence: "high" as const,
+            amount: "100.00",
+            tx_out: {
+              id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+              booking_date: "2026-03-01",
+              amount: "-100.00",
+              counterparty: "A",
+              purpose: "",
+            },
+            tx_in: {
+              id: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+              booking_date: "2026-03-01",
+              amount: "100.00",
+              counterparty: "B",
+              purpose: "",
+            },
+          },
+        ],
+      }),
+    );
+    vi.spyOn(sdk, "getClassificationQueue").mockResolvedValue(
+      mockApiResponse({
+        data: [
+          {
+            transaction_id: "dddddddd-dddd-dddd-dddd-dddddddddddd",
+            booking_date: "2026-03-02",
+            amount: "-20.00",
+            counterparty: "Shop",
+            purpose: "Stuff",
+            booking_text: "",
+            category_slug: "unresolved",
+            category_name: "Unresolved",
+            source: "unresolved",
+            confidence: "low",
+            merchant_id: null,
+            merchant_name: "",
+          },
+        ],
+      }),
+    );
+
+    testRender({ route: "/baseline" });
+
+    expect(
+      await screen.findByRole("heading", { name: /Before you confirm/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /1 transfer to review/i }),
+    ).toHaveAttribute("href", "/review?tab=transfers");
+    expect(
+      screen.getByRole("link", { name: /1 category to check/i }),
+    ).toHaveAttribute("href", "/review?tab=categories");
+  });
+
   it("opens variable evidence with residual copy and correct CTA", async () => {
     vi.spyOn(sdk, "getCurrentBaseline").mockResolvedValue(
       mockApiResponse(sampleBaseline),
