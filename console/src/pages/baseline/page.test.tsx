@@ -149,7 +149,13 @@ describe("Baseline page", () => {
     ).toBeInTheDocument();
     expect(await screen.findByText(/Typical month/i)).toBeInTheDocument();
     expect(screen.getByText(/Recent months/i)).toBeInTheDocument();
+    expect(screen.getByText(/Click a month for detail/i)).toBeInTheDocument();
     expect(screen.getByText(/1\.800,00/)).toBeInTheDocument();
+
+    const marchLink = screen.getByRole("link", {
+      name: /2\.2k €/i,
+    });
+    expect(marchLink).toHaveAttribute("href", "/baseline/months/2026-03");
 
     await userEvent.click(
       screen.getByRole("tab", { name: /Income & expenses/i }),

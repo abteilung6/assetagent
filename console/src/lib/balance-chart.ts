@@ -209,6 +209,8 @@ export type DualSeriesChartLayout = {
   labelIndexes: number[];
   moneyLabels: BalanceChartAxisLabel[];
   xs: number[];
+  primaryYs: number[];
+  secondaryYs: number[];
 };
 
 /** Two series on one chart (e.g. income + expenses over months). */
@@ -280,5 +282,7 @@ export function buildDualSeriesChartLayout(
       text: formatChartMoney(value),
     })),
     xs,
+    primaryYs: primaryCoords.map((c) => c.y),
+    secondaryYs: secondaryCoords.map((c) => c.y),
   };
 }

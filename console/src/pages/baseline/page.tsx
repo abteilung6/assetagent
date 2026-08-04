@@ -1,6 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -28,7 +28,10 @@ import {
 import {
   buildBaselineComposition,
   detectUnusualMonth,
+  formatCompactMoney,
+  formatMonthHeadline,
   formatMonthLabel,
+  yyyyMmFromMonthStart,
   type CompositionSegmentKey,
   type MonthlyCashflowPoint,
 } from "@/lib/baseline-charts";
@@ -300,6 +303,10 @@ const BaselineCharts: React.FC<{
 }> = ({ baseline, onFocusMetric }) => {
   const [view, setView] = useState<"composition" | "over-time">("composition");
   const [monthsWindow, setMonthsWindow] = useState<3 | 6 | 12>(6);
+  const [hoveredTrendIndex, setHoveredTrendIndex] = useState<number | null>(
+    null,
+  );
+  const navigate = useNavigate();
   const stripQuery = useBaselineMonthlyCashflow(6);
   const trendQuery = useBaselineMonthlyCashflow(monthsWindow);
   const composition = buildBaselineComposition({
@@ -433,7 +440,7 @@ const BaselineCharts: React.FC<{
                 Income & expenses over time
               </h2>
               <p className="text-sm text-muted-foreground">
-                Transfer-aware totals by month. Pick a window to zoom.
+                Transfer-aware totals by month. Click a month for detail.
               </p>
             </div>
             <div className="flex gap-1 rounded-lg border p-1">
@@ -530,6 +537,60 @@ const BaselineCharts: React.FC<{
                     </g>
                   );
                 })}
+                {trendMonths.map((point, i) => {
+                  const x = dualLayout.xs[i]!;
+                  const primaryY = dualLayout.primaryYs[i]!;
+                  const secondaryY = dualLayout.secondaryYs[i]!;
+                  const hovered = hoveredTrendIndex === i;
+                  return (
+                    <g key={`hit-${point.monthStart}`}>
+                      <rect
+                        x={x - 14}
+                        y={dualLayout.padTop}
+                        width={28}
+                        height={dualLayout.innerH}
+                        className="fill-transparent cursor-pointer"
+                        role="link"
+                        aria-label={`${formatMonthHeadline(point.monthStart)} details`}
+                        onMouseEnter={() => setHoveredTrendIndex(i)}
+                        onMouseLeave={() => setHoveredTrendIndex(null)}
+                        onFocus={() => setHoveredTrendIndex(i)}
+                        onBlur={() => setHoveredTrendIndex(null)}
+                        onClick={() => {
+                          void navigate({
+                            to: "/baseline/months/$yyyyMm",
+                            params: {
+                              yyyyMm: yyyyMmFromMonthStart(point.monthStart),
+                            },
+                          });
+                        }}
+                      />
+                      <circle
+                        cx={x}
+                        cy={primaryY}
+                        r={hovered ? 4 : 2.5}
+                        className="fill-foreground pointer-events-none"
+                      />
+                      <circle
+                        cx={x}
+                        cy={secondaryY}
+                        r={hovered ? 4 : 2.5}
+                        className="fill-foreground/50 pointer-events-none"
+                      />
+                      {hovered ? (
+                        <text
+                          x={x}
+                          y={Math.min(primaryY, secondaryY) - 10}
+                          textAnchor="middle"
+                          className="fill-foreground pointer-events-none"
+                          fontSize={11}
+                        >
+                          Net {formatChartMoney(point.net)}
+                        </text>
+                      ) : null}
+                    </g>
+                  );
+                })}
               </svg>
               <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <li className="flex items-center gap-1.5">
@@ -573,7 +634,7 @@ const UnusualMonthsStrip: React.FC<{
       <div className="space-y-1">
         <h2 className="text-sm font-semibold tracking-tight">Recent months</h2>
         <p className="text-sm text-muted-foreground">
-          Expense height by month. Tall bars can mean one-offs.
+          Expense height by month. Click a month for detail.
         </p>
       </div>
       {loading ? (
@@ -590,25 +651,21 @@ const UnusualMonthsStrip: React.FC<{
               m.monthStart.slice(0, 7) === baselineMonth.slice(0, 7);
             const isUnusual =
               insight.unusual && insight.monthStart === m.monthStart;
-            const monthEnd = endOfMonthISO(m.monthStart);
             return (
               <Link
                 key={m.monthStart}
-                to="/transactions"
-                search={{
-                  ...defaultTransactionSearchParams,
-                  from: m.monthStart,
-                  to: monthEnd,
-                  sort: "amount",
-                  order: "asc",
-                }}
-                className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
+                to="/baseline/months/$yyyyMm"
+                params={{ yyyyMm: yyyyMmFromMonthStart(m.monthStart) }}
+                className="group flex min-w-0 flex-1 flex-col items-center gap-1.5 underline-offset-4 hover:underline"
                 title={`${formatMonthLabel(m.monthStart)} · expenses ${formatAmount(m.expenses.toFixed(2))}`}
               >
+                <span className="text-[10px] tabular-nums text-muted-foreground group-hover:text-foreground">
+                  {formatCompactMoney(m.expenses)}
+                </span>
                 <div className="flex h-24 w-full items-end justify-center">
                   <span
                     className={cn(
-                      "w-full max-w-[2.5rem] rounded-t-md",
+                      "w-full max-w-[2.5rem] rounded-t-md transition-opacity group-hover:opacity-90",
                       isUnusual
                         ? "bg-red-700/80 dark:bg-red-400/80"
                         : isBaseline
@@ -661,16 +718,6 @@ function segmentTone(key: CompositionSegmentKey): string {
     case "deficit":
       return "bg-red-700/80 dark:bg-red-400/70";
   }
-}
-
-function endOfMonthISO(monthStart: string): string {
-  const iso = monthStart.slice(0, 10);
-  const [y, m] = iso.split("-").map(Number);
-  if (!y || !m) {
-    return iso;
-  }
-  const last = new Date(Date.UTC(y, m, 0));
-  return last.toISOString().slice(0, 10);
 }
 
 type MetricRowProps = {

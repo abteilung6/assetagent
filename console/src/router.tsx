@@ -8,6 +8,7 @@ import {
 
 import { AppLayout } from "@/app/layout";
 import BaselinePage from "@/pages/baseline/page";
+import BaselineMonthPage from "@/pages/baseline/month/page";
 import ChatPage from "@/pages/chat/page";
 import ImportsPage from "@/pages/imports/page";
 import PlanPage from "@/pages/plan/page";
@@ -42,6 +43,15 @@ const baselineRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/baseline",
   component: BaselinePage,
+  staticData: {
+    title: "Baseline",
+  },
+});
+
+const baselineMonthRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/baseline/months/$yyyyMm",
+  component: BaselineMonthPage,
   staticData: {
     title: "Baseline",
   },
@@ -104,6 +114,7 @@ const transactionsRoute = createRoute({
 });
 
 export {
+  baselineMonthRoute,
   baselineRoute,
   chatRoute,
   importsRoute,
@@ -118,6 +129,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   chatRoute,
   baselineRoute,
+  baselineMonthRoute,
   planRoute,
   transactionsRoute,
   importsRoute,

@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBaselineComposition,
+  buildMonthStory,
   detectUnusualMonth,
+  formatCompactMoney,
+  formatMonthHeadline,
   formatMonthLabel,
 } from "@/lib/baseline-charts";
 
@@ -65,5 +68,43 @@ describe("detectUnusualMonth", () => {
 describe("formatMonthLabel", () => {
   it("formats YYYY-MM as MM.YYYY", () => {
     expect(formatMonthLabel("2026-03-01")).toBe("03.2026");
+  });
+});
+
+describe("formatCompactMoney", () => {
+  it("compacts thousands", () => {
+    expect(formatCompactMoney(1200)).toBe("1.2k €");
+    expect(formatCompactMoney(50000)).toBe("50k €");
+  });
+});
+
+describe("formatMonthHeadline", () => {
+  it("formats a long English month title", () => {
+    expect(formatMonthHeadline("2025-12-01")).toBe("December 2025");
+  });
+});
+
+describe("buildMonthStory", () => {
+  const months = [
+    { monthStart: "2025-10-01", income: 3000, expenses: 2000, net: 1000 },
+    { monthStart: "2025-11-01", income: 3000, expenses: 2100, net: 900 },
+    { monthStart: "2025-12-01", income: 3000, expenses: 8000, net: -5000 },
+  ];
+
+  it("explains an expensive month versus median and prior", () => {
+    const story = buildMonthStory(months, "2025-12-01", {
+      oneOffCount: 1,
+      oneOffExpenseTotal: 50000,
+    });
+    expect(story.unusual).toBe(true);
+    expect(story.subline).toMatch(/above typical/i);
+    expect(story.whyBullets.length).toBeGreaterThan(0);
+    expect(story.whyBullets.some((b) => /median/i.test(b))).toBe(true);
+    expect(story.whyBullets.some((b) => /one-off/i.test(b))).toBe(true);
+  });
+
+  it("returns null current when month is missing from series", () => {
+    const story = buildMonthStory(months, "2026-01-01");
+    expect(story.current).toBeNull();
   });
 });

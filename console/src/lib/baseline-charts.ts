@@ -138,6 +138,153 @@ export function formatMonthLabel(monthStart: string): string {
   return `${m}.${y}`;
 }
 
+/** Compact euro for chart strip labels (e.g. 1.2k €). */
+export function formatCompactMoney(value: number): string {
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "−" : "";
+  if (abs >= 1000) {
+    const thousands = abs / 1000;
+    const text =
+      abs % 1000 === 0 ? thousands.toFixed(0) : thousands.toFixed(1);
+    return `${sign}${text}k €`;
+  }
+  return `${sign}${Math.round(abs)} €`;
+}
+
+/** Long month title for the month insight page (e.g. December 2025). */
+export function formatMonthHeadline(monthStart: string): string {
+  const iso = monthStart.slice(0, 10);
+  const match = /^(\d{4})-(\d{2})/.exec(iso);
+  if (!match) {
+    return iso;
+  }
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1));
+  return new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+export function yyyyMmFromMonthStart(monthStart: string): string {
+  return monthStart.slice(0, 7);
+}
+
+export function monthStartFromYyyyMm(yyyyMm: string): string | null {
+  if (!/^\d{4}-\d{2}$/.test(yyyyMm)) {
+    return null;
+  }
+  return `${yyyyMm}-01`;
+}
+
+export function endOfMonthISO(monthStart: string): string {
+  const iso = monthStart.slice(0, 10);
+  const [y, m] = iso.split("-").map(Number);
+  if (!y || !m) {
+    return iso;
+  }
+  const last = new Date(Date.UTC(y, m, 0));
+  return last.toISOString().slice(0, 10);
+}
+
+export function shiftYyyyMm(yyyyMm: string, deltaMonths: number): string {
+  const [y, m] = yyyyMm.split("-").map(Number);
+  if (!y || !m) {
+    return yyyyMm;
+  }
+  const date = new Date(Date.UTC(y, m - 1 + deltaMonths, 1));
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+export type MonthStory = {
+  current: MonthlyCashflowPoint | null;
+  prior: MonthlyCashflowPoint | null;
+  medianExpenses: number | null;
+  expenseRatioToMedian: number | null;
+  unusual: boolean;
+  subline: string;
+  whyBullets: string[];
+};
+
+export type MonthStoryOptions = {
+  oneOffCount?: number;
+  oneOffExpenseTotal?: number;
+};
+
+/** Build headline copy and why-bullets for a selected month. */
+export function buildMonthStory(
+  months: MonthlyCashflowPoint[],
+  monthStart: string,
+  opts: MonthStoryOptions = {},
+): MonthStory {
+  const target = monthStart.slice(0, 10);
+  const index = months.findIndex((m) => m.monthStart.slice(0, 10) === target);
+  const current = index >= 0 ? months[index]! : null;
+  const prior = index > 0 ? months[index - 1]! : null;
+
+  const expenseValues = months
+    .map((m) => m.expenses)
+    .filter((v) => v > 0)
+    .sort((a, b) => a - b);
+  const medianExpenses =
+    expenseValues.length > 0 ? percentile(expenseValues, 0.5) : null;
+  const expenseRatioToMedian =
+    current && medianExpenses && medianExpenses > 0
+      ? current.expenses / medianExpenses
+      : null;
+  const unusual =
+    expenseRatioToMedian != null && expenseRatioToMedian >= 2;
+
+  const whyBullets: string[] = [];
+  if (unusual && expenseRatioToMedian != null && medianExpenses != null) {
+    whyBullets.push(
+      `Expenses ${expenseRatioToMedian.toFixed(1)}× the recent median (${formatCompactMoney(medianExpenses)}).`,
+    );
+  }
+  if (current && prior) {
+    const delta = current.expenses - prior.expenses;
+    if (Math.abs(delta) >= 1) {
+      const direction = delta > 0 ? "higher" : "lower";
+      whyBullets.push(
+        `Expenses ${formatCompactMoney(Math.abs(delta))} ${direction} than ${formatMonthLabel(prior.monthStart)}.`,
+      );
+    }
+  }
+  const oneOffCount = opts.oneOffCount ?? 0;
+  const oneOffExpenseTotal = opts.oneOffExpenseTotal ?? 0;
+  if (oneOffCount > 0) {
+    whyBullets.push(
+      oneOffCount === 1
+        ? `1 one-off payment excluded from totals (${formatCompactMoney(oneOffExpenseTotal)}).`
+        : `${oneOffCount} one-off payments excluded from totals (${formatCompactMoney(oneOffExpenseTotal)}).`,
+    );
+  }
+  if (current && current.net < 0) {
+    whyBullets.push("Spent more than earned this month.");
+  }
+
+  let subline = "Income, expenses, and what moved the needle.";
+  if (unusual) {
+    subline = "Expenses above typical — check large payments below.";
+  } else if (current && prior && current.expenses < prior.expenses * 0.85) {
+    subline = "Quieter month than the one before.";
+  } else if (oneOffCount > 0) {
+    subline = "One-offs are excluded from the totals above.";
+  }
+
+  return {
+    current,
+    prior,
+    medianExpenses,
+    expenseRatioToMedian,
+    unusual,
+    subline,
+    whyBullets: whyBullets.slice(0, 3),
+  };
+}
+
 function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) {
     return 0;
