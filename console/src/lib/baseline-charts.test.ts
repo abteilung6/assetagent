@@ -7,6 +7,8 @@ import {
   formatCompactMoney,
   formatMonthHeadline,
   formatMonthLabel,
+  monthlyEquivalentAmount,
+  resolveEvidenceSeries,
 } from "@/lib/baseline-charts";
 
 describe("buildBaselineComposition", () => {
@@ -68,6 +70,26 @@ describe("detectUnusualMonth", () => {
 describe("formatMonthLabel", () => {
   it("formats YYYY-MM as MM.YYYY", () => {
     expect(formatMonthLabel("2026-03-01")).toBe("03.2026");
+  });
+});
+
+describe("monthlyEquivalentAmount", () => {
+  it("spreads quarterly and yearly amounts", () => {
+    expect(monthlyEquivalentAmount(300, "quarterly")).toBe(100);
+    expect(monthlyEquivalentAmount(1200, "yearly")).toBe(100);
+    expect(monthlyEquivalentAmount(50, "monthly")).toBe(50);
+  });
+});
+
+describe("resolveEvidenceSeries", () => {
+  it("preserves evidence_ids order and skips missing ids", () => {
+    const a = { id: "a", name: "A" };
+    const b = { id: "b", name: "B" };
+    const map = new Map([
+      ["a", a],
+      ["b", b],
+    ]);
+    expect(resolveEvidenceSeries(["b", "missing", "a"], map)).toEqual([b, a]);
   });
 });
 

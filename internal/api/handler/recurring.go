@@ -13,10 +13,28 @@ import (
 )
 
 type RecurringService interface {
+	List(ctx context.Context) ([]domain.RecurringSeries, error)
 	ListUncertain(ctx context.Context) ([]domain.RecurringSeries, error)
 	ListMembers(ctx context.Context, seriesID uuid.UUID, limit int) ([]domain.RecurringSeriesMember, error)
 	Confirm(ctx context.Context, id uuid.UUID) (domain.RecurringSeries, error)
 	Reject(ctx context.Context, id uuid.UUID) (domain.RecurringSeries, error)
+}
+
+func (h *Handler) GetRecurring(w http.ResponseWriter, r *http.Request) {
+	if h.recurring == nil {
+		writeInternalError(w, "recurring service is not configured")
+		return
+	}
+	items, err := h.recurring.List(r.Context())
+	if err != nil {
+		writeInternalError(w, "failed to list recurring series")
+		return
+	}
+	data := make([]gen.RecurringSeries, len(items))
+	for i, item := range items {
+		data[i] = toAPIRecurringSeries(item)
+	}
+	writeJSON(w, http.StatusOK, gen.RecurringSeriesListResponse{Data: data})
 }
 
 func (h *Handler) GetUncertainRecurring(w http.ResponseWriter, r *http.Request) {

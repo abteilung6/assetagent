@@ -25,28 +25,31 @@ const sampleBaseline = {
       value: "3500.00",
       calculation: "Sum of monthly-equivalent income series",
       confidence: "high" as const,
-      evidence_ids: [],
+      evidence_ids: ["11111111-1111-1111-1111-111111111111"],
     },
     {
       key: "monthly_fixed_costs" as const,
       value: "1200.00",
       calculation: "Sum of monthly recurring expenses",
       confidence: "high" as const,
-      evidence_ids: [],
+      evidence_ids: ["22222222-2222-2222-2222-222222222222"],
     },
     {
       key: "monthly_irregular_costs" as const,
       value: "50.00",
       calculation: "Yearly costs spread monthly",
       confidence: "high" as const,
-      evidence_ids: [],
+      evidence_ids: ["33333333-3333-3333-3333-333333333333"],
     },
     {
       key: "avg_variable_spend" as const,
       value: "450.00",
       calculation: "Residual variable spend",
       confidence: "high" as const,
-      evidence_ids: [],
+      evidence_ids: [
+        "22222222-2222-2222-2222-222222222222",
+        "33333333-3333-3333-3333-333333333333",
+      ],
     },
     {
       key: "sustainable_free_cashflow" as const,
@@ -73,6 +76,51 @@ describe("Baseline page", () => {
     );
     vi.spyOn(sdk, "getUncertainRecurring").mockResolvedValue(
       mockApiResponse({ data: [] }),
+    );
+    vi.spyOn(sdk, "getRecurring").mockResolvedValue(
+      mockApiResponse({
+        data: [
+          {
+            id: "22222222-2222-2222-2222-222222222222",
+            display_name: "Example Landlord",
+            interval: "monthly" as const,
+            kind: "fixed" as const,
+            status: "active" as const,
+            amount_typical: "1200.00",
+            amount_last: "1200.00",
+            amount_changed: false,
+            uncertainty: "low" as const,
+            member_count: 6,
+            created_at: "2026-01-01T00:00:00Z",
+          },
+          {
+            id: "33333333-3333-3333-3333-333333333333",
+            display_name: "Insurance",
+            interval: "yearly" as const,
+            kind: "fixed" as const,
+            status: "active" as const,
+            amount_typical: "600.00",
+            amount_last: "600.00",
+            amount_changed: false,
+            uncertainty: "low" as const,
+            member_count: 2,
+            created_at: "2026-01-01T00:00:00Z",
+          },
+          {
+            id: "11111111-1111-1111-1111-111111111111",
+            display_name: "Salary",
+            interval: "monthly" as const,
+            kind: "income" as const,
+            status: "active" as const,
+            amount_typical: "3500.00",
+            amount_last: "3500.00",
+            amount_changed: false,
+            uncertainty: "low" as const,
+            member_count: 6,
+            created_at: "2026-01-01T00:00:00Z",
+          },
+        ],
+      }),
     );
     vi.spyOn(sdk, "getBaselineMonthlyCashflow").mockResolvedValue(
       mockApiResponse({
@@ -234,5 +282,54 @@ describe("Baseline page", () => {
         }),
       );
     });
+  });
+
+  it("opens fixed composition evidence with recurring series", async () => {
+    vi.spyOn(sdk, "getCurrentBaseline").mockResolvedValue(
+      mockApiResponse(sampleBaseline),
+    );
+
+    testRender({ route: "/baseline" });
+
+    expect(await screen.findByText(/Typical month/i)).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: /Fixed\s+1\.2k/i }),
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: /Monthly fixed costs/i }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("Example Landlord")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Show sample payments/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens variable evidence with residual copy and correct CTA", async () => {
+    vi.spyOn(sdk, "getCurrentBaseline").mockResolvedValue(
+      mockApiResponse(sampleBaseline),
+    );
+
+    testRender({ route: "/baseline" });
+
+    expect(await screen.findByText(/Typical month/i)).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: /Variable\s+450/i }),
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: /Average variable spend/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/How this is built/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Already counted as Fixed \/ Irregular/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Example Landlord")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Correct variable spend/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Period transactions/i }),
+    ).toBeInTheDocument();
   });
 });

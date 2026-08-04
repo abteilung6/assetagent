@@ -961,6 +961,22 @@ export type PostTransferRejectResponses = {
 
 export type PostTransferRejectResponse = PostTransferRejectResponses[keyof PostTransferRejectResponses];
 
+export type GetRecurringData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/recurring';
+};
+
+export type GetRecurringResponses = {
+    /**
+     * Recurring series
+     */
+    200: RecurringSeriesListResponse;
+};
+
+export type GetRecurringResponse = GetRecurringResponses[keyof GetRecurringResponses];
+
 export type GetUncertainRecurringData = {
     body?: never;
     path?: never;

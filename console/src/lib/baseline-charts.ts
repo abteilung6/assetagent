@@ -13,6 +13,84 @@ export type CompositionSegmentKey =
   | "free"
   | "deficit";
 
+/** Click targets on the composition bar / income row. */
+export type CompositionEvidenceKey =
+  | "income"
+  | CompositionSegmentKey;
+
+export type CompositionEvidenceMetricKey =
+  | "regular_monthly_income"
+  | "monthly_fixed_costs"
+  | "monthly_irregular_costs"
+  | "avg_variable_spend"
+  | "sustainable_free_cashflow";
+
+export function compositionEvidenceMetricKey(
+  key: CompositionEvidenceKey,
+): CompositionEvidenceMetricKey {
+  switch (key) {
+    case "income":
+      return "regular_monthly_income";
+    case "fixed":
+      return "monthly_fixed_costs";
+    case "irregular":
+      return "monthly_irregular_costs";
+    case "variable":
+      return "avg_variable_spend";
+    case "free":
+    case "deficit":
+      return "sustainable_free_cashflow";
+  }
+}
+
+export function compositionEvidenceTitle(key: CompositionEvidenceKey): string {
+  switch (key) {
+    case "income":
+      return "Regular monthly income";
+    case "fixed":
+      return "Monthly fixed costs";
+    case "irregular":
+      return "Monthly irregular costs";
+    case "variable":
+      return "Average variable spend";
+    case "free":
+      return "Free cashflow";
+    case "deficit":
+      return "Shortfall";
+  }
+}
+
+/** Monthly-equivalent amount matching baseline finance.Compute. */
+export function monthlyEquivalentAmount(
+  amount: number,
+  interval: "monthly" | "quarterly" | "yearly" | string,
+): number {
+  const abs = Math.abs(amount);
+  switch (interval) {
+    case "quarterly":
+      return abs / 3;
+    case "yearly":
+      return abs / 12;
+    default:
+      return abs;
+  }
+}
+
+/** Preserve evidence_ids order; skip IDs missing from the series map. */
+export function resolveEvidenceSeries<T extends { id: string }>(
+  evidenceIds: string[],
+  seriesById: Map<string, T>,
+): T[] {
+  const out: T[] = [];
+  for (const id of evidenceIds) {
+    const series = seriesById.get(id);
+    if (series) {
+      out.push(series);
+    }
+  }
+  return out;
+}
+
 export type CompositionSegment = {
   key: CompositionSegmentKey;
   label: string;

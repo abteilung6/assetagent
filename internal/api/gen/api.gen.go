@@ -1491,6 +1491,9 @@ type ServerInterface interface {
 	// List available LLM models for chat
 	// (GET /api/llm/models)
 	GetLLMModels(w http.ResponseWriter, r *http.Request)
+	// List all recurring series
+	// (GET /api/recurring)
+	GetRecurring(w http.ResponseWriter, r *http.Request)
 	// List uncertain recurring series awaiting review
 	// (GET /api/recurring/uncertain)
 	GetUncertainRecurring(w http.ResponseWriter, r *http.Request)
@@ -1695,6 +1698,12 @@ func (_ Unimplemented) PostImportRollback(w http.ResponseWriter, r *http.Request
 // List available LLM models for chat
 // (GET /api/llm/models)
 func (_ Unimplemented) GetLLMModels(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List all recurring series
+// (GET /api/recurring)
+func (_ Unimplemented) GetRecurring(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2360,6 +2369,20 @@ func (siw *ServerInterfaceWrapper) GetLLMModels(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// GetRecurring operation middleware
+func (siw *ServerInterfaceWrapper) GetRecurring(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRecurring(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetUncertainRecurring operation middleware
 func (siw *ServerInterfaceWrapper) GetUncertainRecurring(w http.ResponseWriter, r *http.Request) {
 
@@ -3015,6 +3038,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/llm/models", wrapper.GetLLMModels)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/recurring", wrapper.GetRecurring)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/recurring/uncertain", wrapper.GetUncertainRecurring)

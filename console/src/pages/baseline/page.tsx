@@ -2,6 +2,7 @@ import type React from "react";
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 
+import { CompositionEvidenceSheet } from "@/components/baseline-composition-evidence/sheet";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Tabs,
@@ -32,6 +33,7 @@ import {
   formatMonthHeadline,
   formatMonthLabel,
   yyyyMmFromMonthStart,
+  type CompositionEvidenceKey,
   type CompositionSegmentKey,
   type MonthlyCashflowPoint,
 } from "@/lib/baseline-charts";
@@ -306,6 +308,9 @@ const BaselineCharts: React.FC<{
   const [hoveredTrendIndex, setHoveredTrendIndex] = useState<number | null>(
     null,
   );
+  const [evidenceKey, setEvidenceKey] =
+    useState<CompositionEvidenceKey | null>(null);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
   const navigate = useNavigate();
   const stripQuery = useBaselineMonthlyCashflow(6);
   const trendQuery = useBaselineMonthlyCashflow(monthsWindow);
@@ -316,6 +321,11 @@ const BaselineCharts: React.FC<{
     variable: Number.parseFloat(baseline.avg_variable_spend) || 0,
     freeCashflow: Number.parseFloat(baseline.sustainable_free_cashflow) || 0,
   });
+
+  const openEvidence = (key: CompositionEvidenceKey) => {
+    setEvidenceKey(key);
+    setEvidenceOpen(true);
+  };
 
   const toPoints = (
     rows: { month_start: string; income: string; expenses: string; net: string }[],
@@ -364,17 +374,21 @@ const BaselineCharts: React.FC<{
                 Typical month
               </h2>
               <p className="text-sm text-muted-foreground">
-                How income splits into costs and free cashflow. Click Variable
-                to correct it.
+                How income splits into costs and free cashflow. Click a segment
+                to see what is inside.
               </p>
             </div>
             <div className="space-y-2">
-              <div className="flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
+              <button
+                type="button"
+                className="flex w-full items-baseline justify-between gap-3 text-left text-xs text-muted-foreground underline-offset-4 hover:underline"
+                onClick={() => openEvidence("income")}
+              >
                 <span>Income</span>
                 <span className="tabular-nums text-foreground">
                   {formatAmount(baseline.regular_monthly_income)}
                 </span>
-              </div>
+              </button>
               <div
                 className="flex h-10 w-full overflow-hidden rounded-lg border bg-muted/30"
                 role="img"
@@ -386,38 +400,36 @@ const BaselineCharts: React.FC<{
                     type="button"
                     title={`${seg.label}: ${formatAmount(seg.amount.toFixed(2))}`}
                     className={cn(
-                      "h-full min-w-0 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "h-full min-w-0 cursor-pointer transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       segmentTone(seg.key),
-                      seg.key === "variable"
-                        ? "cursor-pointer"
-                        : "cursor-default",
                     )}
                     style={{ flexGrow: seg.share, flexBasis: 0 }}
-                    disabled={seg.key !== "variable"}
-                    onClick={() => {
-                      if (seg.key === "variable") {
-                        onFocusMetric("avg_variable_spend");
-                      }
-                    }}
+                    onClick={() => openEvidence(seg.key)}
                   />
                 ))}
               </div>
               <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 {composition.segments.map((seg) => (
-                  <li key={seg.key} className="flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "inline-block size-2 rounded-sm",
-                        segmentTone(seg.key),
-                      )}
-                      aria-hidden
-                    />
-                    <span>
-                      {seg.label}{" "}
-                      <span className="tabular-nums text-foreground">
-                        {formatChartMoney(seg.amount)}
+                  <li key={seg.key}>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 underline-offset-4 hover:underline"
+                      onClick={() => openEvidence(seg.key)}
+                    >
+                      <span
+                        className={cn(
+                          "inline-block size-2 rounded-sm",
+                          segmentTone(seg.key),
+                        )}
+                        aria-hidden
+                      />
+                      <span>
+                        {seg.label}{" "}
+                        <span className="tabular-nums text-foreground">
+                          {formatChartMoney(seg.amount)}
+                        </span>
                       </span>
-                    </span>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -430,6 +442,29 @@ const BaselineCharts: React.FC<{
             insight={stripInsight}
             maxExpense={maxExpense}
             loading={stripQuery.isLoading}
+          />
+
+          <CompositionEvidenceSheet
+            baseline={baseline}
+            evidenceKey={evidenceKey}
+            open={evidenceOpen}
+            onOpenChange={(open) => {
+              setEvidenceOpen(open);
+              if (!open) {
+                setEvidenceKey(null);
+              }
+            }}
+            onCorrectMetric={(key) => {
+              if (key === "variable") {
+                onFocusMetric("avg_variable_spend");
+              } else if (key === "income") {
+                onFocusMetric("regular_monthly_income");
+              } else if (key === "fixed") {
+                onFocusMetric("monthly_fixed_costs");
+              } else if (key === "irregular") {
+                onFocusMetric("monthly_irregular_costs");
+              }
+            }}
           />
         </TabsContent>
 

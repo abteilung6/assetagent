@@ -17,6 +17,35 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+func TestGetRecurring(t *testing.T) {
+	id := uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+	router := newRecurringTestRouter(&stubRecurringService{all: []domain.RecurringSeries{{
+		ID:            id,
+		DisplayName:   "Netflix",
+		Interval:      domain.RecurringIntervalMonthly,
+		Kind:          domain.RecurringKindFixed,
+		Status:        domain.RecurringStatusActive,
+		AmountTypical: decimal.RequireFromString("12.99"),
+		AmountLast:    decimal.RequireFromString("12.99"),
+		Uncertainty:   domain.RecurringUncertaintyLow,
+		MemberCount:   6,
+		CreatedAt:     time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+	}}})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/recurring", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, want := range []string{"Netflix", "12.99", "active"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("body missing %q: %s", want, body)
+		}
+	}
+}
+
 func TestGetUncertainRecurring(t *testing.T) {
 	id := uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 	next := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
@@ -103,9 +132,14 @@ func newRecurringTestRouter(recurring handler.RecurringService) chi.Router {
 }
 
 type stubRecurringService struct {
+	all       []domain.RecurringSeries
 	uncertain []domain.RecurringSeries
 	confirmed uuid.UUID
 	rejectErr error
+}
+
+func (s *stubRecurringService) List(ctx context.Context) ([]domain.RecurringSeries, error) {
+	return s.all, nil
 }
 
 func (s *stubRecurringService) ListUncertain(ctx context.Context) ([]domain.RecurringSeries, error) {

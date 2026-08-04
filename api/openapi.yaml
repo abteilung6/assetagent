@@ -427,6 +427,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/recurring:
+    get:
+      operationId: getRecurring
+      summary: List all recurring series
+      responses:
+        "200":
+          description: Recurring series
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecurringSeriesListResponse"
   /api/recurring/uncertain:
     get:
       operationId: getUncertainRecurring
