@@ -16,6 +16,7 @@ import ReviewPage from "@/pages/review/page";
 import ReviewDetailPage from "@/pages/reviews/detail";
 import ReviewsPage from "@/pages/reviews/page";
 import TransactionsPage from "@/pages/transactions/page";
+import { parseBaselineSearchParams } from "@/pages/baseline/search-params";
 import { parseTransactionSearchParams } from "@/pages/transactions/search-params";
 
 const rootRoute = createRootRoute({
@@ -46,6 +47,8 @@ const baselineRoute = createRoute({
   staticData: {
     title: "Baseline",
   },
+  validateSearch: (search) =>
+    parseBaselineSearchParams(search as Record<string, unknown>),
 });
 
 const baselineMonthRoute = createRoute({
@@ -55,6 +58,8 @@ const baselineMonthRoute = createRoute({
   staticData: {
     title: "Baseline",
   },
+  validateSearch: (search) =>
+    parseBaselineSearchParams(search as Record<string, unknown>),
 });
 
 const importsRoute = createRoute({

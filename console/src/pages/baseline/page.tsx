@@ -38,7 +38,9 @@ import {
   type CompositionSegmentKey,
   type MonthlyCashflowPoint,
 } from "@/lib/baseline-charts";
+import type { BaselineTab } from "@/pages/baseline/search-params";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
+import { baselineRoute } from "@/router";
 import { cn } from "@/lib/utils";
 
 const SUPPORTING_KEYS = [
@@ -304,7 +306,8 @@ const BaselineCharts: React.FC<{
   baseline: FinancialBaseline;
   onFocusMetric: (key: MetricKey) => void;
 }> = ({ baseline, onFocusMetric }) => {
-  const [view, setView] = useState<"composition" | "over-time">("composition");
+  const search = baselineRoute.useSearch();
+  const view = search.tab;
   const [monthsWindow, setMonthsWindow] = useState<3 | 6 | 12>(6);
   const [hoveredTrendIndex, setHoveredTrendIndex] = useState<number | null>(
     null,
@@ -370,7 +373,11 @@ const BaselineCharts: React.FC<{
         value={view}
         onValueChange={(value) => {
           if (value === "composition" || value === "over-time") {
-            setView(value);
+            void navigate({
+              to: "/baseline",
+              search: { tab: value },
+              replace: true,
+            });
           }
         }}
         className="gap-4"
@@ -455,6 +462,7 @@ const BaselineCharts: React.FC<{
             insight={stripInsight}
             maxExpense={maxExpense}
             loading={stripQuery.isLoading}
+            tab={view}
           />
 
           <CompositionEvidenceSheet
@@ -630,6 +638,7 @@ const BaselineCharts: React.FC<{
                             params: {
                               yyyyMm: yyyyMmFromMonthStart(point.monthStart),
                             },
+                            search: { tab: view },
                           });
                         }}
                       />
@@ -704,7 +713,8 @@ const UnusualMonthsStrip: React.FC<{
   insight: ReturnType<typeof detectUnusualMonth>;
   maxExpense: number;
   loading: boolean;
-}> = ({ months, baselineMonth, insight, maxExpense, loading }) => {
+  tab: BaselineTab;
+}> = ({ months, baselineMonth, insight, maxExpense, loading, tab }) => {
   return (
     <div className="space-y-3">
       <div className="space-y-1">
@@ -732,6 +742,7 @@ const UnusualMonthsStrip: React.FC<{
                 key={m.monthStart}
                 to="/baseline/months/$yyyyMm"
                 params={{ yyyyMm: yyyyMmFromMonthStart(m.monthStart) }}
+                search={{ tab }}
                 className="group flex min-w-0 flex-1 flex-col items-center gap-1.5 underline-offset-4 hover:underline"
                 title={`${formatMonthLabel(m.monthStart)} · expenses ${formatAmount(m.expenses.toFixed(2))}`}
               >

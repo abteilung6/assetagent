@@ -203,7 +203,10 @@ describe("Baseline page", () => {
     const marchLink = screen.getByRole("link", {
       name: /2\.2k €/i,
     });
-    expect(marchLink).toHaveAttribute("href", "/baseline/months/2026-03");
+    expect(marchLink).toHaveAttribute(
+      "href",
+      "/baseline/months/2026-03?tab=composition",
+    );
 
     await userEvent.click(
       screen.getByRole("tab", { name: /Income & expenses/i }),
@@ -218,6 +221,9 @@ describe("Baseline page", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Income · typical/i)).toBeInTheDocument();
     expect(screen.getByText(/Expenses · typical/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: /Income & expenses/i }),
+    ).toHaveAttribute("data-active", "");
     await userEvent.click(screen.getByRole("button", { name: /12 mo/i }));
     await waitFor(() => {
       expect(sdk.getBaselineMonthlyCashflow).toHaveBeenCalledWith(
@@ -284,6 +290,21 @@ describe("Baseline page", () => {
         }),
       );
     });
+  });
+
+  it("restores the over-time tab from the URL", async () => {
+    vi.spyOn(sdk, "getCurrentBaseline").mockResolvedValue(
+      mockApiResponse(sampleBaseline),
+    );
+
+    testRender({ route: "/baseline?tab=over-time" });
+
+    expect(
+      await screen.findByText(/Income & expenses over time/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: /Income & expenses/i }),
+    ).toHaveAttribute("data-active", "");
   });
 
   it("opens fixed composition evidence with recurring series", async () => {

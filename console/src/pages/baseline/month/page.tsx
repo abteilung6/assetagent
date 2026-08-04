@@ -18,10 +18,12 @@ import {
   type MonthlyCashflowPoint,
 } from "@/lib/baseline-charts";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
+import { baselineMonthRoute } from "@/router";
 import { cn } from "@/lib/utils";
 
 const BaselineMonthPage: React.FC = () => {
   const { yyyyMm } = useParams({ from: "/baseline/months/$yyyyMm" });
+  const { tab } = baselineMonthRoute.useSearch();
   const monthStart = monthStartFromYyyyMm(yyyyMm);
   const invalid = monthStart == null;
 
@@ -127,6 +129,7 @@ const BaselineMonthPage: React.FC = () => {
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pb-10">
           <Link
             to="/baseline"
+            search={{ tab }}
             className="text-xs text-muted-foreground underline-offset-4 hover:underline"
           >
             ← Baseline
@@ -150,6 +153,7 @@ const BaselineMonthPage: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
             to="/baseline"
+            search={{ tab }}
             className="text-xs text-muted-foreground underline-offset-4 hover:underline"
           >
             ← Baseline
@@ -159,6 +163,7 @@ const BaselineMonthPage: React.FC = () => {
               <Link
                 to="/baseline/months/$yyyyMm"
                 params={{ yyyyMm: prevYyyyMm }}
+                search={{ tab }}
                 className={cn(
                   buttonVariants({ variant: "ghost", size: "sm" }),
                   "h-7 px-2",
@@ -171,6 +176,7 @@ const BaselineMonthPage: React.FC = () => {
               <Link
                 to="/baseline/months/$yyyyMm"
                 params={{ yyyyMm: nextYyyyMm }}
+                search={{ tab }}
                 className={cn(
                   buttonVariants({ variant: "ghost", size: "sm" }),
                   "h-7 px-2",
