@@ -303,6 +303,75 @@ export function formatSignedPercent(value: number): string {
   return `${abs} %`;
 }
 
+/** Months whose booked expenses sit clearly outside the Cashflow cost norm. */
+export function buildExpenseDevelopmentCallouts(
+  months: MonthlyCashflowPoint[],
+  typicalExpenses: number,
+): { low: MonthlyCashflowPoint[]; high: MonthlyCashflowPoint[] } {
+  if (typicalExpenses <= 0) {
+    return { low: [], high: [] };
+  }
+  const low: MonthlyCashflowPoint[] = [];
+  const high: MonthlyCashflowPoint[] = [];
+  for (const m of months) {
+    if (m.expenses <= typicalExpenses * 0.75) {
+      low.push(m);
+    } else if (m.expenses >= typicalExpenses * 1.25) {
+      high.push(m);
+    }
+  }
+  return { low, high };
+}
+
+export type ExpenseDevelopmentRow = {
+  monthStart: string;
+  expenses: number;
+  /** Booked − Cashflow cost norm; null when there is no useful norm. */
+  vsNorm: number | null;
+  /** Percent of norm: (booked − norm) / norm × 100. */
+  vsNormPct: number | null;
+  /** Month-over-month percent vs prior booked expenses; null for first row or zero prior. */
+  vsPriorPct: number | null;
+};
+
+/** Month rows for Expenses → Development (chart companion table). */
+export function buildExpenseDevelopmentRows(
+  months: MonthlyCashflowPoint[],
+  typicalExpenses: number,
+): ExpenseDevelopmentRow[] {
+  return months.map((m, i) => {
+    const prior = i > 0 ? months[i - 1] : undefined;
+    const vsNorm = typicalExpenses > 0 ? m.expenses - typicalExpenses : null;
+    const vsNormPct =
+      typicalExpenses > 0
+        ? ((m.expenses - typicalExpenses) / typicalExpenses) * 100
+        : null;
+    const vsPriorPct =
+      prior && prior.expenses !== 0
+        ? ((m.expenses - prior.expenses) / Math.abs(prior.expenses)) * 100
+        : null;
+    return {
+      monthStart: m.monthStart,
+      expenses: m.expenses,
+      vsNorm,
+      vsNormPct,
+      vsPriorPct,
+    };
+  });
+}
+
+/** Quiet line for Expenses hero when one-offs exist in the baseline window. */
+export function formatExpenseOneOffLine(
+  count: number,
+  expenseTotal: number,
+): string | null {
+  if (count <= 0 || expenseTotal <= 0) {
+    return null;
+  }
+  const countLabel = count === 1 ? "1 one-off" : `${count} one-offs`;
+  return `${countLabel} in window · ${formatCompactMoney(expenseTotal)} — excluded from the norm.`;
+}
+
 export type UnusualMonthInsight = {
   unusual: boolean;
   monthStart: string | null;

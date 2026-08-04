@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { MessageSquareIcon } from "lucide-react";
 import type React from "react";
 
 import type { ChatPageContext } from "@/api/types.gen";
@@ -28,6 +29,7 @@ export const AskAboutThis: React.FC<AskAboutThisProps> = ({
         className,
       )}
     >
+      <MessageSquareIcon aria-hidden />
       Ask
     </Link>
   );

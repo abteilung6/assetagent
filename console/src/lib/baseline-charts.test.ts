@@ -5,6 +5,8 @@ import {
   buildBaselinePerformanceRows,
   buildBaselineReadinessItems,
   buildExpensePaceSeries,
+  buildExpenseDevelopmentCallouts,
+  buildExpenseDevelopmentRows,
   buildIncomeDevelopmentCallouts,
   buildIncomeDevelopmentRows,
   buildMonthStory,
@@ -12,6 +14,7 @@ import {
   detectUnusualMonth,
   eachISODateInclusive,
   formatCompactMoney,
+  formatExpenseOneOffLine,
   formatMonthHeadline,
   formatMonthLabel,
   formatOneOffImpactLine,
@@ -322,5 +325,52 @@ describe("formatSignedPercent", () => {
     expect(formatSignedPercent(42.9)).toBe("+43 %");
     expect(formatSignedPercent(-12.1)).toBe("−12 %");
     expect(formatSignedPercent(0)).toBe("0 %");
+  });
+});
+
+describe("buildExpenseDevelopmentCallouts", () => {
+  it("flags months far from the cost norm", () => {
+    const got = buildExpenseDevelopmentCallouts(
+      [
+        { monthStart: "2026-01-01", income: 0, expenses: 1700, net: 0 },
+        { monthStart: "2026-02-01", income: 0, expenses: 1000, net: 0 },
+        { monthStart: "2026-03-01", income: 0, expenses: 2500, net: 0 },
+      ],
+      1700,
+    );
+    expect(got.low.map((m) => m.monthStart)).toEqual(["2026-02-01"]);
+    expect(got.high.map((m) => m.monthStart)).toEqual(["2026-03-01"]);
+  });
+});
+
+describe("buildExpenseDevelopmentRows", () => {
+  it("computes vs-norm and month-over-month percents for expenses", () => {
+    const rows = buildExpenseDevelopmentRows(
+      [
+        { monthStart: "2026-01-01", income: 0, expenses: 1700, net: 0 },
+        { monthStart: "2026-02-01", income: 0, expenses: 1700, net: 0 },
+        { monthStart: "2026-03-01", income: 0, expenses: 2200, net: 0 },
+      ],
+      1700,
+    );
+    expect(rows[0]).toMatchObject({
+      vsNorm: 0,
+      vsNormPct: 0,
+      vsPriorPct: null,
+    });
+    expect(rows[2]?.vsNorm).toBe(500);
+    expect(rows[2]?.vsNormPct).toBeCloseTo((500 / 1700) * 100);
+    expect(rows[2]?.vsPriorPct).toBeCloseTo((500 / 1700) * 100);
+  });
+});
+
+describe("formatExpenseOneOffLine", () => {
+  it("returns null when there are no one-offs", () => {
+    expect(formatExpenseOneOffLine(0, 0)).toBeNull();
+  });
+
+  it("summarizes one-offs excluded from the cost norm", () => {
+    expect(formatExpenseOneOffLine(2, 800)).toMatch(/2 one-offs/);
+    expect(formatExpenseOneOffLine(2, 800)).toMatch(/excluded from the norm/);
   });
 });

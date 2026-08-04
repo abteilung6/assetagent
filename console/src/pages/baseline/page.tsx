@@ -252,6 +252,13 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
         >
           Understand income
         </Link>
+        {" · "}
+        <Link
+          to="/baseline/expenses"
+          className="text-foreground underline-offset-4 hover:underline"
+        >
+          Understand expenses
+        </Link>
       </p>
 
       <section className="space-y-2">
