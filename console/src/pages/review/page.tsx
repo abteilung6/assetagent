@@ -2,6 +2,7 @@ import type React from "react";
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 
+import { AskAboutThis } from "@/components/chat/ask-about-this";
 import { Button } from "@/components/ui/button";
 import {
   Tabs,
@@ -237,6 +238,20 @@ const ReviewPage: React.FC = () => {
             {applySummary}
           </p>
         ) : null}
+
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">
+            Confirm transfers, categories, and recurring series before they
+            shape Baseline.
+          </p>
+          <AskAboutThis
+            prompt="Summarize what I should clear"
+            context={{
+              route: "/review",
+              tab: activeTab,
+            }}
+          />
+        </div>
 
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>

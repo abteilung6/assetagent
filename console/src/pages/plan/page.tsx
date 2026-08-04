@@ -1,6 +1,7 @@
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 
+import { AskAboutThis } from "@/components/chat/ask-about-this";
 import { Button } from "@/components/ui/button";
 import {
   Tabs,
@@ -142,14 +143,23 @@ const PlanPage: React.FC = () => {
             }}
             className="gap-6"
           >
-            <p className="text-sm text-muted-foreground">
-              <span className="text-foreground">1. Forecast</span> shows where
-              cash is headed ·{" "}
-              <span className="text-foreground">2. What if</span> tests one
-              change ·{" "}
-              <span className="text-foreground">3. Actions</span> tracks the
-              change you decide to make.
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                <span className="text-foreground">1. Forecast</span> shows where
+                cash is headed ·{" "}
+                <span className="text-foreground">2. What if</span> tests one
+                change ·{" "}
+                <span className="text-foreground">3. Actions</span> tracks the
+                change you decide to make.
+              </p>
+              <AskAboutThis
+                prompt="Explain my 90-day runway"
+                context={{
+                  route: "/plan",
+                  forecast_id: forecast!.id,
+                }}
+              />
+            </div>
 
             <TabsList variant="line" className="w-full justify-start">
               <TabsTrigger value="forecast">1. Forecast</TabsTrigger>

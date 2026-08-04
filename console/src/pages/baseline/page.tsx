@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 
 import { CompositionEvidenceSheet } from "@/components/baseline-composition-evidence/sheet";
+import { AskAboutThis } from "@/components/chat/ask-about-this";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Tabs,
@@ -237,6 +238,15 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
         >
           View transactions
         </Link>
+        <AskAboutThis
+          prompt="Explain my free cashflow"
+          context={{
+            route: "/baseline",
+            baseline_id: baseline.id,
+            from: periodFrom,
+            to: periodTo,
+          }}
+        />
       </div>
 
       <BaselineCharts

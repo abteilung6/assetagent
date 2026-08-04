@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 
 import type { Transaction } from "@/api/types.gen";
+import { AskAboutThis } from "@/components/chat/ask-about-this";
 import { TransactionDetailSheet } from "@/components/transaction-detail/sheet";
 import { buttonVariants } from "@/components/ui/button";
 import { useBaselineCategorySpend, useBaselineMonthlyCashflow } from "@/hooks/use-baseline";
@@ -210,11 +211,22 @@ const BaselineMonthPage: React.FC = () => {
         ) : (
           <>
             <header className="space-y-3">
-              <div className="space-y-1">
-                <h2 className="text-xl font-semibold tracking-tight">
-                  {formatMonthHeadline(monthStart)}
-                </h2>
-                <p className="text-sm text-muted-foreground">{story.subline}</p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <h2 className="text-xl font-semibold tracking-tight">
+                    {formatMonthHeadline(monthStart)}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">{story.subline}</p>
+                </div>
+                <AskAboutThis
+                  prompt="Why was this month unusual?"
+                  context={{
+                    route: `/baseline/months/${yyyyMm}`,
+                    yyyy_mm: yyyyMm,
+                    from: monthStart,
+                    to: monthEnd,
+                  }}
+                />
               </div>
               <dl className="grid grid-cols-3 gap-4">
                 <div className="space-y-1">
