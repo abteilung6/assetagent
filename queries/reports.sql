@@ -151,6 +151,55 @@ GROUP BY 1
 ORDER BY total DESC, merchant ASC
 LIMIT sqlc.arg('row_limit');
 
+-- name: ListMonthlyCategorySpendInPeriod :many
+WITH category_totals AS (
+  SELECT
+    c.slug AS category_slug,
+    c.display_name AS category_name,
+    COALESCE(SUM(-t.amount), 0)::numeric AS period_total
+  FROM transactions t
+  JOIN transaction_classifications tc ON tc.transaction_id = t.id
+  JOIN categories c ON c.id = tc.category_id
+  WHERE t.booking_date >= sqlc.arg('from_date')::date
+    AND t.booking_date <= sqlc.arg('to_date')::date
+    AND t.amount < 0
+    AND t.one_off = false
+    AND NOT EXISTS (
+      SELECT 1
+      FROM transfer_pairs p
+      WHERE p.status = 'confirmed'
+        AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
+    )
+  GROUP BY c.slug, c.display_name
+),
+top_categories AS (
+  SELECT category_slug, category_name
+  FROM category_totals
+  ORDER BY period_total DESC, category_name ASC
+  LIMIT sqlc.arg('category_limit')
+)
+SELECT
+  date_trunc('month', t.booking_date)::date AS month_start,
+  c.slug AS category_slug,
+  c.display_name AS category_name,
+  COALESCE(SUM(-t.amount), 0)::numeric AS total
+FROM transactions t
+JOIN transaction_classifications tc ON tc.transaction_id = t.id
+JOIN categories c ON c.id = tc.category_id
+JOIN top_categories top ON top.category_slug = c.slug
+WHERE t.booking_date >= sqlc.arg('from_date')::date
+  AND t.booking_date <= sqlc.arg('to_date')::date
+  AND t.amount < 0
+  AND t.one_off = false
+  AND NOT EXISTS (
+    SELECT 1
+    FROM transfer_pairs p
+    WHERE p.status = 'confirmed'
+      AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
+  )
+GROUP BY 1, c.slug, c.display_name
+ORDER BY 1 ASC, total DESC, c.display_name ASC;
+
 -- name: ListDailyExpensePaceInPeriod :many
 SELECT
   t.booking_date::date AS booking_day,

@@ -215,7 +215,10 @@ const BaselineHistoryPage: React.FC = () => {
             <div className="space-y-2">
               <svg
                 viewBox={`0 0 ${dualLayout.width} ${dualLayout.height}`}
-                className="h-52 w-full text-foreground"
+                className="w-full text-foreground"
+                style={{
+                  aspectRatio: `${dualLayout.width} / ${dualLayout.height}`,
+                }}
                 role="img"
                 aria-label="Monthly income and expenses over time with Cashflow norm guides"
               >

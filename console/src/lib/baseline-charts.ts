@@ -425,6 +425,76 @@ export function completeMonthsWindow(
   };
 }
 
+export type CategoryMonthlySpendInput = {
+  month_start: string;
+  category_slug: string;
+  category_name: string;
+  total: string | number;
+};
+
+export type CategoryMonthlySeries = {
+  categorySlug: string;
+  categoryName: string;
+  periodTotal: number;
+};
+
+export type CategoryMonthlyChartModel = {
+  months: string[];
+  series: CategoryMonthlySeries[];
+  /** Parallel to months: values aligned with series order. */
+  points: Array<{ date: string; values: number[] }>;
+};
+
+/** Pivot flat monthly category rows into a multi-series chart model. */
+export function buildCategoryMonthlyChartModel(
+  rows: CategoryMonthlySpendInput[],
+): CategoryMonthlyChartModel {
+  const monthSet = new Set<string>();
+  const seriesMeta = new Map<
+    string,
+    { name: string; periodTotal: number }
+  >();
+  const byMonthSlug = new Map<string, number>();
+
+  for (const row of rows) {
+    const monthStart = row.month_start.slice(0, 10);
+    const total =
+      typeof row.total === "number"
+        ? row.total
+        : Number.parseFloat(row.total) || 0;
+    monthSet.add(monthStart);
+    const meta = seriesMeta.get(row.category_slug);
+    if (meta) {
+      meta.periodTotal += total;
+      meta.name = row.category_name;
+    } else {
+      seriesMeta.set(row.category_slug, {
+        name: row.category_name,
+        periodTotal: total,
+      });
+    }
+    byMonthSlug.set(`${monthStart}|${row.category_slug}`, total);
+  }
+
+  const months = [...monthSet].sort();
+  const series = [...seriesMeta.entries()]
+    .map(([categorySlug, meta]) => ({
+      categorySlug,
+      categoryName: meta.name,
+      periodTotal: meta.periodTotal,
+    }))
+    .sort((a, b) => b.periodTotal - a.periodTotal);
+
+  const points = months.map((date) => ({
+    date,
+    values: series.map(
+      (s) => byMonthSlug.get(`${date}|${s.categorySlug}`) ?? 0,
+    ),
+  }));
+
+  return { months, series, points };
+}
+
 /** Months whose booked expenses sit clearly outside the Cashflow cost norm. */
 export function buildExpenseDevelopmentCallouts(
   months: MonthlyCashflowPoint[],

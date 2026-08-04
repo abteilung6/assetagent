@@ -8,8 +8,16 @@ import { Button } from "@/components/ui/button";
 import {
   useBaselineCategoryMerchants,
   useBaselineCategorySpend,
+  useBaselineCategorySpendMonthly,
 } from "@/hooks/use-baseline";
 import {
+  buildMultiSeriesChartLayout,
+  chartLabelAnchor,
+  formatChartDate,
+  formatChartMoney,
+} from "@/lib/balance-chart";
+import {
+  buildCategoryMonthlyChartModel,
   buildCategoryMovers,
   buildCategoryShareRows,
   completeMonthsWindow,
@@ -19,6 +27,14 @@ import {
 } from "@/lib/baseline-charts";
 import { cn } from "@/lib/utils";
 import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
+
+const SERIES_STROKE = [
+  "stroke-foreground",
+  "stroke-red-700/75 dark:stroke-red-400/75",
+  "stroke-emerald-700/70 dark:stroke-emerald-400/70",
+  "stroke-muted-foreground",
+  "stroke-amber-800/65 dark:stroke-amber-300/65",
+] as const;
 
 function formatEuro(value: number): string {
   return new Intl.NumberFormat("de-DE", {
@@ -74,17 +90,24 @@ function lastCompleteMonthBounds(now = new Date()): {
 const InsightsCategoriesPage: React.FC = () => {
   const [monthsWindow, setMonthsWindow] = useState<6 | 12>(12);
   const [expandedSlug, setExpandedSlug] = useState<string | null>(null);
+  const [focusedSlug, setFocusedSlug] = useState<string | null>(null);
 
-  const window = useMemo(
+  const period = useMemo(
     () => completeMonthsWindow(monthsWindow),
     [monthsWindow],
   );
   const monthBounds = useMemo(() => lastCompleteMonthBounds(), []);
 
   const spendQuery = useBaselineCategorySpend(
-    window.from,
-    window.to,
+    period.from,
+    period.to,
     50,
+    true,
+  );
+  const monthlyQuery = useBaselineCategorySpendMonthly(
+    period.from,
+    period.to,
+    5,
     true,
   );
   const currentMonthQuery = useBaselineCategorySpend(
@@ -116,6 +139,41 @@ const InsightsCategoriesPage: React.FC = () => {
   );
   const dominant = shareRows[0] ?? null;
 
+  const monthlyModel = useMemo(
+    () => buildCategoryMonthlyChartModel(monthlyQuery.data?.data ?? []),
+    [monthlyQuery.data],
+  );
+  const chartModel = useMemo(() => {
+    if (!focusedSlug) {
+      return monthlyModel;
+    }
+    const idx = monthlyModel.series.findIndex(
+      (s) => s.categorySlug === focusedSlug,
+    );
+    if (idx < 0) {
+      return monthlyModel;
+    }
+    const series = [monthlyModel.series[idx]!];
+    return {
+      months: monthlyModel.months,
+      series,
+      points: monthlyModel.points.map((p) => ({
+        date: p.date,
+        values: [p.values[idx] ?? 0],
+      })),
+    };
+  }, [monthlyModel, focusedSlug]);
+  const chartLayout = useMemo(
+    () => buildMultiSeriesChartLayout(chartModel.points),
+    [chartModel.points],
+  );
+
+  function toggleCategory(slug: string) {
+    const open = expandedSlug === slug;
+    setExpandedSlug(open ? null : slug);
+    setFocusedSlug(open ? null : slug);
+  }
+
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 pb-10">
@@ -130,8 +188,8 @@ const InsightsCategoriesPage: React.FC = () => {
                   prompt="Which categories dominate spending lately?"
                   context={{
                     route: "/insights/categories",
-                    from: window.from,
-                    to: window.to,
+                    from: period.from,
+                    to: period.to,
                     months: monthsWindow,
                   }}
                   className="-my-1 h-auto px-0 py-0"
@@ -141,7 +199,7 @@ const InsightsCategoriesPage: React.FC = () => {
                 {spendQuery.isLoading ? "…" : formatEuro(totalSpend)}
               </p>
               <p className="text-sm text-muted-foreground">
-                {window.from} → {window.to}
+                {period.from} → {period.to}
                 {dominant
                   ? ` · ${dominant.categoryName} ${formatShare(dominant.share)}`
                   : null}
@@ -163,6 +221,124 @@ const InsightsCategoriesPage: React.FC = () => {
             </div>
           </div>
         </header>
+
+        <section className="space-y-3">
+          <div className="space-y-1">
+            <h2 className="text-sm font-semibold tracking-tight">
+              Development
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Top categories by month
+              {focusedSlug
+                ? " — focused on the expanded category."
+                : ". Expand a category below to focus the chart."}
+            </p>
+          </div>
+          {monthlyQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading trend…</p>
+          ) : !chartLayout || chartModel.series.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Not enough classified spend for a monthly trend yet.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <svg
+                viewBox={`0 0 ${chartLayout.width} ${chartLayout.height}`}
+                className="w-full text-foreground"
+                style={{
+                  aspectRatio: `${chartLayout.width} / ${chartLayout.height}`,
+                }}
+                role="img"
+                aria-label="Monthly spend by top categories"
+              >
+                {chartLayout.moneyLabels.map((label) => (
+                  <g key={`money-${label.value}`}>
+                    <line
+                      x1={chartLayout.padX}
+                      x2={chartLayout.width - chartLayout.padX}
+                      y1={label.y}
+                      y2={label.y}
+                      className="stroke-border/60"
+                      strokeWidth={1}
+                      strokeDasharray={label.value === 0 ? "4 4" : undefined}
+                    />
+                    <text
+                      x={chartLayout.padX - 8}
+                      y={label.y + 3}
+                      textAnchor="end"
+                      className="fill-muted-foreground"
+                      fontSize={11}
+                    >
+                      {label.text}
+                    </text>
+                  </g>
+                ))}
+                {chartLayout.paths.map((path, i) => (
+                  <path
+                    key={chartModel.series[i]?.categorySlug ?? i}
+                    d={path}
+                    className={SERIES_STROKE[i % SERIES_STROKE.length]}
+                    fill="none"
+                    strokeWidth={2}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    strokeDasharray={i === 0 ? undefined : "5 4"}
+                  />
+                ))}
+                {chartLayout.labelIndexes.map((i) => {
+                  const date = chartModel.months[i]!;
+                  const x = chartLayout.xs[i]!;
+                  return (
+                    <g key={date}>
+                      <line
+                        x1={x}
+                        x2={x}
+                        y1={chartLayout.padTop + chartLayout.innerH}
+                        y2={chartLayout.padTop + chartLayout.innerH + 4}
+                        className="stroke-muted-foreground"
+                        strokeWidth={1}
+                      />
+                      <text
+                        x={x}
+                        y={chartLayout.height - 12}
+                        textAnchor={chartLabelAnchor(
+                          i,
+                          chartModel.months.length,
+                        )}
+                        className="fill-muted-foreground"
+                        fontSize={11}
+                      >
+                        {formatChartDate(date)}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+              <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                {chartModel.series.map((s, i) => (
+                  <li key={s.categorySlug} className="flex items-center gap-1.5">
+                    <span
+                      className={cn(
+                        "inline-block h-0.5 w-3",
+                        i === 0
+                          ? "bg-foreground"
+                          : i === 1
+                            ? "border-t-2 border-dashed border-red-700/75 dark:border-red-400/75"
+                            : i === 2
+                              ? "border-t-2 border-dashed border-emerald-700/70 dark:border-emerald-400/70"
+                              : "bg-muted-foreground",
+                      )}
+                    />
+                    {s.categoryName}
+                    <span className="tabular-nums">
+                      ({formatChartMoney(s.periodTotal)})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
 
         {movers.length > 0 ? (
           <section className="space-y-3">
@@ -224,7 +400,7 @@ const InsightsCategoriesPage: React.FC = () => {
               Spend mix
             </h2>
             <p className="text-sm text-muted-foreground">
-              Expand a category for top merchants in this window.
+              Expand a category for top merchants and to focus the chart.
             </p>
           </div>
           {spendQuery.isLoading ? (
@@ -244,9 +420,7 @@ const InsightsCategoriesPage: React.FC = () => {
                       type="button"
                       className="flex w-full items-start gap-2 text-left"
                       aria-expanded={open}
-                      onClick={() =>
-                        setExpandedSlug(open ? null : row.categorySlug)
-                      }
+                      onClick={() => toggleCategory(row.categorySlug)}
                     >
                       <ChevronRight
                         className={cn(
@@ -276,8 +450,8 @@ const InsightsCategoriesPage: React.FC = () => {
                     </button>
                     {open ? (
                       <CategoryMerchantsPanel
-                        from={window.from}
-                        to={window.to}
+                        from={period.from}
+                        to={period.to}
                         categorySlug={row.categorySlug}
                         categoryName={row.categoryName}
                       />

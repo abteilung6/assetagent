@@ -4,6 +4,7 @@ import {
   buildBalanceChartLayout,
   buildDualSeriesChartLayout,
   buildExpensePaceChartLayout,
+  buildMultiSeriesChartLayout,
   chartDateIndexes,
   chartLabelAnchor,
   chartMoneyTicks,
@@ -143,6 +144,23 @@ describe("buildDualSeriesChartLayout", () => {
     expect(layout!.referenceLines[0]!.y).toBeLessThan(
       layout!.referenceLines[1]!.y,
     );
+  });
+});
+
+describe("buildMultiSeriesChartLayout", () => {
+  it("returns null for empty input", () => {
+    expect(buildMultiSeriesChartLayout([])).toBeNull();
+  });
+
+  it("builds one path per series", () => {
+    const layout = buildMultiSeriesChartLayout([
+      { date: "2026-01-01", values: [100, 50] },
+      { date: "2026-02-01", values: [120, 40] },
+    ]);
+    expect(layout).not.toBeNull();
+    expect(layout!.paths).toHaveLength(2);
+    expect(layout!.seriesYs).toHaveLength(2);
+    expect(layout!.max).toBe(120);
   });
 });
 

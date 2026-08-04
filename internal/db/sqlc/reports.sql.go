@@ -507,3 +507,91 @@ func (q *Queries) ListMonthlyCashflowV2(ctx context.Context, arg ListMonthlyCash
 	}
 	return items, nil
 }
+
+const listMonthlyCategorySpendInPeriod = `-- name: ListMonthlyCategorySpendInPeriod :many
+WITH category_totals AS (
+  SELECT
+    c.slug AS category_slug,
+    c.display_name AS category_name,
+    COALESCE(SUM(-t.amount), 0)::numeric AS period_total
+  FROM transactions t
+  JOIN transaction_classifications tc ON tc.transaction_id = t.id
+  JOIN categories c ON c.id = tc.category_id
+  WHERE t.booking_date >= $1::date
+    AND t.booking_date <= $2::date
+    AND t.amount < 0
+    AND t.one_off = false
+    AND NOT EXISTS (
+      SELECT 1
+      FROM transfer_pairs p
+      WHERE p.status = 'confirmed'
+        AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
+    )
+  GROUP BY c.slug, c.display_name
+),
+top_categories AS (
+  SELECT category_slug, category_name
+  FROM category_totals
+  ORDER BY period_total DESC, category_name ASC
+  LIMIT $3
+)
+SELECT
+  date_trunc('month', t.booking_date)::date AS month_start,
+  c.slug AS category_slug,
+  c.display_name AS category_name,
+  COALESCE(SUM(-t.amount), 0)::numeric AS total
+FROM transactions t
+JOIN transaction_classifications tc ON tc.transaction_id = t.id
+JOIN categories c ON c.id = tc.category_id
+JOIN top_categories top ON top.category_slug = c.slug
+WHERE t.booking_date >= $1::date
+  AND t.booking_date <= $2::date
+  AND t.amount < 0
+  AND t.one_off = false
+  AND NOT EXISTS (
+    SELECT 1
+    FROM transfer_pairs p
+    WHERE p.status = 'confirmed'
+      AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
+  )
+GROUP BY 1, c.slug, c.display_name
+ORDER BY 1 ASC, total DESC, c.display_name ASC
+`
+
+type ListMonthlyCategorySpendInPeriodParams struct {
+	FromDate      pgtype.Date `json:"from_date"`
+	ToDate        pgtype.Date `json:"to_date"`
+	CategoryLimit int32       `json:"category_limit"`
+}
+
+type ListMonthlyCategorySpendInPeriodRow struct {
+	MonthStart   pgtype.Date     `json:"month_start"`
+	CategorySlug string          `json:"category_slug"`
+	CategoryName string          `json:"category_name"`
+	Total        decimal.Decimal `json:"total"`
+}
+
+func (q *Queries) ListMonthlyCategorySpendInPeriod(ctx context.Context, arg ListMonthlyCategorySpendInPeriodParams) ([]ListMonthlyCategorySpendInPeriodRow, error) {
+	rows, err := q.db.Query(ctx, listMonthlyCategorySpendInPeriod, arg.FromDate, arg.ToDate, arg.CategoryLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListMonthlyCategorySpendInPeriodRow{}
+	for rows.Next() {
+		var i ListMonthlyCategorySpendInPeriodRow
+		if err := rows.Scan(
+			&i.MonthStart,
+			&i.CategorySlug,
+			&i.CategoryName,
+			&i.Total,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

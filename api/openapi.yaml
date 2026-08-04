@@ -759,6 +759,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/baselines/category-spend-monthly:
+    get:
+      operationId: getBaselineCategorySpendMonthly
+      summary: Monthly expense totals for top categories in a period
+      description: >
+        Transfer-aware expense outflows by calendar month for the top N
+        categories by period total (excludes one-offs).
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+            default: 5
+      responses:
+        "200":
+          description: Monthly category spend series
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BaselineCategorySpendMonthlyResponse"
+        "400":
+          description: Invalid period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/baselines/daily-expense-pace:
     get:
       operationId: getBaselineDailyExpensePace
@@ -2145,6 +2185,28 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BaselineCategoryMerchantPoint"
+    BaselineCategorySpendMonthlyPoint:
+      type: object
+      required: [month_start, category_slug, category_name, total]
+      properties:
+        month_start:
+          type: string
+          format: date
+        category_slug:
+          type: string
+        category_name:
+          type: string
+        total:
+          type: string
+          description: Absolute EUR spent in the category that month
+    BaselineCategorySpendMonthlyResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BaselineCategorySpendMonthlyPoint"
     BaselineDailyExpensePacePoint:
       type: object
       required: [date, expenses, transaction_count]

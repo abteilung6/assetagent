@@ -302,6 +302,106 @@ export function buildDualSeriesChartLayout(
   };
 }
 
+export type MultiSeriesPoint = {
+  date: string;
+  values: number[];
+};
+
+export type MultiSeriesChartLayout = {
+  width: number;
+  height: number;
+  padX: number;
+  padTop: number;
+  padBottom: number;
+  innerH: number;
+  min: number;
+  max: number;
+  paths: string[];
+  zeroY: number;
+  labelIndexes: number[];
+  moneyLabels: BalanceChartAxisLabel[];
+  xs: number[];
+  seriesYs: number[][];
+};
+
+/** Build SVG geometry for several numeric series sharing one Y scale. */
+export function buildMultiSeriesChartLayout(
+  points: MultiSeriesPoint[],
+  options?: {
+    width?: number;
+    height?: number;
+    padX?: number;
+    padTop?: number;
+    padBottom?: number;
+  },
+): MultiSeriesChartLayout | null {
+  if (!points.length) {
+    return null;
+  }
+  const seriesCount = points[0]?.values.length ?? 0;
+  if (seriesCount === 0) {
+    return null;
+  }
+  if (
+    points.some(
+      (p) =>
+        p.values.length !== seriesCount ||
+        p.values.some((v) => Number.isNaN(v)),
+    )
+  ) {
+    return null;
+  }
+
+  const width = options?.width ?? DEFAULT_WIDTH;
+  const height = options?.height ?? DEFAULT_HEIGHT;
+  const padX = options?.padX ?? DEFAULT_PAD_X;
+  const padTop = options?.padTop ?? DEFAULT_PAD_TOP;
+  const padBottom = options?.padBottom ?? DEFAULT_PAD_BOTTOM;
+  const innerW = width - padX * 2;
+  const innerH = height - padTop - padBottom;
+
+  const values = points.flatMap((p) => p.values);
+  const min = Math.min(...values, 0);
+  const max = Math.max(...values, 0);
+  const span = max - min || 1;
+
+  const xs = points.map((_, i) =>
+    padX +
+    (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW),
+  );
+  const seriesYs = Array.from({ length: seriesCount }, (_, s) =>
+    points.map((p, i) =>
+      yForValue(p.values[s]!, min, span, padTop, innerH),
+    ),
+  );
+  const paths = seriesYs.map((ys) =>
+    ys
+      .map((y, i) => `${i === 0 ? "M" : "L"} ${xs[i]!} ${y}`)
+      .join(" "),
+  );
+
+  return {
+    width,
+    height,
+    padX,
+    padTop,
+    padBottom,
+    innerH,
+    min,
+    max,
+    paths,
+    zeroY: yForValue(0, min, span, padTop, innerH),
+    labelIndexes: chartDateIndexes(points.length),
+    moneyLabels: chartMoneyTicks(min, max).map((value) => ({
+      value,
+      y: yForValue(value, min, span, padTop, innerH),
+      text: formatChartMoney(value),
+    })),
+    xs,
+    seriesYs,
+  };
+}
+
 export type ExpensePaceChartPoint = {
   date: string;
   cumulative: number;

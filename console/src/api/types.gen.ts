@@ -393,6 +393,20 @@ export type BaselineCategoryMerchantsResponse = {
     data: Array<BaselineCategoryMerchantPoint>;
 };
 
+export type BaselineCategorySpendMonthlyPoint = {
+    month_start: string;
+    category_slug: string;
+    category_name: string;
+    /**
+     * Absolute EUR spent in the category that month
+     */
+    total: string;
+};
+
+export type BaselineCategorySpendMonthlyResponse = {
+    data: Array<BaselineCategorySpendMonthlyPoint>;
+};
+
 export type BaselineDailyExpensePacePoint = {
     date: string;
     /**
@@ -1363,6 +1377,35 @@ export type GetBaselineCategoryMerchantsResponses = {
 };
 
 export type GetBaselineCategoryMerchantsResponse = GetBaselineCategoryMerchantsResponses[keyof GetBaselineCategoryMerchantsResponses];
+
+export type GetBaselineCategorySpendMonthlyData = {
+    body?: never;
+    path?: never;
+    query: {
+        from: string;
+        to: string;
+        limit?: number;
+    };
+    url: '/api/baselines/category-spend-monthly';
+};
+
+export type GetBaselineCategorySpendMonthlyErrors = {
+    /**
+     * Invalid period
+     */
+    400: Error;
+};
+
+export type GetBaselineCategorySpendMonthlyError = GetBaselineCategorySpendMonthlyErrors[keyof GetBaselineCategorySpendMonthlyErrors];
+
+export type GetBaselineCategorySpendMonthlyResponses = {
+    /**
+     * Monthly category spend series
+     */
+    200: BaselineCategorySpendMonthlyResponse;
+};
+
+export type GetBaselineCategorySpendMonthlyResponse = GetBaselineCategorySpendMonthlyResponses[keyof GetBaselineCategorySpendMonthlyResponses];
 
 export type GetBaselineDailyExpensePaceData = {
     body?: never;

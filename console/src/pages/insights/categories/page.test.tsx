@@ -55,6 +55,36 @@ describe("Insights categories page", () => {
         ],
       }),
     );
+    vi.spyOn(sdk, "getBaselineCategorySpendMonthly").mockResolvedValue(
+      mockApiResponse({
+        data: [
+          {
+            month_start: "2026-01-01",
+            category_slug: "housing",
+            category_name: "Housing",
+            total: "1200.00",
+          },
+          {
+            month_start: "2026-02-01",
+            category_slug: "housing",
+            category_name: "Housing",
+            total: "1200.00",
+          },
+          {
+            month_start: "2026-01-01",
+            category_slug: "groceries",
+            category_name: "Groceries",
+            total: "300.00",
+          },
+          {
+            month_start: "2026-02-01",
+            category_slug: "groceries",
+            category_name: "Groceries",
+            total: "300.00",
+          },
+        ],
+      }),
+    );
   });
 
   afterEach(() => {
@@ -64,12 +94,19 @@ describe("Insights categories page", () => {
   it("shows spend mix and expands merchants", async () => {
     testRender({ route: "/insights/categories" });
 
-    expect(await screen.findByText("Housing")).toBeInTheDocument();
+    expect(await screen.findByText("Development")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("img", { name: /Monthly spend by top categories/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Spend mix")).toBeInTheDocument();
-    expect(screen.getByText("Groceries")).toBeInTheDocument();
+    expect(screen.getAllByText("Housing").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Groceries").length).toBeGreaterThan(0);
     expect(screen.getByText(/Classified spend/i)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /Housing/i }));
+    const housingButtons = await screen.findAllByRole("button", {
+      name: /Housing/i,
+    });
+    await userEvent.click(housingButtons[0]!);
 
     expect(await screen.findByText("Vermieter GmbH")).toBeInTheDocument();
     expect(sdk.getBaselineCategoryMerchants).toHaveBeenCalled();

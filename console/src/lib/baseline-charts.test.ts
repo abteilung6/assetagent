@@ -5,6 +5,7 @@ import {
   buildBaselinePerformanceRows,
   buildBaselineReadinessItems,
   buildCategoryMovers,
+  buildCategoryMonthlyChartModel,
   buildCategoryShareRows,
   buildExpensePaceSeries,
   buildExpenseDevelopmentCallouts,
@@ -390,16 +391,48 @@ describe("buildCategoryMovers", () => {
 
 describe("completeMonthsWindow", () => {
   it("covers the last N complete calendar months", () => {
-    const window = completeMonthsWindow(
-      3,
-      new Date(Date.UTC(2026, 6, 19)),
-    );
-    // July 19 2026 local — careful with timezone. Use fixed local constructor.
     const local = completeMonthsWindow(3, new Date(2026, 6, 19));
     expect(local.from).toBe("2026-04-01");
     expect(local.to).toBe("2026-06-30");
     expect(local.months).toBe(3);
-    expect(window.months).toBe(3);
+  });
+});
+
+describe("buildCategoryMonthlyChartModel", () => {
+  it("pivots flat rows into months and ranked series", () => {
+    const model = buildCategoryMonthlyChartModel([
+      {
+        month_start: "2026-02-01",
+        category_slug: "housing",
+        category_name: "Housing",
+        total: "1200",
+      },
+      {
+        month_start: "2026-01-01",
+        category_slug: "housing",
+        category_name: "Housing",
+        total: "1100",
+      },
+      {
+        month_start: "2026-01-01",
+        category_slug: "groceries",
+        category_name: "Groceries",
+        total: "400",
+      },
+      {
+        month_start: "2026-02-01",
+        category_slug: "groceries",
+        category_name: "Groceries",
+        total: "300",
+      },
+    ]);
+    expect(model.months).toEqual(["2026-01-01", "2026-02-01"]);
+    expect(model.series.map((s) => s.categorySlug)).toEqual([
+      "housing",
+      "groceries",
+    ]);
+    expect(model.points[0]?.values).toEqual([1100, 400]);
+    expect(model.points[1]?.values).toEqual([1200, 300]);
   });
 });
 

@@ -297,6 +297,45 @@ func (r *Reports) ListMerchantSpendInCategory(
 	return out, nil
 }
 
+// MonthlyCategorySpendPoint is expense total for one category in one calendar month.
+type MonthlyCategorySpendPoint struct {
+	MonthStart   time.Time
+	CategorySlug string
+	CategoryName string
+	Total        decimal.Decimal
+}
+
+func (r *Reports) ListMonthlyCategorySpend(
+	ctx context.Context,
+	from, to time.Time,
+	categoryLimit int,
+) ([]MonthlyCategorySpendPoint, error) {
+	if categoryLimit < 1 {
+		categoryLimit = 5
+	}
+	if categoryLimit > 12 {
+		categoryLimit = 12
+	}
+	rows, err := r.queries.ListMonthlyCategorySpendInPeriod(ctx, sqldb.ListMonthlyCategorySpendInPeriodParams{
+		FromDate:      pgtype.Date{Time: from, Valid: true},
+		ToDate:        pgtype.Date{Time: to, Valid: true},
+		CategoryLimit: int32(categoryLimit),
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]MonthlyCategorySpendPoint, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, MonthlyCategorySpendPoint{
+			MonthStart:   row.MonthStart.Time,
+			CategorySlug: row.CategorySlug,
+			CategoryName: row.CategoryName,
+			Total:        row.Total,
+		})
+	}
+	return out, nil
+}
+
 // DailyExpensePacePoint is expense total and booking count for one day.
 type DailyExpensePacePoint struct {
 	Date             time.Time

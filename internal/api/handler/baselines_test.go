@@ -260,6 +260,23 @@ func (s *stubBaselineService) CategoryMerchants(ctx context.Context, from, to ti
 	}, nil
 }
 
+func (s *stubBaselineService) CategorySpendMonthly(ctx context.Context, from, to time.Time, categoryLimit int) ([]repository.MonthlyCategorySpendPoint, error) {
+	return []repository.MonthlyCategorySpendPoint{
+		{
+			MonthStart:   time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC),
+			CategorySlug: "housing",
+			CategoryName: "Housing",
+			Total:        decimal.RequireFromString("1200.00"),
+		},
+		{
+			MonthStart:   time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
+			CategorySlug: "housing",
+			CategoryName: "Housing",
+			Total:        decimal.RequireFromString("1200.00"),
+		},
+	}, nil
+}
+
 func (s *stubBaselineService) DailyExpensePace(ctx context.Context, from, to time.Time) ([]repository.DailyExpensePacePoint, error) {
 	return []repository.DailyExpensePacePoint{
 		{

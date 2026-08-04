@@ -24,6 +24,7 @@ type BaselineService interface {
 	OneOffImpact(ctx context.Context, from, to time.Time) (repository.OneOffExpenseImpact, error)
 	CategorySpend(ctx context.Context, from, to time.Time, limit int) ([]repository.CategorySpendPoint, error)
 	CategoryMerchants(ctx context.Context, from, to time.Time, categorySlug string, limit int) ([]repository.CategoryMerchantSpendPoint, error)
+	CategorySpendMonthly(ctx context.Context, from, to time.Time, categoryLimit int) ([]repository.MonthlyCategorySpendPoint, error)
 	DailyExpensePace(ctx context.Context, from, to time.Time) ([]repository.DailyExpensePacePoint, error)
 }
 
@@ -153,6 +154,36 @@ func (h *Handler) GetBaselineCategoryMerchants(w http.ResponseWriter, r *http.Re
 		}
 	}
 	writeJSON(w, http.StatusOK, gen.BaselineCategoryMerchantsResponse{Data: data})
+}
+
+func (h *Handler) GetBaselineCategorySpendMonthly(w http.ResponseWriter, r *http.Request, params gen.GetBaselineCategorySpendMonthlyParams) {
+	if h.baseline == nil {
+		writeInternalError(w, "baseline service is not configured")
+		return
+	}
+	limit := 5
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+	items, err := h.baseline.CategorySpendMonthly(r.Context(), params.From.Time, params.To.Time, limit)
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidBaselinePeriod) {
+			writeValidationError(w, err.Error())
+			return
+		}
+		writeInternalError(w, "failed to load monthly category spend")
+		return
+	}
+	data := make([]gen.BaselineCategorySpendMonthlyPoint, len(items))
+	for i, item := range items {
+		data[i] = gen.BaselineCategorySpendMonthlyPoint{
+			MonthStart:   openapi_types.Date{Time: item.MonthStart},
+			CategorySlug: item.CategorySlug,
+			CategoryName: item.CategoryName,
+			Total:        item.Total.StringFixed(2),
+		}
+	}
+	writeJSON(w, http.StatusOK, gen.BaselineCategorySpendMonthlyResponse{Data: data})
 }
 
 func (h *Handler) GetBaselineDailyExpensePace(w http.ResponseWriter, r *http.Request, params gen.GetBaselineDailyExpensePaceParams) {
