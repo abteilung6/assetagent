@@ -1,6 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 
-import type { ChatMessage, ChatToolCall, LlmModelSelection } from "@/api/types.gen";
+import type {
+  ChatMessage,
+  ChatPageContext,
+  ChatToolCall,
+  LlmModelSelection,
+} from "@/api/types.gen";
 import { streamChat } from "@/lib/chat-stream";
 
 export type ChatUIMessage = {
@@ -23,6 +28,7 @@ export function useChat(selection: LlmModelSelection | null) {
   const [error, setError] = useState<Error | null>(null);
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [pageContext, setPageContext] = useState<ChatPageContext | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const stop = useCallback(() => {
@@ -30,10 +36,15 @@ export function useChat(selection: LlmModelSelection | null) {
   }, []);
 
   const send = useCallback(
-    async (content: string) => {
+    async (content: string, context?: ChatPageContext | null) => {
       const trimmed = content.trim();
       if (!trimmed || isPending || !selection) {
         return;
+      }
+
+      const resolvedContext = context === undefined ? pageContext : context;
+      if (context) {
+        setPageContext(context);
       }
 
       abortRef.current?.abort();
@@ -79,6 +90,7 @@ export function useChat(selection: LlmModelSelection | null) {
         await streamChat({
           messages: toApiMessages(nextMessages),
           selection,
+          context: resolvedContext ?? undefined,
           signal: controller.signal,
           onEvent: (event) => {
             switch (event.type) {
@@ -154,7 +166,7 @@ export function useChat(selection: LlmModelSelection | null) {
         }
       }
     },
-    [messages, isPending, selection],
+    [messages, isPending, selection, pageContext],
   );
 
   return {
@@ -166,5 +178,7 @@ export function useChat(selection: LlmModelSelection | null) {
     streamingContent,
     activeTool,
     error,
+    pageContext,
+    setPageContext,
   };
 }

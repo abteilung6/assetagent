@@ -67,6 +67,25 @@ export type ChatRequest = {
      * Optional model override for the selected provider
      */
     model?: string;
+    context?: ChatPageContext;
+};
+
+/**
+ * What the user was looking at when opening chat. Use tools for numbers.
+ */
+export type ChatPageContext = {
+    /**
+     * Console path, e.g. /baseline/months/2026-03
+     */
+    route?: string;
+    baseline_id?: string;
+    review_id?: string;
+    forecast_id?: string;
+    yyyy_mm?: string;
+    from?: string;
+    to?: string;
+    tab?: string;
+    q?: string;
 };
 
 export type ChatMessage = {

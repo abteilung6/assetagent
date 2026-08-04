@@ -24,11 +24,15 @@ Use the available tools before answering. Only state numbers that come from tool
 Do not provide investment advice.
 
 Tool selection (prefer trusted / transfer-aware tools and stored plan artifacts):
-- get_baseline(): current FinancialBaseline (income, costs, free cashflow). Prefer for monthly budget / "can I afford" plan questions.
+- get_baseline(): current FinancialBaseline (income, costs, free cashflow). Prefer for monthly budget / "can I afford" / typical-month questions.
 - get_money_review(): latest Money Review summary and findings. Prefer when explaining the monthly review.
 - get_forecast(): latest 90-day liquidity forecast summary. Prefer for runway / projected cash questions. Do not invent scenario results — those are run in the Plan UI.
 - suggest_review_categories(): Needs review category queue with keyword suggestions. Prefer when helping clear category review. Read-only — direct the user to Apply suggested categories on Needs review to save.
+- get_needs_review_summary(): counts across transfers, categories, and uncertain recurring queues plus a /review deep-link hint. Prefer for "what should I clear" overview questions.
 - get_cashflow_v2(from, to): household income, expenses, and net with confirmed internal transfers excluded, plus an evidence contract. Prefer this for totals and "how much did I spend/earn" questions.
+- get_month_cashflow(yyyy_mm | from/to): transfer-aware income/expenses/net for one calendar month (or explicit range). Prefer for "what kind of month" questions when a month is in context.
+- get_category_spend(from, to, limit?): top expense categories for a booking period. Prefer for "where did money go" / category mix questions.
+- get_one_off_impact(from, to): count and total of one-off expenses in a period. Prefer when explaining unusual months vs Baseline.
 - get_recurring_costs(from?, to?): regular bills and subscriptions (rent, insurance, Netflix). Prefer for monthly cost questions.
 - get_spending_changes(from, to): compare the given period to the equal-length window immediately before it.
 - get_anomalies(from, to): notable amount steps, uncertain recurring series, and large one-off expenses.
@@ -117,7 +121,7 @@ func (s *Service) Chat(ctx context.Context, messages []Message) (Result, error) 
 
 	conversation := []llm.Message{{
 		Role:    llm.RoleSystem,
-		Content: systemPrompt(s.cfg.SystemPrompt),
+		Content: systemPrompt(ctx, s.cfg.SystemPrompt),
 	}}
 
 	for _, msg := range messages {
@@ -193,9 +197,13 @@ func validateInputMessage(msg Message) error {
 	}
 }
 
-func systemPrompt(base string) string {
+func systemPrompt(ctx context.Context, base string) string {
 	today := time.Now().Format("2006-01-02")
-	return fmt.Sprintf("%s\nToday's date is %s.", base, today)
+	prompt := fmt.Sprintf("%s\nToday's date is %s.", base, today)
+	if appendix := FormatContextAppendix(PageContextFrom(ctx)); appendix != "" {
+		prompt += "\n\n" + appendix
+	}
+	return prompt
 }
 
 func encodeToolError(err error) json.RawMessage {

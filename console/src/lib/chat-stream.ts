@@ -1,4 +1,9 @@
-import type { ChatMessage, ChatToolCall, LlmModelSelection } from "@/api/types.gen";
+import type {
+  ChatMessage,
+  ChatPageContext,
+  ChatToolCall,
+  LlmModelSelection,
+} from "@/api/types.gen";
 
 export type ChatStreamEvent =
   | { type: "delta"; content: string }
@@ -10,6 +15,7 @@ export type ChatStreamEvent =
 export type StreamChatOptions = {
   messages: ChatMessage[];
   selection: LlmModelSelection;
+  context?: ChatPageContext;
   signal?: AbortSignal;
   onEvent: (event: ChatStreamEvent) => void;
 };
@@ -17,6 +23,7 @@ export type StreamChatOptions = {
 export async function streamChat({
   messages,
   selection,
+  context,
   signal,
   onEvent,
 }: StreamChatOptions): Promise<void> {
@@ -27,6 +34,7 @@ export async function streamChat({
       messages,
       provider: selection.provider,
       model: selection.model,
+      ...(context ? { context } : {}),
     }),
     signal,
   });

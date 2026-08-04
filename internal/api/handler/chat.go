@@ -31,6 +31,12 @@ func (h *Handler) PostChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	pageCtx, err := pageContextFromRequest(req.Context)
+	if err != nil {
+		writeValidationError(w, err.Error())
+		return
+	}
+
 	messages := make([]chat.Message, len(req.Messages))
 	for i, msg := range req.Messages {
 		messages[i] = chat.Message{
@@ -50,6 +56,7 @@ func (h *Handler) PostChat(w http.ResponseWriter, r *http.Request) {
 
 	ctx, endSpan := chat.StartHTTPChatSpan(r.Context(), provider, model, len(messages), false, chat.LastUserMessage(messages))
 	defer endSpan()
+	ctx = chat.WithPageContext(ctx, pageCtx)
 
 	result, err := h.chat.Chat(ctx, provider, model, messages)
 	if err != nil {
@@ -97,4 +104,42 @@ func rawJSONToMap(raw json.RawMessage) (map[string]interface{}, error) {
 	}
 
 	return out, nil
+}
+
+func pageContextFromRequest(raw *gen.ChatPageContext) (chat.PageContext, error) {
+	if raw == nil {
+		return chat.PageContext{}, nil
+	}
+	pageCtx := chat.PageContext{}
+	if raw.Route != nil {
+		pageCtx.Route = *raw.Route
+	}
+	if raw.BaselineId != nil {
+		pageCtx.BaselineID = raw.BaselineId.String()
+	}
+	if raw.ReviewId != nil {
+		pageCtx.ReviewID = raw.ReviewId.String()
+	}
+	if raw.ForecastId != nil {
+		pageCtx.ForecastID = raw.ForecastId.String()
+	}
+	if raw.YyyyMm != nil {
+		pageCtx.YYYYMM = *raw.YyyyMm
+	}
+	if raw.From != nil {
+		pageCtx.From = raw.From.Time.Format("2006-01-02")
+	}
+	if raw.To != nil {
+		pageCtx.To = raw.To.Time.Format("2006-01-02")
+	}
+	if raw.Tab != nil {
+		pageCtx.Tab = *raw.Tab
+	}
+	if raw.Q != nil {
+		pageCtx.Q = *raw.Q
+	}
+	if err := chat.ValidatePageContext(pageCtx); err != nil {
+		return chat.PageContext{}, err
+	}
+	return pageCtx, nil
 }

@@ -68,7 +68,7 @@ func (s *Service) Stream(ctx context.Context, messages []Message, write StreamWr
 
 	conversation := []llm.Message{{
 		Role:    llm.RoleSystem,
-		Content: systemPrompt(s.cfg.SystemPrompt),
+		Content: systemPrompt(ctx, s.cfg.SystemPrompt),
 	}}
 
 	for _, msg := range messages {

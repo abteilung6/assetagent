@@ -769,9 +769,26 @@ type ChatMessage struct {
 // ChatMessageRole defines model for ChatMessage.Role.
 type ChatMessageRole string
 
+// ChatPageContext What the user was looking at when opening chat. Use tools for numbers.
+type ChatPageContext struct {
+	BaselineId *openapi_types.UUID `json:"baseline_id,omitempty"`
+	ForecastId *openapi_types.UUID `json:"forecast_id,omitempty"`
+	From       *openapi_types.Date `json:"from,omitempty"`
+	Q          *string             `json:"q,omitempty"`
+	ReviewId   *openapi_types.UUID `json:"review_id,omitempty"`
+
+	// Route Console path, e.g. /baseline/months/2026-03
+	Route  *string             `json:"route,omitempty"`
+	Tab    *string             `json:"tab,omitempty"`
+	To     *openapi_types.Date `json:"to,omitempty"`
+	YyyyMm *string             `json:"yyyy_mm,omitempty"`
+}
+
 // ChatRequest defines model for ChatRequest.
 type ChatRequest struct {
-	Messages []ChatMessage `json:"messages"`
+	// Context What the user was looking at when opening chat. Use tools for numbers.
+	Context  *ChatPageContext `json:"context,omitempty"`
+	Messages []ChatMessage    `json:"messages"`
 
 	// Model Optional model override for the selected provider
 	Model *string `json:"model,omitempty"`

@@ -25,6 +25,12 @@ func (h *Handler) PostChatStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	pageCtx, err := pageContextFromRequest(req.Context)
+	if err != nil {
+		writeValidationError(w, err.Error())
+		return
+	}
+
 	messages := make([]chat.Message, len(req.Messages))
 	for i, msg := range req.Messages {
 		messages[i] = chat.Message{
@@ -44,6 +50,7 @@ func (h *Handler) PostChatStream(w http.ResponseWriter, r *http.Request) {
 
 	ctx, endSpan := chat.StartHTTPChatSpan(r.Context(), provider, model, len(messages), true, chat.LastUserMessage(messages))
 	defer endSpan()
+	ctx = chat.WithPageContext(ctx, pageCtx)
 
 	initSSE(w)
 
