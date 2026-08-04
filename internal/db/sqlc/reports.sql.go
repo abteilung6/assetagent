@@ -389,6 +389,68 @@ func (q *Queries) ListDailyExpensePaceInPeriod(ctx context.Context, arg ListDail
 	return items, nil
 }
 
+const listMerchantSpendInCategoryPeriod = `-- name: ListMerchantSpendInCategoryPeriod :many
+SELECT
+  COALESCE(NULLIF(TRIM(t.counterparty), ''), '(unknown)')::text AS merchant,
+  COALESCE(SUM(-t.amount), 0)::numeric AS total,
+  COUNT(*)::bigint AS transaction_count
+FROM transactions t
+JOIN transaction_classifications tc ON tc.transaction_id = t.id
+JOIN categories c ON c.id = tc.category_id
+WHERE t.booking_date >= $1::date
+  AND t.booking_date <= $2::date
+  AND t.amount < 0
+  AND t.one_off = false
+  AND c.slug = $3
+  AND NOT EXISTS (
+    SELECT 1
+    FROM transfer_pairs p
+    WHERE p.status = 'confirmed'
+      AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
+  )
+GROUP BY 1
+ORDER BY total DESC, merchant ASC
+LIMIT $4
+`
+
+type ListMerchantSpendInCategoryPeriodParams struct {
+	FromDate     pgtype.Date `json:"from_date"`
+	ToDate       pgtype.Date `json:"to_date"`
+	CategorySlug string      `json:"category_slug"`
+	RowLimit     int32       `json:"row_limit"`
+}
+
+type ListMerchantSpendInCategoryPeriodRow struct {
+	Merchant         string          `json:"merchant"`
+	Total            decimal.Decimal `json:"total"`
+	TransactionCount int64           `json:"transaction_count"`
+}
+
+func (q *Queries) ListMerchantSpendInCategoryPeriod(ctx context.Context, arg ListMerchantSpendInCategoryPeriodParams) ([]ListMerchantSpendInCategoryPeriodRow, error) {
+	rows, err := q.db.Query(ctx, listMerchantSpendInCategoryPeriod,
+		arg.FromDate,
+		arg.ToDate,
+		arg.CategorySlug,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListMerchantSpendInCategoryPeriodRow{}
+	for rows.Next() {
+		var i ListMerchantSpendInCategoryPeriodRow
+		if err := rows.Scan(&i.Merchant, &i.Total, &i.TransactionCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMonthlyCashflowV2 = `-- name: ListMonthlyCashflowV2 :many
 SELECT
   date_trunc('month', t.booking_date)::date AS month_start,

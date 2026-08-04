@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  getBaselineCategoryMerchantsOptions,
   getBaselineCategorySpendOptions,
   getBaselineDailyExpensePaceOptions,
   getBaselineMonthlyCashflowOptions,
@@ -57,6 +58,23 @@ export function useBaselineCategorySpend(
   });
 }
 
+export function useBaselineCategoryMerchants(
+  from: string,
+  to: string,
+  categorySlug: string,
+  limit = 8,
+  enabled = true,
+) {
+  return useQuery({
+    ...getBaselineCategoryMerchantsOptions({
+      query: { from, to, category_slug: categorySlug, limit },
+    }),
+    enabled:
+      enabled && Boolean(from) && Boolean(to) && Boolean(categorySlug),
+    retry: false,
+  });
+}
+
 export function useBaselineDailyExpensePace(
   from: string,
   to: string,
@@ -92,6 +110,7 @@ export function useBaselineRecompute() {
             "_id" in key &&
             (key._id === "getBaselineOneOffImpact" ||
               key._id === "getBaselineCategorySpend" ||
+              key._id === "getBaselineCategoryMerchants" ||
               key._id === "getBaselineDailyExpensePace")
           );
         },

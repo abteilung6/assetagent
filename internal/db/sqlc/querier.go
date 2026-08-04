@@ -78,6 +78,7 @@ type Querier interface {
 	ListDecisions(ctx context.Context, rowLimit int32) ([]Decision, error)
 	ListImportRuns(ctx context.Context, limit int32) ([]ImportRun, error)
 	ListMerchantSourceLabels(ctx context.Context) ([]ListMerchantSourceLabelsRow, error)
+	ListMerchantSpendInCategoryPeriod(ctx context.Context, arg ListMerchantSpendInCategoryPeriodParams) ([]ListMerchantSpendInCategoryPeriodRow, error)
 	ListMerchants(ctx context.Context) ([]ListMerchantsRow, error)
 	ListMoneyReviews(ctx context.Context, rowLimit int32) ([]MoneyReview, error)
 	ListMonthlyCashflowV2(ctx context.Context, arg ListMonthlyCashflowV2Params) ([]ListMonthlyCashflowV2Row, error)

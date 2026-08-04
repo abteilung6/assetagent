@@ -250,6 +250,16 @@ func (s *stubBaselineService) CategorySpend(ctx context.Context, from, to time.T
 	}, nil
 }
 
+func (s *stubBaselineService) CategoryMerchants(ctx context.Context, from, to time.Time, categorySlug string, limit int) ([]repository.CategoryMerchantSpendPoint, error) {
+	return []repository.CategoryMerchantSpendPoint{
+		{
+			Merchant:         "Vermieter GmbH",
+			Total:            decimal.RequireFromString("1100.00"),
+			TransactionCount: 1,
+		},
+	}, nil
+}
+
 func (s *stubBaselineService) DailyExpensePace(ctx context.Context, from, to time.Time) ([]repository.DailyExpensePacePoint, error) {
 	return []repository.DailyExpensePacePoint{
 		{

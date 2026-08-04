@@ -581,6 +581,24 @@ func (s *BaselineService) CategorySpend(ctx context.Context, from, to time.Time,
 	return s.reports.ListCategorySpend(ctx, from, to, limit)
 }
 
+// CategoryMerchants returns top merchants within a category for a booking period.
+func (s *BaselineService) CategoryMerchants(
+	ctx context.Context,
+	from, to time.Time,
+	categorySlug string,
+	limit int,
+) ([]repository.CategoryMerchantSpendPoint, error) {
+	from = dateOnlyUTC(from)
+	to = dateOnlyUTC(to)
+	if to.Before(from) {
+		return nil, ErrInvalidBaselinePeriod
+	}
+	if strings.TrimSpace(categorySlug) == "" {
+		return nil, ErrInvalidBaselinePeriod
+	}
+	return s.reports.ListMerchantSpendInCategory(ctx, from, to, categorySlug, limit)
+}
+
 // DailyExpensePace returns transfer-aware daily expense totals and booking counts.
 // Days with no spend are omitted; callers fill the calendar when drawing curves.
 func (s *BaselineService) DailyExpensePace(ctx context.Context, from, to time.Time) ([]repository.DailyExpensePacePoint, error) {

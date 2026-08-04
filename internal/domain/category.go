@@ -10,15 +10,25 @@ const (
 	CategoryKindOther    = "other"
 )
 
-// SystemCategorySlugs is the stable Phase B taxonomy seeded by migration.
+// SystemCategorySlugs is the stable household taxonomy seeded by migrations.
 var SystemCategorySlugs = []string{
 	"income",
 	"housing",
 	"insurance",
 	"mobility",
 	"groceries",
+	"dining",
+	"shopping",
+	"subscriptions",
 	"leisure",
+	"travel",
 	"health",
+	"personal_care",
+	"education",
+	"children",
+	"pets",
+	"taxes_fees",
+	"cash_atm",
 	"saving_investing",
 	"transfer",
 	"other",

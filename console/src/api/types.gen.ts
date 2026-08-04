@@ -380,6 +380,19 @@ export type BaselineCategorySpendResponse = {
     data: Array<BaselineCategorySpendPoint>;
 };
 
+export type BaselineCategoryMerchantPoint = {
+    merchant: string;
+    /**
+     * Absolute EUR spent with this merchant in the category
+     */
+    total: string;
+    transaction_count: number;
+};
+
+export type BaselineCategoryMerchantsResponse = {
+    data: Array<BaselineCategoryMerchantPoint>;
+};
+
 export type BaselineDailyExpensePacePoint = {
     date: string;
     /**
@@ -1320,6 +1333,36 @@ export type GetBaselineCategorySpendResponses = {
 };
 
 export type GetBaselineCategorySpendResponse = GetBaselineCategorySpendResponses[keyof GetBaselineCategorySpendResponses];
+
+export type GetBaselineCategoryMerchantsData = {
+    body?: never;
+    path?: never;
+    query: {
+        from: string;
+        to: string;
+        category_slug: string;
+        limit?: number;
+    };
+    url: '/api/baselines/category-merchants';
+};
+
+export type GetBaselineCategoryMerchantsErrors = {
+    /**
+     * Invalid period or category
+     */
+    400: Error;
+};
+
+export type GetBaselineCategoryMerchantsError = GetBaselineCategoryMerchantsErrors[keyof GetBaselineCategoryMerchantsErrors];
+
+export type GetBaselineCategoryMerchantsResponses = {
+    /**
+     * Merchant spend within the category
+     */
+    200: BaselineCategoryMerchantsResponse;
+};
+
+export type GetBaselineCategoryMerchantsResponse = GetBaselineCategoryMerchantsResponses[keyof GetBaselineCategoryMerchantsResponses];
 
 export type GetBaselineDailyExpensePaceData = {
     body?: never;

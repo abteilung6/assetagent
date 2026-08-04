@@ -60,7 +60,9 @@ export const AppSidebar: React.FC = () => {
     pathActive(pathname, "/insights/months") ||
     pathActive(pathname, "/baseline/history") ||
     pathActive(pathname, "/baseline/months");
-  const insightsActive = pathActive(pathname, "/insights") || monthsActive;
+  const categoriesActive = pathActive(pathname, "/insights/categories", true);
+  const insightsActive =
+    pathActive(pathname, "/insights") || monthsActive || categoriesActive;
 
   return (
     <Sidebar collapsible="icon">
@@ -153,6 +155,14 @@ export const AppSidebar: React.FC = () => {
                     isActive={monthsActive}
                   >
                     Months
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton
+                    render={<Link to="/insights/categories" />}
+                    isActive={categoriesActive}
+                  >
+                    Categories
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               </SidebarMenuSub>

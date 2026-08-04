@@ -17,6 +17,7 @@ import {
   formatChartMoney,
 } from "@/lib/balance-chart";
 import {
+  buildCategoryShareRows,
   buildExpenseDevelopmentCallouts,
   buildTypicalMonthLevels,
   detectUnusualMonth,
@@ -27,7 +28,6 @@ import {
   type MonthlyCashflowPoint,
 } from "@/lib/baseline-charts";
 import { cn } from "@/lib/utils";
-import { defaultTransactionSearchParams } from "@/pages/transactions/search-params";
 
 function toPoints(
   rows: { month_start: string; income: string; expenses: string; net: string }[],
@@ -118,6 +118,12 @@ const BaselineHistoryPage: React.FC = () => {
     () => buildExpenseDevelopmentCallouts(trendMonths, typical.expenses).high,
     [trendMonths, typical.expenses],
   );
+
+  const driverShares = useMemo(
+    () => buildCategoryShareRows(driversQuery.data?.data ?? []),
+    [driversQuery.data],
+  );
+  const dominantDriver = driverShares[0] ?? null;
 
   const dualLayout = buildDualSeriesChartLayout(
     trendMonths.map((m) => ({
@@ -433,45 +439,53 @@ const BaselineHistoryPage: React.FC = () => {
             </h2>
             <p className="text-sm text-muted-foreground">
               Categories in {driverWindow.label}. Transfer-aware booking dates.
+              {dominantDriver
+                ? ` ${dominantDriver.categoryName} was ${new Intl.NumberFormat(
+                    "de-DE",
+                    { style: "percent", maximumFractionDigits: 0 },
+                  ).format(dominantDriver.share)} of classified spend.`
+                : null}
             </p>
           </div>
           {driversQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : (driversQuery.data?.data.length ?? 0) === 0 ? (
+          ) : driverShares.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No category spend in that month yet.
             </p>
           ) : (
             <ul className="divide-y border-y">
-              {(driversQuery.data?.data ?? []).map((row) => (
-                <li key={row.category_slug}>
+              {driverShares.map((row) => (
+                <li key={row.categorySlug}>
                   <Link
-                    to="/transactions"
-                    search={{
-                      ...defaultTransactionSearchParams,
-                      from: driverWindow.from,
-                      to: driverWindow.to,
-                      q: row.category_name,
-                    }}
+                    to="/insights/categories"
                     className="flex items-center justify-between gap-3 py-2.5 text-sm underline-offset-4 hover:underline"
                   >
-                    <span className="min-w-0 truncate">{row.category_name}</span>
+                    <span className="min-w-0 truncate">{row.categoryName}</span>
                     <span className="shrink-0 tabular-nums text-muted-foreground">
-                      {formatEuro(Number.parseFloat(row.total) || 0)}
+                      {formatEuro(row.total)}
                     </span>
                   </Link>
                 </li>
               ))}
             </ul>
           )}
-          <Link
-            to="/insights/months/$yyyyMm"
-            params={{ yyyyMm: driverWindow.yyyyMm }}
-            search={{ tab: "activity" }}
-            className="text-sm text-foreground underline-offset-4 hover:underline"
-          >
-            Open {driverWindow.label}
-          </Link>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link
+              to="/insights/months/$yyyyMm"
+              params={{ yyyyMm: driverWindow.yyyyMm }}
+              search={{ tab: "activity" }}
+              className="text-sm text-foreground underline-offset-4 hover:underline"
+            >
+              Open {driverWindow.label}
+            </Link>
+            <Link
+              to="/insights/categories"
+              className="text-sm text-foreground underline-offset-4 hover:underline"
+            >
+              Open Categories
+            </Link>
+          </div>
         </section>
       </div>
     </div>

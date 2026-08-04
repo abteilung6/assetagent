@@ -303,6 +303,128 @@ export function formatSignedPercent(value: number): string {
   return `${abs} %`;
 }
 
+export type CategorySpendInput = {
+  category_slug: string;
+  category_name: string;
+  total: string | number;
+  transaction_count?: number;
+};
+
+export type CategoryShareRow = {
+  categorySlug: string;
+  categoryName: string;
+  total: number;
+  share: number;
+  transactionCount: number;
+};
+
+/** Rank categories by spend and attach share of the period total. */
+export function buildCategoryShareRows(
+  points: CategorySpendInput[],
+): CategoryShareRow[] {
+  const rows = points
+    .map((point) => ({
+      categorySlug: point.category_slug,
+      categoryName: point.category_name,
+      total:
+        typeof point.total === "number"
+          ? point.total
+          : Number.parseFloat(point.total) || 0,
+      transactionCount: point.transaction_count ?? 0,
+    }))
+    .filter((row) => row.total > 0)
+    .sort((a, b) => b.total - a.total);
+  const grand = rows.reduce((sum, row) => sum + row.total, 0);
+  return rows.map((row) => ({
+    ...row,
+    share: grand > 0 ? row.total / grand : 0,
+  }));
+}
+
+export type CategoryMover = {
+  categorySlug: string;
+  categoryName: string;
+  current: number;
+  prior: number;
+  delta: number;
+};
+
+/** Largest absolute category spend changes between two periods. */
+export function buildCategoryMovers(
+  current: CategorySpendInput[],
+  prior: CategorySpendInput[],
+  limit = 5,
+): CategoryMover[] {
+  const bySlug = new Map<
+    string,
+    { name: string; current: number; prior: number }
+  >();
+  for (const point of prior) {
+    const total =
+      typeof point.total === "number"
+        ? point.total
+        : Number.parseFloat(point.total) || 0;
+    bySlug.set(point.category_slug, {
+      name: point.category_name,
+      current: 0,
+      prior: total,
+    });
+  }
+  for (const point of current) {
+    const total =
+      typeof point.total === "number"
+        ? point.total
+        : Number.parseFloat(point.total) || 0;
+    const existing = bySlug.get(point.category_slug);
+    if (existing) {
+      existing.current = total;
+      existing.name = point.category_name;
+    } else {
+      bySlug.set(point.category_slug, {
+        name: point.category_name,
+        current: total,
+        prior: 0,
+      });
+    }
+  }
+  return [...bySlug.entries()]
+    .map(([categorySlug, row]) => ({
+      categorySlug,
+      categoryName: row.name,
+      current: row.current,
+      prior: row.prior,
+      delta: row.current - row.prior,
+    }))
+    .filter((row) => Math.abs(row.delta) >= 1)
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+    .slice(0, limit);
+}
+
+/** Inclusive booking window covering the last N complete calendar months. */
+export function completeMonthsWindow(
+  months: number,
+  now = new Date(),
+): { from: string; to: string; months: number } {
+  const n = Math.max(1, Math.floor(months));
+  const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonthEnd = new Date(firstOfThisMonth.getTime() - 1);
+  const fromDate = new Date(
+    lastMonthEnd.getFullYear(),
+    lastMonthEnd.getMonth() - (n - 1),
+    1,
+  );
+  const yyyy = lastMonthEnd.getFullYear();
+  const mm = String(lastMonthEnd.getMonth() + 1).padStart(2, "0");
+  const lastDay = String(lastMonthEnd.getDate()).padStart(2, "0");
+  const fromY = fromDate.getFullYear();
+  const fromM = String(fromDate.getMonth() + 1).padStart(2, "0");
+  return {
+    from: `${fromY}-${fromM}-01`,
+    to: `${yyyy}-${mm}-${lastDay}`,
+    months: n,
+  };
+}
+
 /** Months whose booked expenses sit clearly outside the Cashflow cost norm. */
 export function buildExpenseDevelopmentCallouts(
   months: MonthlyCashflowPoint[],

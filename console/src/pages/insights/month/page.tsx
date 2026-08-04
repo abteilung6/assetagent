@@ -13,6 +13,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import {
+  useBaselineCategoryMerchants,
   useBaselineCategorySpend,
   useBaselineDailyExpensePace,
   useBaselineMonthlyCashflow,
@@ -20,6 +21,8 @@ import {
 } from "@/hooks/use-baseline";
 import { useTransactions } from "@/hooks/use-transactions";
 import {
+  buildCategoryMovers,
+  buildCategoryShareRows,
   buildExpensePaceSeries,
   buildMonthStory,
   endOfMonthISO,
@@ -29,6 +32,7 @@ import {
   monthStartFromYyyyMm,
   partitionMonthSpend,
   shiftYyyyMm,
+  type CategoryMover,
   type MonthlyCashflowPoint,
 } from "@/lib/baseline-charts";
 import {
@@ -58,11 +62,20 @@ const BaselineMonthPage: React.FC = () => {
 
   const cashflowQuery = useBaselineMonthlyCashflow(6);
   const monthEnd = monthStart ? endOfMonthISO(monthStart) : "";
+  const priorYyyyMm = shiftYyyyMm(yyyyMm, -1);
+  const priorStart = monthStartFromYyyyMm(priorYyyyMm);
+  const priorEnd = priorStart ? endOfMonthISO(priorStart) : "";
   const categoryQuery = useBaselineCategorySpend(
     monthStart ?? "",
     monthEnd,
-    8,
+    12,
     Boolean(monthStart),
+  );
+  const priorCategoryQuery = useBaselineCategorySpend(
+    priorStart ?? "",
+    priorEnd,
+    12,
+    Boolean(priorStart),
   );
   const paceQuery = useBaselineDailyExpensePace(
     monthStart ?? "",
@@ -141,6 +154,16 @@ const BaselineMonthPage: React.FC = () => {
           })
         : null,
     [months, monthStart, oneOffCount, oneOffExpenseTotal],
+  );
+
+  const categoryMovers = useMemo(
+    () =>
+      buildCategoryMovers(
+        categoryQuery.data?.data ?? [],
+        priorCategoryQuery.data?.data ?? [],
+        4,
+      ),
+    [categoryQuery.data, priorCategoryQuery.data],
   );
 
   const topOutflows = expenseRows
@@ -394,6 +417,12 @@ const BaselineMonthPage: React.FC = () => {
                 <CategorySpendSection
                   loading={categoryQuery.isLoading}
                   points={categoryQuery.data?.data ?? []}
+                  movers={categoryMovers}
+                  priorLabel={
+                    story.prior ? formatMonthLabel(story.prior.monthStart) : null
+                  }
+                  from={monthStart}
+                  to={monthEnd}
                 />
 
                 <section className="flex flex-col gap-3">
@@ -726,7 +755,21 @@ const CategorySpendSection: React.FC<{
     total: string;
     transaction_count: number;
   }>;
-}> = ({ loading, points }) => {
+  movers: CategoryMover[];
+  priorLabel: string | null;
+  from: string;
+  to: string;
+}> = ({ loading, points, movers, priorLabel, from, to }) => {
+  const [expandedSlug, setExpandedSlug] = useState<string | null>(null);
+  const shareRows = useMemo(() => buildCategoryShareRows(points), [points]);
+  const moverBySlug = useMemo(() => {
+    const map = new Map<string, CategoryMover>();
+    for (const mover of movers) {
+      map.set(mover.categorySlug, mover);
+    }
+    return map;
+  }, [movers]);
+
   if (loading) {
     return (
       <section className="space-y-2">
@@ -737,13 +780,10 @@ const CategorySpendSection: React.FC<{
       </section>
     );
   }
-  if (points.length === 0) {
+  if (shareRows.length === 0) {
     return null;
   }
-  const maxTotal = Math.max(
-    ...points.map((p) => Number.parseFloat(p.total) || 0),
-    1,
-  );
+
   return (
     <section className="space-y-3">
       <div className="space-y-1">
@@ -752,31 +792,144 @@ const CategorySpendSection: React.FC<{
         </h3>
         <p className="text-sm text-muted-foreground">
           What kind of month this was — excluding one-offs and transfers.
+          Expand a row for merchants
+          {priorLabel ? ` · deltas vs ${priorLabel}` : null}.
         </p>
       </div>
+      {movers.length > 0 && priorLabel ? (
+        <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+          {movers.slice(0, 3).map((mover) => {
+            const up = mover.delta > 0;
+            return (
+              <li key={`mover-${mover.categorySlug}`}>
+                <span className="text-foreground">{mover.categoryName}</span>{" "}
+                {up ? "up" : "down"}{" "}
+                {formatCompactMoney(Math.abs(mover.delta))} vs {priorLabel}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
       <ul className="space-y-2.5">
-        {points.map((point) => {
-          const total = Number.parseFloat(point.total) || 0;
-          const width = Math.max(4, Math.round((total / maxTotal) * 100));
+        {shareRows.map((row) => {
+          const width = Math.max(4, Math.round(row.share * 100));
+          const open = expandedSlug === row.categorySlug;
+          const mover = moverBySlug.get(row.categorySlug);
+          const shareLabel = new Intl.NumberFormat("de-DE", {
+            style: "percent",
+            maximumFractionDigits: 0,
+          }).format(row.share);
           return (
-            <li key={point.category_slug} className="space-y-1">
-              <div className="flex items-baseline justify-between gap-3 text-sm">
-                <span className="truncate font-medium">{point.category_name}</span>
-                <span className="shrink-0 tabular-nums text-muted-foreground">
-                  {formatEuro(total)}
-                </span>
-              </div>
-              <div className="h-1.5 w-full bg-muted">
-                <div
-                  className="h-full bg-foreground/55"
-                  style={{ width: `${width}%` }}
+            <li key={row.categorySlug} className="space-y-1">
+              <button
+                type="button"
+                className="w-full space-y-1 text-left"
+                aria-expanded={open}
+                onClick={() =>
+                  setExpandedSlug(open ? null : row.categorySlug)
+                }
+              >
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="truncate font-medium">
+                    {row.categoryName}
+                  </span>
+                  <span className="shrink-0 tabular-nums text-muted-foreground">
+                    {formatEuro(row.total)}
+                    <span className="ml-2 text-xs">{shareLabel}</span>
+                    {mover && Math.abs(mover.delta) >= 1 ? (
+                      <span
+                        className={cn(
+                          "ml-2 text-xs",
+                          mover.delta > 0
+                            ? "text-red-700 dark:text-red-400"
+                            : "text-emerald-700 dark:text-emerald-400",
+                        )}
+                      >
+                        {mover.delta > 0 ? "+" : "−"}
+                        {formatCompactMoney(Math.abs(mover.delta))}
+                      </span>
+                    ) : null}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-muted">
+                  <div
+                    className="h-full bg-foreground/55"
+                    style={{ width: `${width}%` }}
+                  />
+                </div>
+              </button>
+              {open ? (
+                <MonthCategoryMerchants
+                  from={from}
+                  to={to}
+                  categorySlug={row.categorySlug}
+                  categoryName={row.categoryName}
                 />
-              </div>
+              ) : null}
             </li>
           );
         })}
       </ul>
+      <Link
+        to="/insights/categories"
+        className="text-sm text-foreground underline-offset-4 hover:underline"
+      >
+        Open Categories
+      </Link>
     </section>
+  );
+};
+
+const MonthCategoryMerchants: React.FC<{
+  from: string;
+  to: string;
+  categorySlug: string;
+  categoryName: string;
+}> = ({ from, to, categorySlug, categoryName }) => {
+  const merchantsQuery = useBaselineCategoryMerchants(
+    from,
+    to,
+    categorySlug,
+    5,
+    true,
+  );
+  const merchants = merchantsQuery.data?.data ?? [];
+  return (
+    <div className="space-y-1.5 border-l pl-3 pt-1">
+      {merchantsQuery.isLoading ? (
+        <p className="text-xs text-muted-foreground">Loading merchants…</p>
+      ) : merchants.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No merchants listed.</p>
+      ) : (
+        <ul className="space-y-1">
+          {merchants.map((row) => (
+            <li
+              key={row.merchant}
+              className="flex items-baseline justify-between gap-3 text-xs"
+            >
+              <span className="min-w-0 truncate text-muted-foreground">
+                {row.merchant}
+              </span>
+              <span className="shrink-0 tabular-nums">
+                {formatEuro(Number.parseFloat(row.total) || 0)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link
+        to="/transactions"
+        search={{
+          ...defaultTransactionSearchParams,
+          from,
+          to,
+          q: categoryName,
+        }}
+        className="inline-block text-xs text-foreground underline-offset-4 hover:underline"
+      >
+        See transactions
+      </Link>
+    </div>
   );
 };
 

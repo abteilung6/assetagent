@@ -13,6 +13,7 @@ import BaselineIncomePage from "@/pages/baseline/income/page";
 import BaselineTrackingPage from "@/pages/baseline/tracking/page";
 import ChatPage from "@/pages/chat/page";
 import ImportsPage from "@/pages/imports/page";
+import InsightsCategoriesPage from "@/pages/insights/categories/page";
 import InsightsMonthPage from "@/pages/insights/month/page";
 import InsightsMonthsPage from "@/pages/insights/months/page";
 import PlanPage from "@/pages/plan/page";
@@ -117,6 +118,15 @@ const insightsMonthsRoute = createRoute({
   },
 });
 
+const insightsCategoriesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/insights/categories",
+  component: InsightsCategoriesPage,
+  staticData: {
+    title: "Categories",
+  },
+});
+
 const insightsMonthRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/insights/months/$yyyyMm",
@@ -216,6 +226,7 @@ export {
   baselineRoute,
   chatRoute,
   importsRoute,
+  insightsCategoriesRoute,
   insightsMonthRoute,
   insightsMonthsRoute,
   planRoute,
@@ -235,6 +246,7 @@ const routeTree = rootRoute.addChildren([
   legacyBaselinePerformanceRoute,
   insightsRoute,
   insightsMonthsRoute,
+  insightsCategoriesRoute,
   insightsMonthRoute,
   legacyBaselineHistoryRoute,
   legacyBaselineMonthRoute,

@@ -685,6 +685,20 @@ type BaselineAdjustRequest struct {
 // BaselineAdjustRequestMetricKey defines model for BaselineAdjustRequest.MetricKey.
 type BaselineAdjustRequestMetricKey string
 
+// BaselineCategoryMerchantPoint defines model for BaselineCategoryMerchantPoint.
+type BaselineCategoryMerchantPoint struct {
+	Merchant string `json:"merchant"`
+
+	// Total Absolute EUR spent with this merchant in the category
+	Total            string `json:"total"`
+	TransactionCount int64  `json:"transaction_count"`
+}
+
+// BaselineCategoryMerchantsResponse defines model for BaselineCategoryMerchantsResponse.
+type BaselineCategoryMerchantsResponse struct {
+	Data []BaselineCategoryMerchantPoint `json:"data"`
+}
+
 // BaselineCategorySpendPoint defines model for BaselineCategorySpendPoint.
 type BaselineCategorySpendPoint struct {
 	CategoryName string `json:"category_name"`
@@ -791,7 +805,7 @@ type ChatPageContext struct {
 	Q          *string             `json:"q,omitempty"`
 	ReviewId   *openapi_types.UUID `json:"review_id,omitempty"`
 
-	// Route Console path, e.g. /baseline/months/2026-03
+	// Route Console path, e.g. /insights/months/2026-03
 	Route  *string             `json:"route,omitempty"`
 	Tab    *string             `json:"tab,omitempty"`
 	To     *openapi_types.Date `json:"to,omitempty"`
@@ -1341,6 +1355,14 @@ type GetActionsParams struct {
 // GetActionsParamsStatus defines parameters for GetActions.
 type GetActionsParamsStatus string
 
+// GetBaselineCategoryMerchantsParams defines parameters for GetBaselineCategoryMerchants.
+type GetBaselineCategoryMerchantsParams struct {
+	From         openapi_types.Date `form:"from" json:"from"`
+	To           openapi_types.Date `form:"to" json:"to"`
+	CategorySlug string             `form:"category_slug" json:"category_slug"`
+	Limit        *int               `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetBaselineCategorySpendParams defines parameters for GetBaselineCategorySpend.
 type GetBaselineCategorySpendParams struct {
 	From  openapi_types.Date `form:"from" json:"from"`
@@ -1492,6 +1514,9 @@ type ServerInterface interface {
 	// Update an action status
 	// (POST /api/actions/{id}/status)
 	PostActionStatus(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Merchant expense totals within a category for a period
+	// (GET /api/baselines/category-merchants)
+	GetBaselineCategoryMerchants(w http.ResponseWriter, r *http.Request, params GetBaselineCategoryMerchantsParams)
 	// Category expense totals for a period (transfer-aware, excludes one-offs)
 	// (GET /api/baselines/category-spend)
 	GetBaselineCategorySpend(w http.ResponseWriter, r *http.Request, params GetBaselineCategorySpendParams)
@@ -1633,6 +1658,12 @@ func (_ Unimplemented) GetActions(w http.ResponseWriter, r *http.Request, params
 // Update an action status
 // (POST /api/actions/{id}/status)
 func (_ Unimplemented) PostActionStatus(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Merchant expense totals within a category for a period
+// (GET /api/baselines/category-merchants)
+func (_ Unimplemented) GetBaselineCategoryMerchants(w http.ResponseWriter, r *http.Request, params GetBaselineCategoryMerchantsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1960,6 +1991,78 @@ func (siw *ServerInterfaceWrapper) PostActionStatus(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostActionStatus(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBaselineCategoryMerchants operation middleware
+func (siw *ServerInterfaceWrapper) GetBaselineCategoryMerchants(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetBaselineCategoryMerchantsParams
+
+	// ------------- Required query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "category_slug" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "category_slug", r.URL.Query(), &params.CategorySlug, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "category_slug"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "category_slug", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBaselineCategoryMerchants(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3217,6 +3320,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/actions/{id}/status", wrapper.PostActionStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/baselines/category-merchants", wrapper.GetBaselineCategoryMerchants)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/baselines/category-spend", wrapper.GetBaselineCategorySpend)

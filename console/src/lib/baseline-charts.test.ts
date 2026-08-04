@@ -4,6 +4,8 @@ import {
   buildBaselineComposition,
   buildBaselinePerformanceRows,
   buildBaselineReadinessItems,
+  buildCategoryMovers,
+  buildCategoryShareRows,
   buildExpensePaceSeries,
   buildExpenseDevelopmentCallouts,
   buildExpenseDevelopmentRows,
@@ -11,6 +13,7 @@ import {
   buildIncomeDevelopmentRows,
   buildMonthStory,
   buildTypicalMonthLevels,
+  completeMonthsWindow,
   detectUnusualMonth,
   eachISODateInclusive,
   formatCompactMoney,
@@ -325,6 +328,78 @@ describe("formatSignedPercent", () => {
     expect(formatSignedPercent(42.9)).toBe("+43 %");
     expect(formatSignedPercent(-12.1)).toBe("−12 %");
     expect(formatSignedPercent(0)).toBe("0 %");
+  });
+});
+
+describe("buildCategoryShareRows", () => {
+  it("ranks categories and attaches share of total", () => {
+    const rows = buildCategoryShareRows([
+      {
+        category_slug: "groceries",
+        category_name: "Groceries",
+        total: "100.00",
+        transaction_count: 4,
+      },
+      {
+        category_slug: "housing",
+        category_name: "Housing",
+        total: "300.00",
+        transaction_count: 1,
+      },
+    ]);
+    expect(rows.map((r) => r.categorySlug)).toEqual(["housing", "groceries"]);
+    expect(rows[0]?.share).toBeCloseTo(0.75);
+    expect(rows[1]?.share).toBeCloseTo(0.25);
+  });
+});
+
+describe("buildCategoryMovers", () => {
+  it("surfaces largest absolute deltas between periods", () => {
+    const movers = buildCategoryMovers(
+      [
+        {
+          category_slug: "housing",
+          category_name: "Housing",
+          total: "1400",
+        },
+        {
+          category_slug: "travel",
+          category_name: "Travel",
+          total: "400",
+        },
+      ],
+      [
+        {
+          category_slug: "housing",
+          category_name: "Housing",
+          total: "1200",
+        },
+        {
+          category_slug: "groceries",
+          category_name: "Groceries",
+          total: "300",
+        },
+      ],
+      5,
+    );
+    expect(movers[0]?.categorySlug).toBe("travel");
+    expect(movers[0]?.delta).toBe(400);
+    expect(movers.map((m) => m.categorySlug)).toContain("groceries");
+  });
+});
+
+describe("completeMonthsWindow", () => {
+  it("covers the last N complete calendar months", () => {
+    const window = completeMonthsWindow(
+      3,
+      new Date(Date.UTC(2026, 6, 19)),
+    );
+    // July 19 2026 local — careful with timezone. Use fixed local constructor.
+    const local = completeMonthsWindow(3, new Date(2026, 6, 19));
+    expect(local.from).toBe("2026-04-01");
+    expect(local.to).toBe("2026-06-30");
+    expect(local.months).toBe(3);
+    expect(window.months).toBe(3);
   });
 });
 

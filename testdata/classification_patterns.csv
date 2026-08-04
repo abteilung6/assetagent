@@ -8,20 +8,70 @@ MIETE,housing,55,high
 IMMOBILIENFINANZ,housing,50,high
 RUNDFUNK,housing,55,high
 TELEKOM,housing,50,high
-TELEFONICA,mobility,50,high
-VODAFONE,mobility,50,high
-CONGSTAR,mobility,50,high
+STADTWERKE,housing,45,high
 VERSICHER,insurance,50,high
 RECHTSSCHUTZ,insurance,45,high
 HUK,insurance,55,high
 ALLIANZ,insurance,55,high
+TELEFONICA,mobility,50,high
+VODAFONE,mobility,50,high
+CONGSTAR,mobility,50,high
+BVG,mobility,45,high
+DEUTSCHE BAHN,mobility,50,medium
+UBER,mobility,55,medium
+LIMEBIKE,mobility,60,medium
 REWE,groceries,40,high
+EDEKA,groceries,40,high
+LIDL,groceries,40,high
+ALDI,groceries,40,high
+PENNY,groceries,40,high
+LIEFERANDO,dining,40,high
+TAKEAWAY,dining,40,high
+UBER EATS,dining,40,high
+WOLT,dining,45,high
+MCDONALD,dining,45,high
+BURGER KING,dining,45,high
+STARBUCKS,dining,50,high
+RESTAURANT,dining,55,medium
+AMAZON,shopping,50,medium
+AMZN,shopping,50,medium
+ZALANDO,shopping,45,high
+IKEA,shopping,50,medium
+OBI ,housing,60,medium
+BAUMARKT,housing,65,medium
+NETFLIX,subscriptions,40,high
+SPOTIFY,subscriptions,40,high
+DISNEY,subscriptions,45,high
+APPLE.COM BILL,subscriptions,50,medium
+GOOGLE PAYMENT,subscriptions,55,medium
 SPOK,leisure,60,medium
 FITNESS,leisure,65,medium
 MCFIT,leisure,60,medium
-AMAZON,leisure,60,medium
-AMZN,leisure,60,medium
-BOOKING.COM,leisure,55,medium
-NETFLIX,leisure,55,medium
-OBI ,housing,60,medium
-BAUMARKT,housing,65,medium
+CINEMA,leisure,55,medium
+BOOKING.COM,travel,40,high
+AIRBNB,travel,40,high
+LUFTHANSA,travel,40,high
+RYANAIR,travel,45,high
+EASYJET,travel,45,high
+HOTEL,travel,55,medium
+URLAUB,travel,60,medium
+ROSSMANN,personal_care,40,high
+DM DROGERIE,personal_care,40,high
+DROGERIE,personal_care,50,medium
+APOTHEKE,health,45,high
+DOCTOR,health,60,medium
+ARZT,health,55,medium
+UNIVERSIT,education,50,medium
+SCHULE,education,55,medium
+NACHHILFE,education,50,medium
+KITA,children,45,high
+KINDERGARTEN,children,45,high
+FRESSNAPF,pets,40,high
+ZOO & CO,pets,45,high
+TIERARZT,pets,50,medium
+FINANZAMT,taxes_fees,40,high
+STEUER,taxes_fees,55,medium
+GEBUEHR,taxes_fees,60,medium
+BARGELD,cash_atm,45,high
+GELDAutomat,cash_atm,40,high
+GA NR,cash_atm,50,medium

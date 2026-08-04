@@ -23,6 +23,7 @@ type BaselineService interface {
 	MonthlyCashflow(ctx context.Context, months int) ([]service.MonthlyCashflowPoint, error)
 	OneOffImpact(ctx context.Context, from, to time.Time) (repository.OneOffExpenseImpact, error)
 	CategorySpend(ctx context.Context, from, to time.Time, limit int) ([]repository.CategorySpendPoint, error)
+	CategoryMerchants(ctx context.Context, from, to time.Time, categorySlug string, limit int) ([]repository.CategoryMerchantSpendPoint, error)
 	DailyExpensePace(ctx context.Context, from, to time.Time) ([]repository.DailyExpensePacePoint, error)
 }
 
@@ -117,6 +118,41 @@ func (h *Handler) GetBaselineCategorySpend(w http.ResponseWriter, r *http.Reques
 		}
 	}
 	writeJSON(w, http.StatusOK, gen.BaselineCategorySpendResponse{Data: data})
+}
+
+func (h *Handler) GetBaselineCategoryMerchants(w http.ResponseWriter, r *http.Request, params gen.GetBaselineCategoryMerchantsParams) {
+	if h.baseline == nil {
+		writeInternalError(w, "baseline service is not configured")
+		return
+	}
+	limit := 8
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+	items, err := h.baseline.CategoryMerchants(
+		r.Context(),
+		params.From.Time,
+		params.To.Time,
+		params.CategorySlug,
+		limit,
+	)
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidBaselinePeriod) {
+			writeValidationError(w, err.Error())
+			return
+		}
+		writeInternalError(w, "failed to load category merchants")
+		return
+	}
+	data := make([]gen.BaselineCategoryMerchantPoint, len(items))
+	for i, item := range items {
+		data[i] = gen.BaselineCategoryMerchantPoint{
+			Merchant:         item.Merchant,
+			Total:            item.Total.StringFixed(2),
+			TransactionCount: item.TransactionCount,
+		}
+	}
+	writeJSON(w, http.StatusOK, gen.BaselineCategoryMerchantsResponse{Data: data})
 }
 
 func (h *Handler) GetBaselineDailyExpensePace(w http.ResponseWriter, r *http.Request, params gen.GetBaselineDailyExpensePaceParams) {

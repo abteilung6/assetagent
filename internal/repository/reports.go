@@ -235,8 +235,8 @@ func (r *Reports) ListCategorySpend(
 	if limit < 1 {
 		limit = 8
 	}
-	if limit > 20 {
-		limit = 20
+	if limit > 50 {
+		limit = 50
 	}
 	rows, err := r.queries.ListCategorySpendInPeriod(ctx, sqldb.ListCategorySpendInPeriodParams{
 		FromDate: pgtype.Date{Time: from, Valid: true},
@@ -251,6 +251,45 @@ func (r *Reports) ListCategorySpend(
 		out = append(out, CategorySpendPoint{
 			CategorySlug:     row.CategorySlug,
 			CategoryName:     row.CategoryName,
+			Total:            row.Total,
+			TransactionCount: row.TransactionCount,
+		})
+	}
+	return out, nil
+}
+
+// CategoryMerchantSpendPoint is expense total for one merchant within a category.
+type CategoryMerchantSpendPoint struct {
+	Merchant         string
+	Total            decimal.Decimal
+	TransactionCount int64
+}
+
+func (r *Reports) ListMerchantSpendInCategory(
+	ctx context.Context,
+	from, to time.Time,
+	categorySlug string,
+	limit int,
+) ([]CategoryMerchantSpendPoint, error) {
+	if limit < 1 {
+		limit = 8
+	}
+	if limit > 20 {
+		limit = 20
+	}
+	rows, err := r.queries.ListMerchantSpendInCategoryPeriod(ctx, sqldb.ListMerchantSpendInCategoryPeriodParams{
+		FromDate:     pgtype.Date{Time: from, Valid: true},
+		ToDate:       pgtype.Date{Time: to, Valid: true},
+		CategorySlug: categorySlug,
+		RowLimit:     int32(limit),
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]CategoryMerchantSpendPoint, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, CategoryMerchantSpendPoint{
+			Merchant:         row.Merchant,
 			Total:            row.Total,
 			TransactionCount: row.TransactionCount,
 		})

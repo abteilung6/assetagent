@@ -42,6 +42,17 @@ describe("Baseline month page", () => {
         ],
       }),
     );
+    vi.spyOn(sdk, "getBaselineCategoryMerchants").mockResolvedValue(
+      mockApiResponse({
+        data: [
+          {
+            merchant: "Vermieter GmbH",
+            total: "1200.00",
+            transaction_count: 1,
+          },
+        ],
+      }),
+    );
     vi.spyOn(sdk, "getBaselineDailyExpensePace").mockResolvedValue(
       mockApiResponse({
         data: [

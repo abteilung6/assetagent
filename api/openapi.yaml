@@ -698,7 +698,7 @@ paths:
           schema:
             type: integer
             minimum: 1
-            maximum: 20
+            maximum: 50
             default: 8
       responses:
         "200":
@@ -709,6 +709,52 @@ paths:
                 $ref: "#/components/schemas/BaselineCategorySpendResponse"
         "400":
           description: Invalid period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/baselines/category-merchants:
+    get:
+      operationId: getBaselineCategoryMerchants
+      summary: Merchant expense totals within a category for a period
+      description: >
+        Transfer-aware expense outflows for one category (excludes one-offs).
+        Merchants are grouped by counterparty name.
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: category_slug
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 8
+      responses:
+        "200":
+          description: Merchant spend within the category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BaselineCategoryMerchantsResponse"
+        "400":
+          description: Invalid period or category
           content:
             application/json:
               schema:
@@ -2079,6 +2125,26 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BaselineCategorySpendPoint"
+    BaselineCategoryMerchantPoint:
+      type: object
+      required: [merchant, total, transaction_count]
+      properties:
+        merchant:
+          type: string
+        total:
+          type: string
+          description: Absolute EUR spent with this merchant in the category
+        transaction_count:
+          type: integer
+          format: int64
+    BaselineCategoryMerchantsResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BaselineCategoryMerchantPoint"
     BaselineDailyExpensePacePoint:
       type: object
       required: [date, expenses, transaction_count]
