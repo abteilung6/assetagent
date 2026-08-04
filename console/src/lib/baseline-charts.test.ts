@@ -9,6 +9,7 @@ import {
   formatCompactMoney,
   formatMonthHeadline,
   formatMonthLabel,
+  formatOneOffImpactLine,
   monthlyEquivalentAmount,
   partitionMonthSpend,
   resolveEvidenceSeries,
@@ -110,6 +111,18 @@ describe("buildBaselineReadinessItems", () => {
         unusualMonthStart: null,
       }),
     ).toEqual([]);
+  });
+});
+
+describe("formatOneOffImpactLine", () => {
+  it("returns null when nothing is excluded", () => {
+    expect(formatOneOffImpactLine(0, 0, "1.800,00 €")).toBeNull();
+  });
+
+  it("formats count and total against free cashflow", () => {
+    expect(formatOneOffImpactLine(1, 50000, "1.800,00 €")).toMatch(
+      /Excluding 1 one-off \(−50k €\), free cashflow is 1\.800,00 €/,
+    );
   });
 });
 

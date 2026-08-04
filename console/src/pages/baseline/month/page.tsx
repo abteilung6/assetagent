@@ -5,7 +5,7 @@ import { Link, useParams } from "@tanstack/react-router";
 import type { Transaction } from "@/api/types.gen";
 import { TransactionDetailSheet } from "@/components/transaction-detail/sheet";
 import { buttonVariants } from "@/components/ui/button";
-import { useBaselineMonthlyCashflow } from "@/hooks/use-baseline";
+import { useBaselineCategorySpend, useBaselineMonthlyCashflow } from "@/hooks/use-baseline";
 import { useTransactions } from "@/hooks/use-transactions";
 import {
   buildMonthStory,
@@ -30,6 +30,12 @@ const BaselineMonthPage: React.FC = () => {
 
   const cashflowQuery = useBaselineMonthlyCashflow(6);
   const monthEnd = monthStart ? endOfMonthISO(monthStart) : "";
+  const categoryQuery = useBaselineCategorySpend(
+    monthStart ?? "",
+    monthEnd,
+    8,
+    Boolean(monthStart),
+  );
 
   const expensesQuery = useTransactions(
     monthStart
@@ -267,6 +273,11 @@ const BaselineMonthPage: React.FC = () => {
               </section>
             ) : null}
 
+            <CategorySpendSection
+              loading={categoryQuery.isLoading}
+              points={categoryQuery.data?.data ?? []}
+            />
+
             <section className="space-y-5">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold tracking-tight">
@@ -363,6 +374,64 @@ const BaselineMonthPage: React.FC = () => {
         />
       </div>
     </div>
+  );
+};
+
+const CategorySpendSection: React.FC<{
+  loading: boolean;
+  points: Array<{
+    category_slug: string;
+    category_name: string;
+    total: string;
+    transaction_count: number;
+  }>;
+}> = ({ loading, points }) => {
+  if (loading) {
+    return (
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold tracking-tight">By category</h3>
+        <p className="text-sm text-muted-foreground">Loading categories…</p>
+      </section>
+    );
+  }
+  if (points.length === 0) {
+    return null;
+  }
+  const maxTotal = Math.max(
+    ...points.map((p) => Number.parseFloat(p.total) || 0),
+    1,
+  );
+  return (
+    <section className="space-y-3">
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold tracking-tight">By category</h3>
+        <p className="text-sm text-muted-foreground">
+          What kind of month this was — excluding one-offs and transfers.
+        </p>
+      </div>
+      <ul className="space-y-2.5">
+        {points.map((point) => {
+          const total = Number.parseFloat(point.total) || 0;
+          const width = Math.max(4, Math.round((total / maxTotal) * 100));
+          return (
+            <li key={point.category_slug} className="space-y-1">
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="truncate font-medium">{point.category_name}</span>
+                <span className="shrink-0 tabular-nums text-muted-foreground">
+                  {formatEuro(total)}
+                </span>
+              </div>
+              <div className="h-1.5 w-full bg-muted">
+                <div
+                  className="h-full bg-foreground/55"
+                  style={{ width: `${width}%` }}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 };
 

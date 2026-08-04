@@ -88,6 +88,34 @@ func (q *Queries) GetLatestBookingDate(ctx context.Context) (pgtype.Date, error)
 	return latest_booking_date, err
 }
 
+const getOneOffExpenseImpact = `-- name: GetOneOffExpenseImpact :one
+SELECT
+  COUNT(*)::bigint AS one_off_count,
+  COALESCE(SUM(-amount), 0)::numeric AS one_off_expense_total
+FROM transactions
+WHERE booking_date >= $1::date
+  AND booking_date <= $2::date
+  AND one_off = true
+  AND amount < 0
+`
+
+type GetOneOffExpenseImpactParams struct {
+	FromDate pgtype.Date `json:"from_date"`
+	ToDate   pgtype.Date `json:"to_date"`
+}
+
+type GetOneOffExpenseImpactRow struct {
+	OneOffCount        int64           `json:"one_off_count"`
+	OneOffExpenseTotal decimal.Decimal `json:"one_off_expense_total"`
+}
+
+func (q *Queries) GetOneOffExpenseImpact(ctx context.Context, arg GetOneOffExpenseImpactParams) (GetOneOffExpenseImpactRow, error) {
+	row := q.db.QueryRow(ctx, getOneOffExpenseImpact, arg.FromDate, arg.ToDate)
+	var i GetOneOffExpenseImpactRow
+	err := row.Scan(&i.OneOffCount, &i.OneOffExpenseTotal)
+	return i, err
+}
+
 const getTopCounterparties = `-- name: GetTopCounterparties :many
 SELECT
   counterparty,
@@ -204,6 +232,68 @@ func (q *Queries) ListCashflowV2TransactionIDs(ctx context.Context, arg ListCash
 			return nil, err
 		}
 		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCategorySpendInPeriod = `-- name: ListCategorySpendInPeriod :many
+SELECT
+  c.slug AS category_slug,
+  c.display_name AS category_name,
+  COALESCE(SUM(-t.amount), 0)::numeric AS total,
+  COUNT(*)::bigint AS transaction_count
+FROM transactions t
+JOIN transaction_classifications tc ON tc.transaction_id = t.id
+JOIN categories c ON c.id = tc.category_id
+WHERE t.booking_date >= $1::date
+  AND t.booking_date <= $2::date
+  AND t.amount < 0
+  AND t.one_off = false
+  AND NOT EXISTS (
+    SELECT 1
+    FROM transfer_pairs p
+    WHERE p.status = 'confirmed'
+      AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
+  )
+GROUP BY c.slug, c.display_name
+ORDER BY total DESC, c.display_name ASC
+LIMIT $3
+`
+
+type ListCategorySpendInPeriodParams struct {
+	FromDate pgtype.Date `json:"from_date"`
+	ToDate   pgtype.Date `json:"to_date"`
+	RowLimit int32       `json:"row_limit"`
+}
+
+type ListCategorySpendInPeriodRow struct {
+	CategorySlug     string          `json:"category_slug"`
+	CategoryName     string          `json:"category_name"`
+	Total            decimal.Decimal `json:"total"`
+	TransactionCount int64           `json:"transaction_count"`
+}
+
+func (q *Queries) ListCategorySpendInPeriod(ctx context.Context, arg ListCategorySpendInPeriodParams) ([]ListCategorySpendInPeriodRow, error) {
+	rows, err := q.db.Query(ctx, listCategorySpendInPeriod, arg.FromDate, arg.ToDate, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCategorySpendInPeriodRow{}
+	for rows.Next() {
+		var i ListCategorySpendInPeriodRow
+		if err := rows.Scan(
+			&i.CategorySlug,
+			&i.CategoryName,
+			&i.Total,
+			&i.TransactionCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

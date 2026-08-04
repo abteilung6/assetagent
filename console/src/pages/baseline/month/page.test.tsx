@@ -21,6 +21,27 @@ describe("Baseline month page", () => {
     vi.spyOn(sdk, "getUncertainRecurring").mockResolvedValue(
       mockApiResponse({ data: [] }),
     );
+    vi.spyOn(sdk, "getBaselineOneOffImpact").mockResolvedValue(
+      mockApiResponse({ count: 0, expense_total: "0.00" }),
+    );
+    vi.spyOn(sdk, "getBaselineCategorySpend").mockResolvedValue(
+      mockApiResponse({
+        data: [
+          {
+            category_slug: "housing",
+            category_name: "Housing",
+            total: "1200.00",
+            transaction_count: 1,
+          },
+          {
+            category_slug: "groceries",
+            category_name: "Groceries",
+            total: "85.00",
+            transaction_count: 1,
+          },
+        ],
+      }),
+    );
     vi.spyOn(sdk, "getBaselineMonthlyCashflow").mockResolvedValue(
       mockApiResponse({
         data: [
@@ -103,6 +124,9 @@ describe("Baseline month page", () => {
     expect(screen.getByText(/Recurring bills versus one-time/i)).toBeInTheDocument();
     expect(screen.getByText(/Income sources/i)).toBeInTheDocument();
     expect(screen.getByText("Employer GmbH")).toBeInTheDocument();
+    expect(screen.getByText(/By category/i)).toBeInTheDocument();
+    expect(screen.getByText("Housing")).toBeInTheDocument();
+    expect(screen.getByText("Groceries")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /See all 3 transactions/i }),
     ).toHaveAttribute("href", expect.stringContaining("/transactions"));

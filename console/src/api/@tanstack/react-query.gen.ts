@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { getActions, getBaselineMonthlyCashflow, getCategories, getClassificationQueue, getCurrentBaseline, getDecisions, getForecast, getForecastScenarios, getHealth, getImport, getImports, getLatestForecast, getLlmModels, getMoneyReview, getMoneyReviews, getRecurring, getRecurringMembers, getTransactions, getTransferCandidates, getUncertainRecurring, type Options, postActionStatus, postBaselineAdjust, postBaselineConfirm, postBaselinesRecompute, postChat, postClassificationApplySuggestions, postClassificationCorrect, postDecisions, postForecasts, postForecastScenario, postImportRollback, postImports, postImportsPreview, postMoneyReviewConfirm, postMoneyReviews, postRecurringConfirm, postRecurringReject, postTransactionOneOff, postTransferConfirm, postTransferReject } from '../sdk.gen';
-import type { GetActionsData, GetActionsResponse, GetBaselineMonthlyCashflowData, GetBaselineMonthlyCashflowResponse, GetCategoriesData, GetCategoriesResponse, GetClassificationQueueData, GetClassificationQueueResponse, GetCurrentBaselineData, GetCurrentBaselineError, GetCurrentBaselineResponse, GetDecisionsData, GetDecisionsResponse, GetForecastData, GetForecastError, GetForecastResponse, GetForecastScenariosData, GetForecastScenariosResponse, GetHealthData, GetHealthResponse, GetImportData, GetImportError, GetImportResponse, GetImportsData, GetImportsError, GetImportsResponse, GetLatestForecastData, GetLatestForecastError, GetLatestForecastResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetMoneyReviewData, GetMoneyReviewError, GetMoneyReviewResponse, GetMoneyReviewsData, GetMoneyReviewsResponse, GetRecurringData, GetRecurringMembersData, GetRecurringMembersError, GetRecurringMembersResponse, GetRecurringResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, GetTransferCandidatesData, GetTransferCandidatesResponse, GetUncertainRecurringData, GetUncertainRecurringResponse, PostActionStatusData, PostActionStatusError, PostActionStatusResponse, PostBaselineAdjustData, PostBaselineAdjustError, PostBaselineAdjustResponse, PostBaselineConfirmData, PostBaselineConfirmError, PostBaselineConfirmResponse, PostBaselinesRecomputeData, PostBaselinesRecomputeError, PostBaselinesRecomputeResponse, PostChatData, PostChatError, PostChatResponse, PostClassificationApplySuggestionsData, PostClassificationApplySuggestionsResponse, PostClassificationCorrectData, PostClassificationCorrectError, PostClassificationCorrectResponse, PostDecisionsData, PostDecisionsError, PostDecisionsResponse, PostForecastScenarioData, PostForecastScenarioError, PostForecastScenarioResponse, PostForecastsData, PostForecastsError, PostForecastsResponse, PostImportRollbackData, PostImportRollbackError, PostImportRollbackResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse, PostMoneyReviewConfirmData, PostMoneyReviewConfirmError, PostMoneyReviewConfirmResponse, PostMoneyReviewsData, PostMoneyReviewsError, PostMoneyReviewsResponse, PostRecurringConfirmData, PostRecurringConfirmError, PostRecurringConfirmResponse, PostRecurringRejectData, PostRecurringRejectError, PostRecurringRejectResponse, PostTransactionOneOffData, PostTransactionOneOffError, PostTransactionOneOffResponse, PostTransferConfirmData, PostTransferConfirmError, PostTransferConfirmResponse, PostTransferRejectData, PostTransferRejectError, PostTransferRejectResponse } from '../types.gen';
+import { getActions, getBaselineCategorySpend, getBaselineMonthlyCashflow, getBaselineOneOffImpact, getCategories, getClassificationQueue, getCurrentBaseline, getDecisions, getForecast, getForecastScenarios, getHealth, getImport, getImports, getLatestForecast, getLlmModels, getMoneyReview, getMoneyReviews, getRecurring, getRecurringMembers, getTransactions, getTransferCandidates, getUncertainRecurring, type Options, postActionStatus, postBaselineAdjust, postBaselineConfirm, postBaselinesRecompute, postChat, postClassificationApplySuggestions, postClassificationCorrect, postDecisions, postForecasts, postForecastScenario, postImportRollback, postImports, postImportsPreview, postMoneyReviewConfirm, postMoneyReviews, postRecurringConfirm, postRecurringReject, postTransactionOneOff, postTransferConfirm, postTransferReject } from '../sdk.gen';
+import type { GetActionsData, GetActionsResponse, GetBaselineCategorySpendData, GetBaselineCategorySpendError, GetBaselineCategorySpendResponse, GetBaselineMonthlyCashflowData, GetBaselineMonthlyCashflowResponse, GetBaselineOneOffImpactData, GetBaselineOneOffImpactError, GetBaselineOneOffImpactResponse, GetCategoriesData, GetCategoriesResponse, GetClassificationQueueData, GetClassificationQueueResponse, GetCurrentBaselineData, GetCurrentBaselineError, GetCurrentBaselineResponse, GetDecisionsData, GetDecisionsResponse, GetForecastData, GetForecastError, GetForecastResponse, GetForecastScenariosData, GetForecastScenariosResponse, GetHealthData, GetHealthResponse, GetImportData, GetImportError, GetImportResponse, GetImportsData, GetImportsError, GetImportsResponse, GetLatestForecastData, GetLatestForecastError, GetLatestForecastResponse, GetLlmModelsData, GetLlmModelsError, GetLlmModelsResponse, GetMoneyReviewData, GetMoneyReviewError, GetMoneyReviewResponse, GetMoneyReviewsData, GetMoneyReviewsResponse, GetRecurringData, GetRecurringMembersData, GetRecurringMembersError, GetRecurringMembersResponse, GetRecurringResponse, GetTransactionsData, GetTransactionsError, GetTransactionsResponse, GetTransferCandidatesData, GetTransferCandidatesResponse, GetUncertainRecurringData, GetUncertainRecurringResponse, PostActionStatusData, PostActionStatusError, PostActionStatusResponse, PostBaselineAdjustData, PostBaselineAdjustError, PostBaselineAdjustResponse, PostBaselineConfirmData, PostBaselineConfirmError, PostBaselineConfirmResponse, PostBaselinesRecomputeData, PostBaselinesRecomputeError, PostBaselinesRecomputeResponse, PostChatData, PostChatError, PostChatResponse, PostClassificationApplySuggestionsData, PostClassificationApplySuggestionsResponse, PostClassificationCorrectData, PostClassificationCorrectError, PostClassificationCorrectResponse, PostDecisionsData, PostDecisionsError, PostDecisionsResponse, PostForecastScenarioData, PostForecastScenarioError, PostForecastScenarioResponse, PostForecastsData, PostForecastsError, PostForecastsResponse, PostImportRollbackData, PostImportRollbackError, PostImportRollbackResponse, PostImportsData, PostImportsError, PostImportsPreviewData, PostImportsPreviewError, PostImportsPreviewResponse, PostImportsResponse, PostMoneyReviewConfirmData, PostMoneyReviewConfirmError, PostMoneyReviewConfirmResponse, PostMoneyReviewsData, PostMoneyReviewsError, PostMoneyReviewsResponse, PostRecurringConfirmData, PostRecurringConfirmError, PostRecurringConfirmResponse, PostRecurringRejectData, PostRecurringRejectError, PostRecurringRejectResponse, PostTransactionOneOffData, PostTransactionOneOffError, PostTransactionOneOffResponse, PostTransferConfirmData, PostTransferConfirmError, PostTransferConfirmResponse, PostTransferRejectData, PostTransferRejectError, PostTransferRejectResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -517,6 +517,42 @@ export const getBaselineMonthlyCashflowOptions = (options?: Options<GetBaselineM
         return data;
     },
     queryKey: getBaselineMonthlyCashflowQueryKey(options)
+});
+
+export const getBaselineOneOffImpactQueryKey = (options: Options<GetBaselineOneOffImpactData>) => createQueryKey('getBaselineOneOffImpact', options);
+
+/**
+ * Count and total of one-off expenses in a period
+ */
+export const getBaselineOneOffImpactOptions = (options: Options<GetBaselineOneOffImpactData>) => queryOptions<GetBaselineOneOffImpactResponse, GetBaselineOneOffImpactError, GetBaselineOneOffImpactResponse, ReturnType<typeof getBaselineOneOffImpactQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getBaselineOneOffImpact({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getBaselineOneOffImpactQueryKey(options)
+});
+
+export const getBaselineCategorySpendQueryKey = (options: Options<GetBaselineCategorySpendData>) => createQueryKey('getBaselineCategorySpend', options);
+
+/**
+ * Category expense totals for a period (transfer-aware, excludes one-offs)
+ */
+export const getBaselineCategorySpendOptions = (options: Options<GetBaselineCategorySpendData>) => queryOptions<GetBaselineCategorySpendResponse, GetBaselineCategorySpendError, GetBaselineCategorySpendResponse, ReturnType<typeof getBaselineCategorySpendQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getBaselineCategorySpend({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getBaselineCategorySpendQueryKey(options)
 });
 
 /**

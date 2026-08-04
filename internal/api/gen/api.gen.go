@@ -685,6 +685,21 @@ type BaselineAdjustRequest struct {
 // BaselineAdjustRequestMetricKey defines model for BaselineAdjustRequest.MetricKey.
 type BaselineAdjustRequestMetricKey string
 
+// BaselineCategorySpendPoint defines model for BaselineCategorySpendPoint.
+type BaselineCategorySpendPoint struct {
+	CategoryName string `json:"category_name"`
+	CategorySlug string `json:"category_slug"`
+
+	// Total Absolute EUR spent in the category
+	Total            string `json:"total"`
+	TransactionCount int64  `json:"transaction_count"`
+}
+
+// BaselineCategorySpendResponse defines model for BaselineCategorySpendResponse.
+type BaselineCategorySpendResponse struct {
+	Data []BaselineCategorySpendPoint `json:"data"`
+}
+
 // BaselineMetric defines model for BaselineMetric.
 type BaselineMetric struct {
 	Assumptions *[]string                `json:"assumptions,omitempty"`
@@ -712,6 +727,14 @@ type BaselineMonthlyCashflowPoint struct {
 // BaselineMonthlyCashflowResponse defines model for BaselineMonthlyCashflowResponse.
 type BaselineMonthlyCashflowResponse struct {
 	Data []BaselineMonthlyCashflowPoint `json:"data"`
+}
+
+// BaselineOneOffImpact defines model for BaselineOneOffImpact.
+type BaselineOneOffImpact struct {
+	Count int64 `json:"count"`
+
+	// ExpenseTotal Absolute EUR total of one-off expenses in the period
+	ExpenseTotal string `json:"expense_total"`
 }
 
 // BaselineRecomputeRequest defines model for BaselineRecomputeRequest.
@@ -1287,9 +1310,22 @@ type GetActionsParams struct {
 // GetActionsParamsStatus defines parameters for GetActions.
 type GetActionsParamsStatus string
 
+// GetBaselineCategorySpendParams defines parameters for GetBaselineCategorySpend.
+type GetBaselineCategorySpendParams struct {
+	From  openapi_types.Date `form:"from" json:"from"`
+	To    openapi_types.Date `form:"to" json:"to"`
+	Limit *int               `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetBaselineMonthlyCashflowParams defines parameters for GetBaselineMonthlyCashflow.
 type GetBaselineMonthlyCashflowParams struct {
 	Months *int `form:"months,omitempty" json:"months,omitempty"`
+}
+
+// GetBaselineOneOffImpactParams defines parameters for GetBaselineOneOffImpact.
+type GetBaselineOneOffImpactParams struct {
+	From openapi_types.Date `form:"from" json:"from"`
+	To   openapi_types.Date `form:"to" json:"to"`
 }
 
 // GetDecisionsParams defines parameters for GetDecisions.
@@ -1419,12 +1455,18 @@ type ServerInterface interface {
 	// Update an action status
 	// (POST /api/actions/{id}/status)
 	PostActionStatus(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Category expense totals for a period (transfer-aware, excludes one-offs)
+	// (GET /api/baselines/category-spend)
+	GetBaselineCategorySpend(w http.ResponseWriter, r *http.Request, params GetBaselineCategorySpendParams)
 	// Get the current draft or confirmed FinancialBaseline
 	// (GET /api/baselines/current)
 	GetCurrentBaseline(w http.ResponseWriter, r *http.Request)
 	// Transfer-aware monthly income/expense totals for baseline charts
 	// (GET /api/baselines/monthly-cashflow)
 	GetBaselineMonthlyCashflow(w http.ResponseWriter, r *http.Request, params GetBaselineMonthlyCashflowParams)
+	// Count and total of one-off expenses in a period
+	// (GET /api/baselines/one-off-impact)
+	GetBaselineOneOffImpact(w http.ResponseWriter, r *http.Request, params GetBaselineOneOffImpactParams)
 	// Recompute and persist a draft FinancialBaseline
 	// (POST /api/baselines/recompute)
 	PostBaselinesRecompute(w http.ResponseWriter, r *http.Request)
@@ -1554,6 +1596,12 @@ func (_ Unimplemented) PostActionStatus(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Category expense totals for a period (transfer-aware, excludes one-offs)
+// (GET /api/baselines/category-spend)
+func (_ Unimplemented) GetBaselineCategorySpend(w http.ResponseWriter, r *http.Request, params GetBaselineCategorySpendParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Get the current draft or confirmed FinancialBaseline
 // (GET /api/baselines/current)
 func (_ Unimplemented) GetCurrentBaseline(w http.ResponseWriter, r *http.Request) {
@@ -1563,6 +1611,12 @@ func (_ Unimplemented) GetCurrentBaseline(w http.ResponseWriter, r *http.Request
 // Transfer-aware monthly income/expense totals for baseline charts
 // (GET /api/baselines/monthly-cashflow)
 func (_ Unimplemented) GetBaselineMonthlyCashflow(w http.ResponseWriter, r *http.Request, params GetBaselineMonthlyCashflowParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Count and total of one-off expenses in a period
+// (GET /api/baselines/one-off-impact)
+func (_ Unimplemented) GetBaselineOneOffImpact(w http.ResponseWriter, r *http.Request, params GetBaselineOneOffImpactParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1869,6 +1923,65 @@ func (siw *ServerInterfaceWrapper) PostActionStatus(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetBaselineCategorySpend operation middleware
+func (siw *ServerInterfaceWrapper) GetBaselineCategorySpend(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetBaselineCategorySpendParams
+
+	// ------------- Required query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBaselineCategorySpend(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetCurrentBaseline operation middleware
 func (siw *ServerInterfaceWrapper) GetCurrentBaseline(w http.ResponseWriter, r *http.Request) {
 
@@ -1907,6 +2020,52 @@ func (siw *ServerInterfaceWrapper) GetBaselineMonthlyCashflow(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetBaselineMonthlyCashflow(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBaselineOneOffImpact operation middleware
+func (siw *ServerInterfaceWrapper) GetBaselineOneOffImpact(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetBaselineOneOffImpactParams
+
+	// ------------- Required query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBaselineOneOffImpact(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2968,10 +3127,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/api/actions/{id}/status", wrapper.PostActionStatus)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/baselines/category-spend", wrapper.GetBaselineCategorySpend)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/baselines/current", wrapper.GetCurrentBaseline)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/baselines/monthly-cashflow", wrapper.GetBaselineMonthlyCashflow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/baselines/one-off-impact", wrapper.GetBaselineOneOffImpact)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/baselines/recompute", wrapper.PostBaselinesRecompute)

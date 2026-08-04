@@ -560,3 +560,23 @@ func (s *BaselineService) MonthlyCashflow(ctx context.Context, months int) ([]Mo
 	}
 	return out, nil
 }
+
+// OneOffImpact returns one-off expense count/total for a booking period.
+func (s *BaselineService) OneOffImpact(ctx context.Context, from, to time.Time) (repository.OneOffExpenseImpact, error) {
+	from = dateOnlyUTC(from)
+	to = dateOnlyUTC(to)
+	if to.Before(from) {
+		return repository.OneOffExpenseImpact{}, ErrInvalidBaselinePeriod
+	}
+	return s.reports.GetOneOffExpenseImpact(ctx, from, to)
+}
+
+// CategorySpend returns top expense categories for a booking period.
+func (s *BaselineService) CategorySpend(ctx context.Context, from, to time.Time, limit int) ([]repository.CategorySpendPoint, error) {
+	from = dateOnlyUTC(from)
+	to = dateOnlyUTC(to)
+	if to.Before(from) {
+		return nil, ErrInvalidBaselinePeriod
+	}
+	return s.reports.ListCategorySpend(ctx, from, to, limit)
+}

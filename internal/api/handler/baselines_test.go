@@ -13,6 +13,7 @@ import (
 	"github.com/abteilung6/assetagent/internal/api/gen"
 	"github.com/abteilung6/assetagent/internal/api/handler"
 	"github.com/abteilung6/assetagent/internal/finance"
+	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/abteilung6/assetagent/internal/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -227,6 +228,24 @@ func (s *stubBaselineService) MonthlyCashflow(ctx context.Context, months int) (
 			Income:     decimal.RequireFromString("3000.00"),
 			Expenses:   decimal.RequireFromString("8000.00"),
 			Net:        decimal.RequireFromString("-5000.00"),
+		},
+	}, nil
+}
+
+func (s *stubBaselineService) OneOffImpact(ctx context.Context, from, to time.Time) (repository.OneOffExpenseImpact, error) {
+	return repository.OneOffExpenseImpact{
+		Count:        1,
+		ExpenseTotal: decimal.RequireFromString("50000.00"),
+	}, nil
+}
+
+func (s *stubBaselineService) CategorySpend(ctx context.Context, from, to time.Time, limit int) ([]repository.CategorySpendPoint, error) {
+	return []repository.CategorySpendPoint{
+		{
+			CategorySlug:     "housing",
+			CategoryName:     "Housing",
+			Total:            decimal.RequireFromString("1200.00"),
+			TransactionCount: 1,
 		},
 	}, nil
 }

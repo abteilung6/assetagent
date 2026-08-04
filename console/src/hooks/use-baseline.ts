@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  getBaselineCategorySpendOptions,
   getBaselineMonthlyCashflowOptions,
+  getBaselineOneOffImpactOptions,
   getCurrentBaselineOptions,
   getCurrentBaselineQueryKey,
   getBaselineMonthlyCashflowQueryKey,
@@ -29,6 +31,31 @@ export function useBaselineMonthlyCashflow(months = 6) {
   });
 }
 
+export function useBaselineOneOffImpact(from: string, to: string, enabled = true) {
+  return useQuery({
+    ...getBaselineOneOffImpactOptions({
+      query: { from, to },
+    }),
+    enabled: enabled && Boolean(from) && Boolean(to),
+    retry: false,
+  });
+}
+
+export function useBaselineCategorySpend(
+  from: string,
+  to: string,
+  limit = 8,
+  enabled = true,
+) {
+  return useQuery({
+    ...getBaselineCategorySpendOptions({
+      query: { from, to, limit },
+    }),
+    enabled: enabled && Boolean(from) && Boolean(to),
+    retry: false,
+  });
+}
+
 export function useBaselineRecompute() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -40,6 +67,18 @@ export function useBaselineRecompute() {
       });
       await queryClient.invalidateQueries({
         queryKey: getBaselineMonthlyCashflowQueryKey(),
+      });
+      await queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return (
+            typeof key === "object" &&
+            key !== null &&
+            "_id" in key &&
+            (key._id === "getBaselineOneOffImpact" ||
+              key._id === "getBaselineCategorySpend")
+          );
+        },
       });
     },
   });

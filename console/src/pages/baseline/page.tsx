@@ -16,6 +16,7 @@ import {
   useBaselineAdjust,
   useBaselineConfirm,
   useBaselineMonthlyCashflow,
+  useBaselineOneOffImpact,
   useBaselineRecompute,
   useCurrentBaseline,
   type FinancialBaseline,
@@ -34,6 +35,7 @@ import {
   formatCompactMoney,
   formatMonthHeadline,
   formatMonthLabel,
+  formatOneOffImpactLine,
   yyyyMmFromMonthStart,
   type CompositionEvidenceKey,
   type CompositionSegmentKey,
@@ -205,6 +207,14 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
   );
   const periodLabel = `${formatDate(baseline.period_from)} – ${formatDate(baseline.period_to)}`;
   const confirmed = baseline.status === "confirmed";
+  const periodFrom = baseline.period_from.slice(0, 10);
+  const periodTo = baseline.period_to.slice(0, 10);
+  const oneOffQuery = useBaselineOneOffImpact(periodFrom, periodTo);
+  const oneOffLine = formatOneOffImpactLine(
+    oneOffQuery.data?.count ?? 0,
+    Number.parseFloat(oneOffQuery.data?.expense_total ?? "0") || 0,
+    formatAmount(baseline.sustainable_free_cashflow),
+  );
 
   return (
     <div className="flex flex-col gap-8">
@@ -220,8 +230,8 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
           to="/transactions"
           search={{
             ...defaultTransactionSearchParams,
-            from: baseline.period_from.slice(0, 10),
-            to: baseline.period_to.slice(0, 10),
+            from: periodFrom,
+            to: periodTo,
           }}
           className="text-foreground underline-offset-4 hover:underline"
         >
@@ -249,6 +259,9 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
             / month
           </span>
         </p>
+        {oneOffLine ? (
+          <p className="max-w-xl text-sm text-muted-foreground">{oneOffLine}</p>
+        ) : null}
         {freeMetric?.calculation ? (
           <p className="max-w-xl text-sm text-muted-foreground">
             {freeMetric.calculation}
@@ -840,10 +853,11 @@ const BaselineReadiness: React.FC<{
     return (
       <section className="space-y-1">
         <h2 className="text-sm font-semibold tracking-tight">
-          Before you confirm
+          Looks stable
         </h2>
         <p className="text-sm text-muted-foreground">
-          Nothing open in Needs review — this baseline looks ready to confirm.
+          Confirm this as your planning baseline? That unlocks Money Review and
+          Plan forecast.
         </p>
       </section>
     );

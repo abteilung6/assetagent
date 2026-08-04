@@ -94,3 +94,36 @@ WHERE t.booking_date >= sqlc.arg('from_date')::date
   )
 GROUP BY 1
 ORDER BY 1 ASC;
+
+-- name: GetOneOffExpenseImpact :one
+SELECT
+  COUNT(*)::bigint AS one_off_count,
+  COALESCE(SUM(-amount), 0)::numeric AS one_off_expense_total
+FROM transactions
+WHERE booking_date >= sqlc.arg('from_date')::date
+  AND booking_date <= sqlc.arg('to_date')::date
+  AND one_off = true
+  AND amount < 0;
+
+-- name: ListCategorySpendInPeriod :many
+SELECT
+  c.slug AS category_slug,
+  c.display_name AS category_name,
+  COALESCE(SUM(-t.amount), 0)::numeric AS total,
+  COUNT(*)::bigint AS transaction_count
+FROM transactions t
+JOIN transaction_classifications tc ON tc.transaction_id = t.id
+JOIN categories c ON c.id = tc.category_id
+WHERE t.booking_date >= sqlc.arg('from_date')::date
+  AND t.booking_date <= sqlc.arg('to_date')::date
+  AND t.amount < 0
+  AND t.one_off = false
+  AND NOT EXISTS (
+    SELECT 1
+    FROM transfer_pairs p
+    WHERE p.status = 'confirmed'
+      AND (p.tx_out_id = t.id OR p.tx_in_id = t.id)
+  )
+GROUP BY c.slug, c.display_name
+ORDER BY total DESC, c.display_name ASC
+LIMIT sqlc.arg('row_limit');

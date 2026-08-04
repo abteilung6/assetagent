@@ -43,4 +43,10 @@ beforeEach(() => {
   vi.spyOn(sdk, "getRecurring").mockResolvedValue(
     mockApiResponse({ data: [] }),
   );
+  vi.spyOn(sdk, "getBaselineOneOffImpact").mockResolvedValue(
+    mockApiResponse({ count: 0, expense_total: "0.00" }),
+  );
+  vi.spyOn(sdk, "getBaselineCategorySpend").mockResolvedValue(
+    mockApiResponse({ data: [] }),
+  );
 });

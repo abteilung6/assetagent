@@ -376,6 +376,20 @@ export type MonthSpendPartition<T extends { recurring: boolean }> = {
   oneTime: T[];
 };
 
+/** Quiet line explaining one-offs already excluded from free cashflow. */
+export function formatOneOffImpactLine(
+  count: number,
+  expenseTotal: number,
+  freeCashflowLabel: string,
+): string | null {
+  if (count <= 0 || expenseTotal <= 0) {
+    return null;
+  }
+  const countLabel =
+    count === 1 ? "1 one-off" : `${count} one-offs`;
+  return `Excluding ${countLabel} (−${formatCompactMoney(expenseTotal)}), free cashflow is ${freeCashflowLabel}.`;
+}
+
 /** Split expense drivers into recurring series members vs everything else. */
 export function partitionMonthSpend<T extends { recurring: boolean }>(
   transactions: T[],

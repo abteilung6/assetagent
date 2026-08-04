@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/abteilung6/assetagent/internal/api/gen"
+	"github.com/abteilung6/assetagent/internal/repository"
 	"github.com/abteilung6/assetagent/internal/service"
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -20,6 +21,8 @@ type BaselineService interface {
 	Confirm(ctx context.Context, id uuid.UUID) (service.ComputedBaseline, error)
 	Adjust(ctx context.Context, id uuid.UUID, metricKey string, newValue decimal.Decimal, reason string) (service.ComputedBaseline, error)
 	MonthlyCashflow(ctx context.Context, months int) ([]service.MonthlyCashflowPoint, error)
+	OneOffImpact(ctx context.Context, from, to time.Time) (repository.OneOffExpenseImpact, error)
+	CategorySpend(ctx context.Context, from, to time.Time, limit int) ([]repository.CategorySpendPoint, error)
 }
 
 func (h *Handler) GetCurrentBaseline(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +66,56 @@ func (h *Handler) GetBaselineMonthlyCashflow(w http.ResponseWriter, r *http.Requ
 		}
 	}
 	writeJSON(w, http.StatusOK, gen.BaselineMonthlyCashflowResponse{Data: data})
+}
+
+func (h *Handler) GetBaselineOneOffImpact(w http.ResponseWriter, r *http.Request, params gen.GetBaselineOneOffImpactParams) {
+	if h.baseline == nil {
+		writeInternalError(w, "baseline service is not configured")
+		return
+	}
+	impact, err := h.baseline.OneOffImpact(r.Context(), params.From.Time, params.To.Time)
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidBaselinePeriod) {
+			writeValidationError(w, err.Error())
+			return
+		}
+		writeInternalError(w, "failed to load one-off impact")
+		return
+	}
+	writeJSON(w, http.StatusOK, gen.BaselineOneOffImpact{
+		Count:        impact.Count,
+		ExpenseTotal: impact.ExpenseTotal.StringFixed(2),
+	})
+}
+
+func (h *Handler) GetBaselineCategorySpend(w http.ResponseWriter, r *http.Request, params gen.GetBaselineCategorySpendParams) {
+	if h.baseline == nil {
+		writeInternalError(w, "baseline service is not configured")
+		return
+	}
+	limit := 8
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+	items, err := h.baseline.CategorySpend(r.Context(), params.From.Time, params.To.Time, limit)
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidBaselinePeriod) {
+			writeValidationError(w, err.Error())
+			return
+		}
+		writeInternalError(w, "failed to load category spend")
+		return
+	}
+	data := make([]gen.BaselineCategorySpendPoint, len(items))
+	for i, item := range items {
+		data[i] = gen.BaselineCategorySpendPoint{
+			CategorySlug:     item.CategorySlug,
+			CategoryName:     item.CategoryName,
+			Total:            item.Total.StringFixed(2),
+			TransactionCount: item.TransactionCount,
+		}
+	}
+	writeJSON(w, http.StatusOK, gen.BaselineCategorySpendResponse{Data: data})
 }
 
 func (h *Handler) PostBaselinesRecompute(w http.ResponseWriter, r *http.Request) {

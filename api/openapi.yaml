@@ -646,6 +646,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BaselineMonthlyCashflowResponse"
+  /api/baselines/one-off-impact:
+    get:
+      operationId: getBaselineOneOffImpact
+      summary: Count and total of one-off expenses in a period
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: One-off expense impact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BaselineOneOffImpact"
+        "400":
+          description: Invalid period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/baselines/category-spend:
+    get:
+      operationId: getBaselineCategorySpend
+      summary: Category expense totals for a period (transfer-aware, excludes one-offs)
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 8
+      responses:
+        "200":
+          description: Category spend breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BaselineCategorySpendResponse"
+        "400":
+          description: Invalid period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/baselines/recompute:
     post:
       operationId: postBaselinesRecompute
@@ -1911,6 +1978,38 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BaselineMonthlyCashflowPoint"
+    BaselineOneOffImpact:
+      type: object
+      required: [count, expense_total]
+      properties:
+        count:
+          type: integer
+          format: int64
+        expense_total:
+          type: string
+          description: Absolute EUR total of one-off expenses in the period
+    BaselineCategorySpendPoint:
+      type: object
+      required: [category_slug, category_name, total, transaction_count]
+      properties:
+        category_slug:
+          type: string
+        category_name:
+          type: string
+        total:
+          type: string
+          description: Absolute EUR spent in the category
+        transaction_count:
+          type: integer
+          format: int64
+    BaselineCategorySpendResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BaselineCategorySpendPoint"
     BaselineRecomputeRequest:
       type: object
       properties:

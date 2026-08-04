@@ -122,6 +122,12 @@ describe("Baseline page", () => {
         ],
       }),
     );
+    vi.spyOn(sdk, "getBaselineOneOffImpact").mockResolvedValue(
+      mockApiResponse({ count: 0, expense_total: "0.00" }),
+    );
+    vi.spyOn(sdk, "getBaselineCategorySpend").mockResolvedValue(
+      mockApiResponse({ data: [] }),
+    );
     vi.spyOn(sdk, "getBaselineMonthlyCashflow").mockResolvedValue(
       mockApiResponse({
         data: [
@@ -325,6 +331,27 @@ describe("Baseline page", () => {
     expect(await screen.findByText("Example Landlord")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Show sample payments/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows one-off impact and soft confirm nudge when queues are clear", async () => {
+    vi.spyOn(sdk, "getCurrentBaseline").mockResolvedValue(
+      mockApiResponse(sampleBaseline),
+    );
+    vi.spyOn(sdk, "getBaselineOneOffImpact").mockResolvedValue(
+      mockApiResponse({ count: 1, expense_total: "50000.00" }),
+    );
+
+    testRender({ route: "/baseline" });
+
+    expect(
+      await screen.findByText(/Excluding 1 one-off/i),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /Looks stable/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Confirm this as your planning baseline/i),
     ).toBeInTheDocument();
   });
 

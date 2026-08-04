@@ -339,6 +339,28 @@ export type BaselineMonthlyCashflowResponse = {
     data: Array<BaselineMonthlyCashflowPoint>;
 };
 
+export type BaselineOneOffImpact = {
+    count: number;
+    /**
+     * Absolute EUR total of one-off expenses in the period
+     */
+    expense_total: string;
+};
+
+export type BaselineCategorySpendPoint = {
+    category_slug: string;
+    category_name: string;
+    /**
+     * Absolute EUR spent in the category
+     */
+    total: string;
+    transaction_count: number;
+};
+
+export type BaselineCategorySpendResponse = {
+    data: Array<BaselineCategorySpendPoint>;
+};
+
 export type BaselineRecomputeRequest = {
     /**
      * Inclusive period start (optional; requires to)
@@ -1209,6 +1231,63 @@ export type GetBaselineMonthlyCashflowResponses = {
 };
 
 export type GetBaselineMonthlyCashflowResponse = GetBaselineMonthlyCashflowResponses[keyof GetBaselineMonthlyCashflowResponses];
+
+export type GetBaselineOneOffImpactData = {
+    body?: never;
+    path?: never;
+    query: {
+        from: string;
+        to: string;
+    };
+    url: '/api/baselines/one-off-impact';
+};
+
+export type GetBaselineOneOffImpactErrors = {
+    /**
+     * Invalid period
+     */
+    400: Error;
+};
+
+export type GetBaselineOneOffImpactError = GetBaselineOneOffImpactErrors[keyof GetBaselineOneOffImpactErrors];
+
+export type GetBaselineOneOffImpactResponses = {
+    /**
+     * One-off expense impact
+     */
+    200: BaselineOneOffImpact;
+};
+
+export type GetBaselineOneOffImpactResponse = GetBaselineOneOffImpactResponses[keyof GetBaselineOneOffImpactResponses];
+
+export type GetBaselineCategorySpendData = {
+    body?: never;
+    path?: never;
+    query: {
+        from: string;
+        to: string;
+        limit?: number;
+    };
+    url: '/api/baselines/category-spend';
+};
+
+export type GetBaselineCategorySpendErrors = {
+    /**
+     * Invalid period
+     */
+    400: Error;
+};
+
+export type GetBaselineCategorySpendError = GetBaselineCategorySpendErrors[keyof GetBaselineCategorySpendErrors];
+
+export type GetBaselineCategorySpendResponses = {
+    /**
+     * Category spend breakdown
+     */
+    200: BaselineCategorySpendResponse;
+};
+
+export type GetBaselineCategorySpendResponse = GetBaselineCategorySpendResponses[keyof GetBaselineCategorySpendResponses];
 
 export type PostBaselinesRecomputeData = {
     body?: BaselineRecomputeRequest;

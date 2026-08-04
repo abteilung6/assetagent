@@ -195,3 +195,65 @@ func (r *Reports) ListMonthlyCashflowV2(
 	}
 	return out, nil
 }
+
+// OneOffExpenseImpact is excluded spend that still shapes trust copy.
+type OneOffExpenseImpact struct {
+	Count        int64
+	ExpenseTotal decimal.Decimal
+}
+
+func (r *Reports) GetOneOffExpenseImpact(
+	ctx context.Context,
+	from, to time.Time,
+) (OneOffExpenseImpact, error) {
+	row, err := r.queries.GetOneOffExpenseImpact(ctx, sqldb.GetOneOffExpenseImpactParams{
+		FromDate: pgtype.Date{Time: from, Valid: true},
+		ToDate:   pgtype.Date{Time: to, Valid: true},
+	})
+	if err != nil {
+		return OneOffExpenseImpact{}, err
+	}
+	return OneOffExpenseImpact{
+		Count:        row.OneOffCount,
+		ExpenseTotal: row.OneOffExpenseTotal,
+	}, nil
+}
+
+// CategorySpendPoint is expense total for one category in a period.
+type CategorySpendPoint struct {
+	CategorySlug      string
+	CategoryName      string
+	Total             decimal.Decimal
+	TransactionCount  int64
+}
+
+func (r *Reports) ListCategorySpend(
+	ctx context.Context,
+	from, to time.Time,
+	limit int,
+) ([]CategorySpendPoint, error) {
+	if limit < 1 {
+		limit = 8
+	}
+	if limit > 20 {
+		limit = 20
+	}
+	rows, err := r.queries.ListCategorySpendInPeriod(ctx, sqldb.ListCategorySpendInPeriodParams{
+		FromDate: pgtype.Date{Time: from, Valid: true},
+		ToDate:   pgtype.Date{Time: to, Valid: true},
+		RowLimit: int32(limit),
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]CategorySpendPoint, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, CategorySpendPoint{
+			CategorySlug:     row.CategorySlug,
+			CategoryName:     row.CategoryName,
+			Total:            row.Total,
+			TransactionCount: row.TransactionCount,
+		})
+	}
+	return out, nil
+}
