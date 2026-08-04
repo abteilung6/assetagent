@@ -8,6 +8,7 @@ import {
 
 import { AppLayout } from "@/app/layout";
 import BaselinePage from "@/pages/baseline/page";
+import BaselineIncomePage from "@/pages/baseline/income/page";
 import BaselinePerformancePage from "@/pages/baseline/performance/page";
 import ChatPage from "@/pages/chat/page";
 import ImportsPage from "@/pages/imports/page";
@@ -69,6 +70,15 @@ const baselinePerformanceRoute = createRoute({
   component: BaselinePerformancePage,
   staticData: {
     title: "Performance",
+  },
+});
+
+const baselineIncomeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/baseline/income",
+  component: BaselineIncomePage,
+  staticData: {
+    title: "Income",
   },
 });
 
@@ -182,6 +192,7 @@ const transactionsRoute = createRoute({
 });
 
 export {
+  baselineIncomeRoute,
   baselinePerformanceRoute,
   baselineRoute,
   chatRoute,
@@ -199,6 +210,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   chatRoute,
   baselineRoute,
+  baselineIncomeRoute,
   baselinePerformanceRoute,
   insightsRoute,
   insightsMonthsRoute,

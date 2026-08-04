@@ -49,8 +49,9 @@ export const AppSidebar: React.FC = () => {
     (recurringQuery.data?.data.length ?? 0);
 
   const cashflowActive = pathActive(pathname, "/baseline", true);
+  const incomeActive = pathActive(pathname, "/baseline/income", true);
   const performanceActive = pathActive(pathname, "/baseline/performance", true);
-  const baselineActive = cashflowActive || performanceActive;
+  const baselineActive = cashflowActive || incomeActive || performanceActive;
   const monthsActive =
     pathActive(pathname, "/insights/months") ||
     pathActive(pathname, "/baseline/history") ||
@@ -97,6 +98,14 @@ export const AppSidebar: React.FC = () => {
                 <span>Baseline</span>
               </SidebarMenuButton>
               <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton
+                    render={<Link to="/baseline/income" />}
+                    isActive={incomeActive}
+                  >
+                    Income
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
                 <SidebarMenuSubItem>
                   <SidebarMenuSubButton
                     render={<Link to="/baseline" />}

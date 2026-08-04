@@ -5,6 +5,8 @@ import {
   buildBaselinePerformanceRows,
   buildBaselineReadinessItems,
   buildExpensePaceSeries,
+  buildIncomeDevelopmentCallouts,
+  buildIncomeDevelopmentRows,
   buildMonthStory,
   buildTypicalMonthLevels,
   detectUnusualMonth,
@@ -13,6 +15,7 @@ import {
   formatMonthHeadline,
   formatMonthLabel,
   formatOneOffImpactLine,
+  formatSignedPercent,
   monthlyEquivalentAmount,
   partitionMonthSpend,
   resolveEvidenceSeries,
@@ -261,5 +264,63 @@ describe("buildBaselinePerformanceRows", () => {
     expect(rows[1]?.overspent).toBe(true);
     expect(rows[1]?.expensesDelta).toBe(1300);
     expect(rows[1]?.netDelta).toBe(500 - (3500 - 1700));
+  });
+});
+
+describe("buildIncomeDevelopmentCallouts", () => {
+  it("flags months far from the income norm", () => {
+    const got = buildIncomeDevelopmentCallouts(
+      [
+        { monthStart: "2026-01-01", income: 3500, expenses: 0, net: 3500 },
+        { monthStart: "2026-02-01", income: 2000, expenses: 0, net: 2000 },
+        { monthStart: "2026-03-01", income: 5000, expenses: 0, net: 5000 },
+      ],
+      3500,
+    );
+    expect(got.low.map((m) => m.monthStart)).toEqual(["2026-02-01"]);
+    expect(got.high.map((m) => m.monthStart)).toEqual(["2026-03-01"]);
+  });
+});
+
+describe("buildIncomeDevelopmentRows", () => {
+  it("computes vs-norm and month-over-month percents", () => {
+    const rows = buildIncomeDevelopmentRows(
+      [
+        { monthStart: "2026-01-01", income: 3500, expenses: 0, net: 3500 },
+        { monthStart: "2026-02-01", income: 3500, expenses: 0, net: 3500 },
+        { monthStart: "2026-03-01", income: 5000, expenses: 0, net: 5000 },
+      ],
+      3500,
+    );
+    expect(rows[0]).toMatchObject({
+      vsNorm: 0,
+      vsNormPct: 0,
+      vsPriorPct: null,
+    });
+    expect(rows[1]).toMatchObject({
+      vsNorm: 0,
+      vsNormPct: 0,
+      vsPriorPct: 0,
+    });
+    expect(rows[2]?.vsNorm).toBe(1500);
+    expect(rows[2]?.vsNormPct).toBeCloseTo((1500 / 3500) * 100);
+    expect(rows[2]?.vsPriorPct).toBeCloseTo((1500 / 3500) * 100);
+  });
+
+  it("omits vs-norm when there is no useful norm", () => {
+    const rows = buildIncomeDevelopmentRows(
+      [{ monthStart: "2026-01-01", income: 100, expenses: 0, net: 100 }],
+      0,
+    );
+    expect(rows[0]?.vsNorm).toBeNull();
+    expect(rows[0]?.vsNormPct).toBeNull();
+  });
+});
+
+describe("formatSignedPercent", () => {
+  it("formats signed percents for de-DE", () => {
+    expect(formatSignedPercent(42.9)).toBe("+43 %");
+    expect(formatSignedPercent(-12.1)).toBe("−12 %");
+    expect(formatSignedPercent(0)).toBe("0 %");
   });
 });

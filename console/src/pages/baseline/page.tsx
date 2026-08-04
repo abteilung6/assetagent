@@ -245,6 +245,13 @@ const BaselineContent: React.FC<BaselineContentProps> = ({
         >
           Open Insights
         </Link>
+        {" · "}
+        <Link
+          to="/baseline/income"
+          className="text-foreground underline-offset-4 hover:underline"
+        >
+          Understand income
+        </Link>
       </p>
 
       <section className="space-y-2">

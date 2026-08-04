@@ -232,6 +232,77 @@ export function buildBaselinePerformanceRows(
   });
 }
 
+/** Months whose booked income sits clearly outside the Cashflow income norm. */
+export function buildIncomeDevelopmentCallouts(
+  months: MonthlyCashflowPoint[],
+  typicalIncome: number,
+): { low: MonthlyCashflowPoint[]; high: MonthlyCashflowPoint[] } {
+  if (typicalIncome <= 0) {
+    return { low: [], high: [] };
+  }
+  const low: MonthlyCashflowPoint[] = [];
+  const high: MonthlyCashflowPoint[] = [];
+  for (const m of months) {
+    if (m.income <= typicalIncome * 0.75) {
+      low.push(m);
+    } else if (m.income >= typicalIncome * 1.25) {
+      high.push(m);
+    }
+  }
+  return { low, high };
+}
+
+export type IncomeDevelopmentRow = {
+  monthStart: string;
+  income: number;
+  /** Booked − Cashflow income norm; null when there is no useful norm. */
+  vsNorm: number | null;
+  /** Percent of norm: (booked − norm) / norm × 100. */
+  vsNormPct: number | null;
+  /** Month-over-month percent vs prior booked income; null for first row or zero prior. */
+  vsPriorPct: number | null;
+};
+
+/** Month rows for Income → Development (chart companion table). */
+export function buildIncomeDevelopmentRows(
+  months: MonthlyCashflowPoint[],
+  typicalIncome: number,
+): IncomeDevelopmentRow[] {
+  return months.map((m, i) => {
+    const prior = i > 0 ? months[i - 1] : undefined;
+    const vsNorm = typicalIncome > 0 ? m.income - typicalIncome : null;
+    const vsNormPct =
+      typicalIncome > 0
+        ? ((m.income - typicalIncome) / typicalIncome) * 100
+        : null;
+    const vsPriorPct =
+      prior && prior.income !== 0
+        ? ((m.income - prior.income) / Math.abs(prior.income)) * 100
+        : null;
+    return {
+      monthStart: m.monthStart,
+      income: m.income,
+      vsNorm,
+      vsNormPct,
+      vsPriorPct,
+    };
+  });
+}
+
+/** Signed percent for development deltas (e.g. +43 %, −12 %). */
+export function formatSignedPercent(value: number): string {
+  const abs = new Intl.NumberFormat("de-DE", {
+    maximumFractionDigits: 0,
+  }).format(Math.abs(value));
+  if (value > 0) {
+    return `+${abs} %`;
+  }
+  if (value < 0) {
+    return `−${abs} %`;
+  }
+  return `${abs} %`;
+}
+
 export type UnusualMonthInsight = {
   unusual: boolean;
   monthStart: string | null;
