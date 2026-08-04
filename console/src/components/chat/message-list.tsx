@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { ChatUIMessage } from "@/hooks/use-chat";
 
 import type { ChatStarter, FollowUpChip } from "./starters";
+import { MarkdownContent } from "./markdown-content";
 import { ThinkingIndicator } from "./thinking-indicator";
 import { ToolCallIndicator } from "./tool-call-indicator";
 import { ToolEvidence } from "./tool-evidence";
@@ -90,7 +91,11 @@ export const MessageList: React.FC<MessageListProps> = ({
                   : "bg-muted text-foreground",
               )}
             >
-              <div className="whitespace-pre-wrap">{message.content}</div>
+              {message.role === "assistant" ? (
+                <MarkdownContent content={message.content} />
+              ) : (
+                <div className="whitespace-pre-wrap">{message.content}</div>
+              )}
               {message.role === "assistant" && message.toolCalls?.length ? (
                 <ToolEvidence toolCalls={message.toolCalls} />
               ) : null}
@@ -103,7 +108,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               ) : null}
               {showThinking ? <ThinkingIndicator /> : null}
               {showStreamingText ? (
-                <div className="whitespace-pre-wrap text-sm">{streamingContent}</div>
+                <MarkdownContent content={streamingContent ?? ""} />
               ) : null}
             </article>
           ) : null}
