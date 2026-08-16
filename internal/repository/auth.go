@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"net/netip"
 	"strings"
 	"time"
@@ -59,6 +60,20 @@ func (a *Auth) UpdateUserGoogleProfile(ctx context.Context, userID uuid.UUID, gi
 		ID:         userID,
 		GivenName:  strings.TrimSpace(givenName),
 		PictureUrl: strings.TrimSpace(pictureURL),
+	})
+	if err != nil {
+		return domain.User{}, err
+	}
+	return mapUser(row), nil
+}
+
+func (a *Auth) UpdateUserPreferredLocale(ctx context.Context, userID uuid.UUID, locale string) (domain.User, error) {
+	if !domain.IsSupportedLocale(locale) {
+		return domain.User{}, fmt.Errorf("unsupported locale %q", locale)
+	}
+	row, err := a.queries.UpdateUserPreferredLocale(ctx, sqldb.UpdateUserPreferredLocaleParams{
+		ID:              userID,
+		PreferredLocale: locale,
 	})
 	if err != nil {
 		return domain.User{}, err

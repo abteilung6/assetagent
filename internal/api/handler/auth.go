@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -24,14 +25,78 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	user, household, membership, email, err := h.sessions.LoadMe(r.Context(), userID)
 	if err != nil {
-		if errors.Is(err, service.ErrUnauthorized) {
-			writeUnauthorizedError(w, "not authenticated")
-			return
-		}
-		writeInternalError(w, "failed to load current user")
+		writeMeLoadError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toMeResponse(user, household, membership, email))
+}
+
+func (h *Handler) PatchMe(w http.ResponseWriter, r *http.Request) {
+	if h.sessions == nil {
+		writeUnauthorizedError(w, "not authenticated")
+		return
+	}
+	userID, ok := authctx.UserID(r.Context())
+	if !ok {
+		writeUnauthorizedError(w, "not authenticated")
 		return
 	}
 
+	var body gen.PatchMeRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeValidationError(w, "invalid JSON body")
+		return
+	}
+	if !body.PreferredLocale.Valid() {
+		writeValidationError(w, "preferred_locale must be de or en")
+		return
+	}
+
+	user, household, membership, email, err := h.sessions.UpdatePreferredLocale(
+		r.Context(),
+		userID,
+		string(body.PreferredLocale),
+	)
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidLocale) {
+			writeValidationError(w, err.Error())
+			return
+		}
+		writeMeLoadError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toMeResponse(user, household, membership, email))
+}
+
+func (h *Handler) PostLogout(w http.ResponseWriter, r *http.Request) {
+	cfg := service.SessionConfig{CookieName: "session"}
+	if h.sessions != nil {
+		cfg = h.sessions.Config()
+		if sessionID, ok := authctx.SessionID(r.Context()); ok {
+			if err := h.sessions.Logout(r.Context(), sessionID); err != nil {
+				writeInternalError(w, "failed to revoke session")
+				return
+			}
+		}
+	}
+	service.ClearSessionCookie(w, cfg)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func writeMeLoadError(w http.ResponseWriter, err error) {
+	if errors.Is(err, service.ErrUnauthorized) {
+		writeUnauthorizedError(w, "not authenticated")
+		return
+	}
+	writeInternalError(w, "failed to load current user")
+}
+
+func toMeResponse(
+	user domain.User,
+	household domain.Household,
+	membership domain.HouseholdMembership,
+	email string,
+) gen.MeResponse {
 	resp := gen.MeResponse{
 		User: gen.MeUser{
 			Id:              user.ID,
@@ -58,22 +123,7 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 		picture := user.PictureURL
 		resp.User.PictureUrl = &picture
 	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-func (h *Handler) PostLogout(w http.ResponseWriter, r *http.Request) {
-	cfg := service.SessionConfig{CookieName: "session"}
-	if h.sessions != nil {
-		cfg = h.sessions.Config()
-		if sessionID, ok := authctx.SessionID(r.Context()); ok {
-			if err := h.sessions.Logout(r.Context(), sessionID); err != nil {
-				writeInternalError(w, "failed to revoke session")
-				return
-			}
-		}
-	}
-	service.ClearSessionCookie(w, cfg)
-	w.WriteHeader(http.StatusNoContent)
+	return resp
 }
 
 func toMeMembershipRole(role string) gen.MeMembershipRole {
@@ -88,8 +138,8 @@ func toMeMembershipRole(role string) gen.MeMembershipRole {
 func toMePreferredLocale(locale string) gen.MeUserPreferredLocale {
 	switch locale {
 	case domain.LocaleEN:
-		return gen.En
+		return gen.MeUserPreferredLocaleEn
 	default:
-		return gen.De
+		return gen.MeUserPreferredLocaleDe
 	}
 }

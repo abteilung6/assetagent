@@ -19,6 +19,10 @@ export type MeResponse = {
     membership: MeMembership;
 };
 
+export type PatchMeRequest = {
+    preferred_locale: 'de' | 'en';
+};
+
 export type MeUser = {
     id: string;
     display_name: string;
@@ -664,6 +668,35 @@ export type GetMeResponses = {
 };
 
 export type GetMeResponse = GetMeResponses[keyof GetMeResponses];
+
+export type PatchMeData = {
+    body: PatchMeRequest;
+    path?: never;
+    query?: never;
+    url: '/api/me';
+};
+
+export type PatchMeErrors = {
+    /**
+     * Invalid request
+     */
+    400: Error;
+    /**
+     * Not authenticated
+     */
+    401: Error;
+};
+
+export type PatchMeError = PatchMeErrors[keyof PatchMeErrors];
+
+export type PatchMeResponses = {
+    /**
+     * Updated user context
+     */
+    200: MeResponse;
+};
+
+export type PatchMeResponse = PatchMeResponses[keyof PatchMeResponses];
 
 export type PostLogoutData = {
     body?: never;

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -126,7 +127,7 @@ func TestGetMe_withCookie(t *testing.T) {
 	if resp.User.DisplayName != "Ada" {
 		t.Fatalf("display_name = %q, want Ada", resp.User.DisplayName)
 	}
-	if resp.User.PreferredLocale != gen.De {
+	if resp.User.PreferredLocale != gen.MeUserPreferredLocaleDe {
 		t.Fatalf("preferred_locale = %q, want de", resp.User.PreferredLocale)
 	}
 	if resp.User.Email == nil || string(*resp.User.Email) != "ada@example.com" {
@@ -175,7 +176,7 @@ func TestGetMe_includesGoogleProfileFields(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if resp.User.PreferredLocale != gen.En {
+	if resp.User.PreferredLocale != gen.MeUserPreferredLocaleEn {
 		t.Fatalf("preferred_locale = %q, want en", resp.User.PreferredLocale)
 	}
 	if resp.User.GivenName == nil || *resp.User.GivenName != "Ada" {
@@ -183,6 +184,73 @@ func TestGetMe_includesGoogleProfileFields(t *testing.T) {
 	}
 	if resp.User.PictureUrl == nil || *resp.User.PictureUrl != "https://example.com/ada.png" {
 		t.Fatalf("picture_url = %v", resp.User.PictureUrl)
+	}
+}
+
+func TestPatchMe_updatesPreferredLocale(t *testing.T) {
+	f := setupAuthFixture(t)
+	cookie := CreateTestSession(t, f, "Ada", "ada@example.com")
+
+	body := strings.NewReader(`{"preferred_locale":"en"}`)
+	req := httptest.NewRequest(http.MethodPatch, "/api/me", body)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	f.router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+
+	var resp gen.MeResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.User.PreferredLocale != gen.MeUserPreferredLocaleEn {
+		t.Fatalf("preferred_locale = %q, want en", resp.User.PreferredLocale)
+	}
+
+	meReq := httptest.NewRequest(http.MethodGet, "/api/me", nil)
+	meReq.AddCookie(cookie)
+	meRec := httptest.NewRecorder()
+	f.router.ServeHTTP(meRec, meReq)
+	if meRec.Code != http.StatusOK {
+		t.Fatalf("get after patch status = %d", meRec.Code)
+	}
+	var me gen.MeResponse
+	if err := json.NewDecoder(meRec.Body).Decode(&me); err != nil {
+		t.Fatalf("decode me: %v", err)
+	}
+	if me.User.PreferredLocale != gen.MeUserPreferredLocaleEn {
+		t.Fatalf("persisted preferred_locale = %q, want en", me.User.PreferredLocale)
+	}
+}
+
+func TestPatchMe_rejectsInvalidLocale(t *testing.T) {
+	f := setupAuthFixture(t)
+	cookie := CreateTestSession(t, f, "Ada", "ada@example.com")
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/me", strings.NewReader(`{"preferred_locale":"fr"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	f.router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPatchMe_unauthorized(t *testing.T) {
+	f := setupAuthFixture(t)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/me", strings.NewReader(`{"preferred_locale":"en"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	f.router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401; body = %s", rec.Code, rec.Body.String())
 	}
 }
 

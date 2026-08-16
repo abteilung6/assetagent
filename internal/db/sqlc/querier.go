@@ -129,6 +129,7 @@ type Querier interface {
 	UpdateMerchantDefaultCategory(ctx context.Context, arg UpdateMerchantDefaultCategoryParams) (Merchant, error)
 	// Refresh picture from Google; fill given_name only when still unset.
 	UpdateUserGoogleProfile(ctx context.Context, arg UpdateUserGoogleProfileParams) (User, error)
+	UpdateUserPreferredLocale(ctx context.Context, arg UpdateUserPreferredLocaleParams) (User, error)
 	UpsertAuthIdentity(ctx context.Context, arg UpsertAuthIdentityParams) (AuthIdentity, error)
 	UpsertSystemPatternRule(ctx context.Context, arg UpsertSystemPatternRuleParams) (ClassificationRule, error)
 	UpsertTransactionClassification(ctx context.Context, arg UpsertTransactionClassificationParams) (TransactionClassification, error)

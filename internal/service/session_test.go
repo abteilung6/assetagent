@@ -82,6 +82,18 @@ func TestSession_IssueResolveLogout(t *testing.T) {
 		t.Fatalf("email = %q, want ada@example.com", email)
 	}
 
+	updated, _, _, _, err := sessions.UpdatePreferredLocale(ctx, user.ID, domain.LocaleEN)
+	if err != nil {
+		t.Fatalf("UpdatePreferredLocale: %v", err)
+	}
+	if updated.PreferredLocale != domain.LocaleEN {
+		t.Fatalf("preferred_locale = %q, want en", updated.PreferredLocale)
+	}
+	_, _, _, _, err = sessions.UpdatePreferredLocale(ctx, user.ID, "fr")
+	if !errors.Is(err, service.ErrInvalidLocale) {
+		t.Fatalf("UpdatePreferredLocale fr = %v, want ErrInvalidLocale", err)
+	}
+
 	if err := sessions.Logout(ctx, session.ID); err != nil {
 		t.Fatalf("Logout: %v", err)
 	}

@@ -300,16 +300,16 @@ func (e MeMembershipRole) Valid() bool {
 
 // Defines values for MeUserPreferredLocale.
 const (
-	De MeUserPreferredLocale = "de"
-	En MeUserPreferredLocale = "en"
+	MeUserPreferredLocaleDe MeUserPreferredLocale = "de"
+	MeUserPreferredLocaleEn MeUserPreferredLocale = "en"
 )
 
 // Valid indicates whether the value is a known member of the MeUserPreferredLocale enum.
 func (e MeUserPreferredLocale) Valid() bool {
 	switch e {
-	case De:
+	case MeUserPreferredLocaleDe:
 		return true
-	case En:
+	case MeUserPreferredLocaleEn:
 		return true
 	default:
 		return false
@@ -382,6 +382,24 @@ func (e MoneyReviewFindingType) Valid() bool {
 	case RecurringAmountChange:
 		return true
 	case UncertainRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PatchMeRequestPreferredLocale.
+const (
+	PatchMeRequestPreferredLocaleDe PatchMeRequestPreferredLocale = "de"
+	PatchMeRequestPreferredLocaleEn PatchMeRequestPreferredLocale = "en"
+)
+
+// Valid indicates whether the value is a known member of the PatchMeRequestPreferredLocale enum.
+func (e PatchMeRequestPreferredLocale) Valid() bool {
+	switch e {
+	case PatchMeRequestPreferredLocaleDe:
+		return true
+	case PatchMeRequestPreferredLocaleEn:
 		return true
 	default:
 		return false
@@ -1254,6 +1272,14 @@ type Pagination struct {
 	Total  int64 `json:"total"`
 }
 
+// PatchMeRequest defines model for PatchMeRequest.
+type PatchMeRequest struct {
+	PreferredLocale PatchMeRequestPreferredLocale `json:"preferred_locale"`
+}
+
+// PatchMeRequestPreferredLocale defines model for PatchMeRequest.PreferredLocale.
+type PatchMeRequestPreferredLocale string
+
 // RecurringSeries defines model for RecurringSeries.
 type RecurringSeries struct {
 	AmountChanged bool                       `json:"amount_changed"`
@@ -1600,6 +1626,9 @@ type PostImportsMultipartRequestBody PostImportsMultipartBody
 // PostImportsPreviewMultipartRequestBody defines body for PostImportsPreview for multipart/form-data ContentType.
 type PostImportsPreviewMultipartRequestBody PostImportsPreviewMultipartBody
 
+// PatchMeJSONRequestBody defines body for PatchMe for application/json ContentType.
+type PatchMeJSONRequestBody = PatchMeRequest
+
 // PostMoneyReviewsJSONRequestBody defines body for PostMoneyReviews for application/json ContentType.
 type PostMoneyReviewsJSONRequestBody = MoneyReviewCreateRequest
 
@@ -1707,6 +1736,9 @@ type ServerInterface interface {
 	// Current user and household
 	// (GET /api/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
+	// Update current user preferences
+	// (PATCH /api/me)
+	PatchMe(w http.ResponseWriter, r *http.Request)
 	// List all recurring series
 	// (GET /api/recurring)
 	GetRecurring(w http.ResponseWriter, r *http.Request)
@@ -1953,6 +1985,12 @@ func (_ Unimplemented) GetLLMModels(w http.ResponseWriter, r *http.Request) {
 // Current user and household
 // (GET /api/me)
 func (_ Unimplemented) GetMe(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update current user preferences
+// (PATCH /api/me)
+func (_ Unimplemented) PatchMe(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -3118,6 +3156,26 @@ func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request)
 	handler.ServeHTTP(w, r)
 }
 
+// PatchMe operation middleware
+func (siw *ServerInterfaceWrapper) PatchMe(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetRecurring operation middleware
 func (siw *ServerInterfaceWrapper) GetRecurring(w http.ResponseWriter, r *http.Request) {
 
@@ -3903,6 +3961,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/me", wrapper.GetMe)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/api/me", wrapper.PatchMe)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/recurring", wrapper.GetRecurring)

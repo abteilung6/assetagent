@@ -527,6 +527,32 @@ func (q *Queries) UpdateUserGoogleProfile(ctx context.Context, arg UpdateUserGoo
 	return i, err
 }
 
+const updateUserPreferredLocale = `-- name: UpdateUserPreferredLocale :one
+UPDATE users
+SET preferred_locale = $2
+WHERE id = $1
+RETURNING id, display_name, created_at, given_name, picture_url, preferred_locale
+`
+
+type UpdateUserPreferredLocaleParams struct {
+	ID              uuid.UUID `json:"id"`
+	PreferredLocale string    `json:"preferred_locale"`
+}
+
+func (q *Queries) UpdateUserPreferredLocale(ctx context.Context, arg UpdateUserPreferredLocaleParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserPreferredLocale, arg.ID, arg.PreferredLocale)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.DisplayName,
+		&i.CreatedAt,
+		&i.GivenName,
+		&i.PictureUrl,
+		&i.PreferredLocale,
+	)
+	return i, err
+}
+
 const upsertAuthIdentity = `-- name: UpsertAuthIdentity :one
 INSERT INTO auth_identities (user_id, provider, provider_subject, email, email_verified)
 VALUES ($1, $2, $3, $4, $5)

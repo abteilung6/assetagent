@@ -24,6 +24,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    patch:
+      operationId: patchMe
+      summary: Update current user preferences
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchMeRequest"
+      responses:
+        "200":
+          description: Updated user context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /auth/logout:
     post:
       operationId: postLogout
@@ -1334,6 +1364,14 @@ components:
           $ref: "#/components/schemas/MeHousehold"
         membership:
           $ref: "#/components/schemas/MeMembership"
+    PatchMeRequest:
+      type: object
+      required:
+        - preferred_locale
+      properties:
+        preferred_locale:
+          type: string
+          enum: [de, en]
     MeUser:
       type: object
       required:

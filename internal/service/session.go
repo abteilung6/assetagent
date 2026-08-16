@@ -19,6 +19,7 @@ import (
 var (
 	ErrUnauthorized   = errors.New("unauthorized")
 	ErrSessionInvalid = ErrUnauthorized
+	ErrInvalidLocale  = errors.New("preferred_locale must be de or en")
 )
 
 type SessionConfig struct {
@@ -159,6 +160,24 @@ func (s *SessionService) LoadMe(
 		email = identities[0].Email
 	}
 	return user, household, membership, email, nil
+}
+
+// UpdatePreferredLocale persists the user's UI language and returns the refreshed me context.
+func (s *SessionService) UpdatePreferredLocale(
+	ctx context.Context,
+	userID uuid.UUID,
+	locale string,
+) (domain.User, domain.Household, domain.HouseholdMembership, string, error) {
+	if !domain.IsSupportedLocale(locale) {
+		return domain.User{}, domain.Household{}, domain.HouseholdMembership{}, "", ErrInvalidLocale
+	}
+	if _, err := s.auth.UpdateUserPreferredLocale(ctx, userID, locale); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.User{}, domain.Household{}, domain.HouseholdMembership{}, "", ErrUnauthorized
+		}
+		return domain.User{}, domain.Household{}, domain.HouseholdMembership{}, "", err
+	}
+	return s.LoadMe(ctx, userID)
 }
 
 func (s *SessionService) loadUserHousehold(

@@ -20,6 +20,12 @@ SET
 WHERE id = sqlc.arg(id)
 RETURNING *;
 
+-- name: UpdateUserPreferredLocale :one
+UPDATE users
+SET preferred_locale = $2
+WHERE id = $1
+RETURNING *;
+
 -- name: UpsertAuthIdentity :one
 INSERT INTO auth_identities (user_id, provider, provider_subject, email, email_verified)
 VALUES ($1, $2, $3, $4, $5)
