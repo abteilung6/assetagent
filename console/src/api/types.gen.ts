@@ -22,7 +22,10 @@ export type MeResponse = {
 export type MeUser = {
     id: string;
     display_name: string;
+    given_name?: string;
+    picture_url?: string;
     email?: string;
+    preferred_locale: 'de' | 'en';
 };
 
 export type MeHousehold = {

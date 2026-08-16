@@ -66,7 +66,7 @@ func CreateTestSession(t *testing.T, f *testSessionFixture, displayName, email s
 	t.Helper()
 	ctx := context.Background()
 
-	user, err := f.auth.CreateUser(ctx, displayName)
+	user, err := f.auth.CreateUser(ctx, repository.CreateUserInput{DisplayName: displayName})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
@@ -126,11 +126,63 @@ func TestGetMe_withCookie(t *testing.T) {
 	if resp.User.DisplayName != "Ada" {
 		t.Fatalf("display_name = %q, want Ada", resp.User.DisplayName)
 	}
+	if resp.User.PreferredLocale != gen.De {
+		t.Fatalf("preferred_locale = %q, want de", resp.User.PreferredLocale)
+	}
 	if resp.User.Email == nil || string(*resp.User.Email) != "ada@example.com" {
 		t.Fatalf("email = %v, want ada@example.com", resp.User.Email)
 	}
 	if resp.Household.Name == "" || resp.Membership.Role != gen.Owner {
 		t.Fatalf("household/membership = %+v / %+v", resp.Household, resp.Membership)
+	}
+}
+
+func TestGetMe_includesGoogleProfileFields(t *testing.T) {
+	f := setupAuthFixture(t)
+	ctx := context.Background()
+
+	user, err := f.auth.CreateUser(ctx, repository.CreateUserInput{
+		DisplayName:     "Ada Lovelace",
+		GivenName:       "Ada",
+		PictureURL:      "https://example.com/ada.png",
+		PreferredLocale: domain.LocaleEN,
+	})
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	household, err := f.auth.CreateHousehold(ctx, "Ada household")
+	if err != nil {
+		t.Fatalf("CreateHousehold: %v", err)
+	}
+	if _, err := f.auth.CreateMembership(ctx, household.ID, user.ID, domain.MembershipRoleOwner); err != nil {
+		t.Fatalf("CreateMembership: %v", err)
+	}
+	raw, _, err := f.sessions.IssueSession(ctx, user.ID, "test-agent", nil)
+	if err != nil {
+		t.Fatalf("IssueSession: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/me", nil)
+	req.AddCookie(&http.Cookie{Name: f.sessions.CookieName(), Value: raw, Path: "/"})
+	rec := httptest.NewRecorder()
+	f.router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+
+	var resp gen.MeResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.User.PreferredLocale != gen.En {
+		t.Fatalf("preferred_locale = %q, want en", resp.User.PreferredLocale)
+	}
+	if resp.User.GivenName == nil || *resp.User.GivenName != "Ada" {
+		t.Fatalf("given_name = %v", resp.User.GivenName)
+	}
+	if resp.User.PictureUrl == nil || *resp.User.PictureUrl != "https://example.com/ada.png" {
+		t.Fatalf("picture_url = %v", resp.User.PictureUrl)
 	}
 }
 

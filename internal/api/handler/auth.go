@@ -34,8 +34,9 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	resp := gen.MeResponse{
 		User: gen.MeUser{
-			Id:          user.ID,
-			DisplayName: user.DisplayName,
+			Id:              user.ID,
+			DisplayName:     user.DisplayName,
+			PreferredLocale: toMePreferredLocale(user.PreferredLocale),
 		},
 		Household: gen.MeHousehold{
 			Id:   household.ID,
@@ -48,6 +49,14 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 	if email != "" {
 		e := openapi_types.Email(email)
 		resp.User.Email = &e
+	}
+	if user.GivenName != "" {
+		given := user.GivenName
+		resp.User.GivenName = &given
+	}
+	if user.PictureURL != "" {
+		picture := user.PictureURL
+		resp.User.PictureUrl = &picture
 	}
 	writeJSON(w, http.StatusOK, resp)
 }
@@ -73,5 +82,14 @@ func toMeMembershipRole(role string) gen.MeMembershipRole {
 		return gen.Member
 	default:
 		return gen.Owner
+	}
+}
+
+func toMePreferredLocale(locale string) gen.MeUserPreferredLocale {
+	switch locale {
+	case domain.LocaleEN:
+		return gen.En
+	default:
+		return gen.De
 	}
 }

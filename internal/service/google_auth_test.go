@@ -80,6 +80,9 @@ func TestGoogleAuth_StartAndComplete_newUserClaimsSeed(t *testing.T) {
 		Email:         "ada@example.com",
 		EmailVerified: true,
 		Name:          "Ada Lovelace",
+		GivenName:     "Ada",
+		PictureURL:    "https://lh3.googleusercontent.com/a/ada",
+		Locale:        "en-GB",
 	}}
 	google := service.NewGoogleAuth(auth, sessions, exchanger, verifier, service.GoogleAuthConfig{
 		FrontendURL:       "http://localhost:5173",
@@ -110,6 +113,15 @@ func TestGoogleAuth_StartAndComplete_newUserClaimsSeed(t *testing.T) {
 	if user.DisplayName != "Ada Lovelace" {
 		t.Fatalf("display name = %q", user.DisplayName)
 	}
+	if user.GivenName != "Ada" {
+		t.Fatalf("given name = %q, want Ada", user.GivenName)
+	}
+	if user.PictureURL != "https://lh3.googleusercontent.com/a/ada" {
+		t.Fatalf("picture = %q", user.PictureURL)
+	}
+	if user.PreferredLocale != domain.LocaleEN {
+		t.Fatalf("preferred_locale = %q, want en", user.PreferredLocale)
+	}
 	if household.Name != domain.SeedHouseholdName {
 		t.Fatalf("household = %q, want seed claimed", household.Name)
 	}
@@ -117,7 +129,10 @@ func TestGoogleAuth_StartAndComplete_newUserClaimsSeed(t *testing.T) {
 		t.Fatal("expected seed household claimed_at set")
 	}
 
-	// Second login reuses the same user.
+	// Second login refreshes picture but does not overwrite preferred_locale or given_name.
+	verifier.claims.GivenName = "Adelaide"
+	verifier.claims.PictureURL = "https://lh3.googleusercontent.com/a/ada-new"
+	verifier.claims.Locale = "de-DE"
 	exchanger2 := &stubExchanger{rawIDToken: "fake-id-token-2"}
 	google2 := service.NewGoogleAuth(auth, sessions, exchanger2, verifier, service.GoogleAuthConfig{
 		FrontendURL:       "http://localhost:5173",
@@ -137,6 +152,15 @@ func TestGoogleAuth_StartAndComplete_newUserClaimsSeed(t *testing.T) {
 	}
 	if user2.ID != user.ID || household2.ID != household.ID {
 		t.Fatalf("second login created new user/household")
+	}
+	if user2.GivenName != "Ada" {
+		t.Fatalf("given_name overwritten on return login: %q", user2.GivenName)
+	}
+	if user2.PictureURL != "https://lh3.googleusercontent.com/a/ada-new" {
+		t.Fatalf("picture not refreshed: %q", user2.PictureURL)
+	}
+	if user2.PreferredLocale != domain.LocaleEN {
+		t.Fatalf("preferred_locale overwritten on return login: %q", user2.PreferredLocale)
 	}
 }
 

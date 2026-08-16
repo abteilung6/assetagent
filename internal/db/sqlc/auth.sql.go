@@ -153,15 +153,34 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (display_name)
-VALUES ($1)
-RETURNING id, display_name, created_at
+INSERT INTO users (display_name, given_name, picture_url, preferred_locale)
+VALUES ($1, $2, $3, $4)
+RETURNING id, display_name, created_at, given_name, picture_url, preferred_locale
 `
 
-func (q *Queries) CreateUser(ctx context.Context, displayName string) (User, error) {
-	row := q.db.QueryRow(ctx, createUser, displayName)
+type CreateUserParams struct {
+	DisplayName     string      `json:"display_name"`
+	GivenName       pgtype.Text `json:"given_name"`
+	PictureUrl      pgtype.Text `json:"picture_url"`
+	PreferredLocale string      `json:"preferred_locale"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, createUser,
+		arg.DisplayName,
+		arg.GivenName,
+		arg.PictureUrl,
+		arg.PreferredLocale,
+	)
 	var i User
-	err := row.Scan(&i.ID, &i.DisplayName, &i.CreatedAt)
+	err := row.Scan(
+		&i.ID,
+		&i.DisplayName,
+		&i.CreatedAt,
+		&i.GivenName,
+		&i.PictureUrl,
+		&i.PreferredLocale,
+	)
 	return i, err
 }
 
@@ -401,14 +420,21 @@ func (q *Queries) GetUnclaimedSeedHousehold(ctx context.Context) (Household, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, display_name, created_at FROM users
+SELECT id, display_name, created_at, given_name, picture_url, preferred_locale FROM users
 WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 	row := q.db.QueryRow(ctx, getUser, id)
 	var i User
-	err := row.Scan(&i.ID, &i.DisplayName, &i.CreatedAt)
+	err := row.Scan(
+		&i.ID,
+		&i.DisplayName,
+		&i.CreatedAt,
+		&i.GivenName,
+		&i.PictureUrl,
+		&i.PreferredLocale,
+	)
 	return i, err
 }
 
@@ -463,6 +489,40 @@ func (q *Queries) TouchSession(ctx context.Context, arg TouchSessionParams) (Ses
 		&i.RevokedAt,
 		&i.UserAgent,
 		&i.Ip,
+	)
+	return i, err
+}
+
+const updateUserGoogleProfile = `-- name: UpdateUserGoogleProfile :one
+UPDATE users
+SET
+    given_name = CASE
+        WHEN given_name IS NULL AND NULLIF($1::text, '') IS NOT NULL
+            THEN NULLIF($1::text, '')
+        ELSE given_name
+    END,
+    picture_url = NULLIF($2::text, '')
+WHERE id = $3
+RETURNING id, display_name, created_at, given_name, picture_url, preferred_locale
+`
+
+type UpdateUserGoogleProfileParams struct {
+	GivenName  string    `json:"given_name"`
+	PictureUrl string    `json:"picture_url"`
+	ID         uuid.UUID `json:"id"`
+}
+
+// Refresh picture from Google; fill given_name only when still unset.
+func (q *Queries) UpdateUserGoogleProfile(ctx context.Context, arg UpdateUserGoogleProfileParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserGoogleProfile, arg.GivenName, arg.PictureUrl, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.DisplayName,
+		&i.CreatedAt,
+		&i.GivenName,
+		&i.PictureUrl,
+		&i.PreferredLocale,
 	)
 	return i, err
 }

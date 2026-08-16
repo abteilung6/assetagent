@@ -31,7 +31,7 @@ type Querier interface {
 	CreateMerchantAlias(ctx context.Context, arg CreateMerchantAliasParams) (MerchantAlias, error)
 	CreateOAuthLoginState(ctx context.Context, arg CreateOAuthLoginStateParams) (OauthLoginState, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
-	CreateUser(ctx context.Context, displayName string) (User, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteExpiredOAuthLoginStates(ctx context.Context) error
 	DeleteExpiredSessions(ctx context.Context) error
 	DeleteOAuthLoginState(ctx context.Context, state string) error
@@ -127,6 +127,8 @@ type Querier interface {
 	UpdateClassificationRuleCategory(ctx context.Context, arg UpdateClassificationRuleCategoryParams) (ClassificationRule, error)
 	UpdateImportRunCounts(ctx context.Context, arg UpdateImportRunCountsParams) (ImportRun, error)
 	UpdateMerchantDefaultCategory(ctx context.Context, arg UpdateMerchantDefaultCategoryParams) (Merchant, error)
+	// Refresh picture from Google; fill given_name only when still unset.
+	UpdateUserGoogleProfile(ctx context.Context, arg UpdateUserGoogleProfileParams) (User, error)
 	UpsertAuthIdentity(ctx context.Context, arg UpsertAuthIdentityParams) (AuthIdentity, error)
 	UpsertSystemPatternRule(ctx context.Context, arg UpsertSystemPatternRuleParams) (ClassificationRule, error)
 	UpsertTransactionClassification(ctx context.Context, arg UpsertTransactionClassificationParams) (TransactionClassification, error)

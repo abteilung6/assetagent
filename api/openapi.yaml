@@ -1339,15 +1339,24 @@ components:
       required:
         - id
         - display_name
+        - preferred_locale
       properties:
         id:
           type: string
           format: uuid
         display_name:
           type: string
+        given_name:
+          type: string
+        picture_url:
+          type: string
+          format: uri
         email:
           type: string
           format: email
+        preferred_locale:
+          type: string
+          enum: [de, en]
     MeHousehold:
       type: object
       required:

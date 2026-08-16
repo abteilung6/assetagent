@@ -35,7 +35,7 @@ func TestHouseholdIsolation_userCannotListOtherHouseholdTransactions(t *testing.
 		Absolute:   24 * time.Hour,
 	})
 
-	userA, err := auth.CreateUser(ctx, "User A")
+	userA, err := auth.CreateUser(ctx, repository.CreateUserInput{DisplayName: "User A"})
 	if err != nil {
 		t.Fatalf("CreateUser A: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestHouseholdIsolation_userCannotListOtherHouseholdTransactions(t *testing.
 		t.Fatalf("membership A: %v", err)
 	}
 
-	userB, err := auth.CreateUser(ctx, "User B")
+	userB, err := auth.CreateUser(ctx, repository.CreateUserInput{DisplayName: "User B"})
 	if err != nil {
 		t.Fatalf("CreateUser B: %v", err)
 	}

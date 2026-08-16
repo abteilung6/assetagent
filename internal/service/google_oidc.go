@@ -79,6 +79,9 @@ func (v *RealGoogleIDTokenVerifier) Verify(ctx context.Context, rawIDToken, expe
 		Email         string `json:"email"`
 		EmailVerified bool   `json:"email_verified"`
 		Name          string `json:"name"`
+		GivenName     string `json:"given_name"`
+		Picture       string `json:"picture"`
+		Locale        string `json:"locale"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
 		return GoogleIDTokenClaims{}, err
@@ -88,6 +91,9 @@ func (v *RealGoogleIDTokenVerifier) Verify(ctx context.Context, rawIDToken, expe
 		Email:         claims.Email,
 		EmailVerified: claims.EmailVerified,
 		Name:          claims.Name,
+		GivenName:     claims.GivenName,
+		PictureURL:    claims.Picture,
+		Locale:        claims.Locale,
 		Nonce:         idToken.Nonce,
 	}, nil
 }

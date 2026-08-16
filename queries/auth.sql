@@ -1,11 +1,24 @@
 -- name: CreateUser :one
-INSERT INTO users (display_name)
-VALUES ($1)
+INSERT INTO users (display_name, given_name, picture_url, preferred_locale)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetUser :one
 SELECT * FROM users
 WHERE id = $1;
+
+-- name: UpdateUserGoogleProfile :one
+-- Refresh picture from Google; fill given_name only when still unset.
+UPDATE users
+SET
+    given_name = CASE
+        WHEN given_name IS NULL AND NULLIF(sqlc.arg(given_name)::text, '') IS NOT NULL
+            THEN NULLIF(sqlc.arg(given_name)::text, '')
+        ELSE given_name
+    END,
+    picture_url = NULLIF(sqlc.arg(picture_url)::text, '')
+WHERE id = sqlc.arg(id)
+RETURNING *;
 
 -- name: UpsertAuthIdentity :one
 INSERT INTO auth_identities (user_id, provider, provider_subject, email, email_verified)

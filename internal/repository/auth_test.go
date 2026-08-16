@@ -24,12 +24,15 @@ func TestAuth_userHouseholdSessionRoundTrip(t *testing.T) {
 	pool := startMigratedPool(ctx, t)
 	auth := repository.NewAuth(pool)
 
-	user, err := auth.CreateUser(ctx, "Ada")
+	user, err := auth.CreateUser(ctx, repository.CreateUserInput{DisplayName: "Ada"})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
 	if user.ID == uuid.Nil || user.DisplayName != "Ada" {
 		t.Fatalf("CreateUser result = %+v", user)
+	}
+	if user.PreferredLocale != domain.LocaleDE {
+		t.Fatalf("preferred_locale = %q, want %q", user.PreferredLocale, domain.LocaleDE)
 	}
 
 	gotUser, err := auth.GetUser(ctx, user.ID)
@@ -38,6 +41,40 @@ func TestAuth_userHouseholdSessionRoundTrip(t *testing.T) {
 	}
 	if gotUser.ID != user.ID {
 		t.Fatalf("GetUser ID = %v, want %v", gotUser.ID, user.ID)
+	}
+
+	profiled, err := auth.CreateUser(ctx, repository.CreateUserInput{
+		DisplayName:     "Grace Hopper",
+		GivenName:       "Grace",
+		PictureURL:      "https://example.com/grace.png",
+		PreferredLocale: domain.LocaleEN,
+	})
+	if err != nil {
+		t.Fatalf("CreateUser profiled: %v", err)
+	}
+	if profiled.GivenName != "Grace" || profiled.PictureURL != "https://example.com/grace.png" || profiled.PreferredLocale != domain.LocaleEN {
+		t.Fatalf("profiled user = %+v", profiled)
+	}
+	refreshed, err := auth.UpdateUserGoogleProfile(ctx, profiled.ID, "Gracie", "https://example.com/grace-new.png")
+	if err != nil {
+		t.Fatalf("UpdateUserGoogleProfile: %v", err)
+	}
+	if refreshed.GivenName != "Grace" {
+		t.Fatalf("given_name should stay Grace, got %q", refreshed.GivenName)
+	}
+	if refreshed.PictureURL != "https://example.com/grace-new.png" {
+		t.Fatalf("picture_url = %q", refreshed.PictureURL)
+	}
+	filled, err := auth.CreateUser(ctx, repository.CreateUserInput{DisplayName: "No Given"})
+	if err != nil {
+		t.Fatalf("CreateUser bare: %v", err)
+	}
+	filled, err = auth.UpdateUserGoogleProfile(ctx, filled.ID, "Nora", "https://example.com/nora.png")
+	if err != nil {
+		t.Fatalf("UpdateUserGoogleProfile fill: %v", err)
+	}
+	if filled.GivenName != "Nora" || filled.PictureURL != "https://example.com/nora.png" {
+		t.Fatalf("filled profile = %+v", filled)
 	}
 
 	identity, err := auth.UpsertAuthIdentity(ctx, user.ID, domain.AuthProviderGoogle, "google-sub-1", "ada@example.com", true)

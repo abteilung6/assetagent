@@ -298,7 +298,10 @@ type TransferPair struct {
 }
 
 type User struct {
-	ID          uuid.UUID          `json:"id"`
-	DisplayName string             `json:"display_name"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ID              uuid.UUID          `json:"id"`
+	DisplayName     string             `json:"display_name"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	GivenName       pgtype.Text        `json:"given_name"`
+	PictureUrl      pgtype.Text        `json:"picture_url"`
+	PreferredLocale string             `json:"preferred_locale"`
 }

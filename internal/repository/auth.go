@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"net/netip"
+	"strings"
 	"time"
 
 	sqldb "github.com/abteilung6/assetagent/internal/db/sqlc"
@@ -20,8 +21,24 @@ func NewAuth(pool *pgxpool.Pool) *Auth {
 	return &Auth{queries: sqldb.New(pool)}
 }
 
-func (a *Auth) CreateUser(ctx context.Context, displayName string) (domain.User, error) {
-	row, err := a.queries.CreateUser(ctx, displayName)
+type CreateUserInput struct {
+	DisplayName     string
+	GivenName       string
+	PictureURL      string
+	PreferredLocale string
+}
+
+func (a *Auth) CreateUser(ctx context.Context, in CreateUserInput) (domain.User, error) {
+	locale := in.PreferredLocale
+	if !domain.IsSupportedLocale(locale) {
+		locale = domain.LocaleDE
+	}
+	row, err := a.queries.CreateUser(ctx, sqldb.CreateUserParams{
+		DisplayName:     in.DisplayName,
+		GivenName:       textOrNull(in.GivenName),
+		PictureUrl:      textOrNull(in.PictureURL),
+		PreferredLocale: locale,
+	})
 	if err != nil {
 		return domain.User{}, err
 	}
@@ -30,6 +47,19 @@ func (a *Auth) CreateUser(ctx context.Context, displayName string) (domain.User,
 
 func (a *Auth) GetUser(ctx context.Context, id uuid.UUID) (domain.User, error) {
 	row, err := a.queries.GetUser(ctx, id)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return mapUser(row), nil
+}
+
+// UpdateUserGoogleProfile refreshes picture_url and fills given_name only when unset.
+func (a *Auth) UpdateUserGoogleProfile(ctx context.Context, userID uuid.UUID, givenName, pictureURL string) (domain.User, error) {
+	row, err := a.queries.UpdateUserGoogleProfile(ctx, sqldb.UpdateUserGoogleProfileParams{
+		ID:         userID,
+		GivenName:  strings.TrimSpace(givenName),
+		PictureUrl: strings.TrimSpace(pictureURL),
+	})
 	if err != nil {
 		return domain.User{}, err
 	}
@@ -265,10 +295,28 @@ func mapOAuthLoginState(row sqldb.OauthLoginState) OAuthLoginState {
 
 func mapUser(row sqldb.User) domain.User {
 	return domain.User{
-		ID:          row.ID,
-		DisplayName: row.DisplayName,
-		CreatedAt:   row.CreatedAt.Time,
+		ID:              row.ID,
+		DisplayName:     row.DisplayName,
+		GivenName:       textValue(row.GivenName),
+		PictureURL:      textValue(row.PictureUrl),
+		PreferredLocale: row.PreferredLocale,
+		CreatedAt:       row.CreatedAt.Time,
 	}
+}
+
+func textOrNull(value string) pgtype.Text {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: value, Valid: true}
+}
+
+func textValue(value pgtype.Text) string {
+	if !value.Valid {
+		return ""
+	}
+	return value.String
 }
 
 func mapAuthIdentity(row sqldb.AuthIdentity) domain.AuthIdentity {

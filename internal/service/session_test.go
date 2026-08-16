@@ -30,7 +30,7 @@ func TestSession_IssueResolveLogout(t *testing.T) {
 		Absolute:   24 * time.Hour,
 	})
 
-	user, err := auth.CreateUser(ctx, "Ada")
+	user, err := auth.CreateUser(ctx, repository.CreateUserInput{DisplayName: "Ada"})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}

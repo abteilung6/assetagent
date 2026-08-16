@@ -298,6 +298,24 @@ func (e MeMembershipRole) Valid() bool {
 	}
 }
 
+// Defines values for MeUserPreferredLocale.
+const (
+	De MeUserPreferredLocale = "de"
+	En MeUserPreferredLocale = "en"
+)
+
+// Valid indicates whether the value is a known member of the MeUserPreferredLocale enum.
+func (e MeUserPreferredLocale) Valid() bool {
+	switch e {
+	case De:
+		return true
+	case En:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MoneyReviewStatus.
 const (
 	MoneyReviewStatusConfirmed         MoneyReviewStatus = "confirmed"
@@ -1172,10 +1190,16 @@ type MeResponse struct {
 
 // MeUser defines model for MeUser.
 type MeUser struct {
-	DisplayName string               `json:"display_name"`
-	Email       *openapi_types.Email `json:"email,omitempty"`
-	Id          openapi_types.UUID   `json:"id"`
+	DisplayName     string                `json:"display_name"`
+	Email           *openapi_types.Email  `json:"email,omitempty"`
+	GivenName       *string               `json:"given_name,omitempty"`
+	Id              openapi_types.UUID    `json:"id"`
+	PictureUrl      *string               `json:"picture_url,omitempty"`
+	PreferredLocale MeUserPreferredLocale `json:"preferred_locale"`
 }
+
+// MeUserPreferredLocale defines model for MeUser.PreferredLocale.
+type MeUserPreferredLocale string
 
 // MoneyReview defines model for MoneyReview.
 type MoneyReview struct {

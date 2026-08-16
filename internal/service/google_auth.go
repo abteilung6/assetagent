@@ -32,6 +32,9 @@ type GoogleIDTokenClaims struct {
 	Email         string
 	EmailVerified bool
 	Name          string
+	GivenName     string
+	PictureURL    string
+	Locale        string
 	Nonce         string
 }
 
@@ -188,6 +191,14 @@ func (g *GoogleAuthService) resolveOrCreateUserID(ctx context.Context, claims Go
 		); upsertErr != nil {
 			return uuid.Nil, upsertErr
 		}
+		if _, profileErr := g.auth.UpdateUserGoogleProfile(
+			ctx,
+			identity.UserID,
+			claims.GivenName,
+			claims.PictureURL,
+		); profileErr != nil {
+			return uuid.Nil, profileErr
+		}
 		return identity.UserID, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
@@ -198,7 +209,12 @@ func (g *GoogleAuthService) resolveOrCreateUserID(ctx context.Context, claims Go
 	if displayName == "" {
 		displayName = strings.TrimSpace(claims.Email)
 	}
-	user, err := g.auth.CreateUser(ctx, displayName)
+	user, err := g.auth.CreateUser(ctx, repository.CreateUserInput{
+		DisplayName:     displayName,
+		GivenName:       claims.GivenName,
+		PictureURL:      claims.PictureURL,
+		PreferredLocale: domain.NormalizeLocale(claims.Locale),
+	})
 	if err != nil {
 		return uuid.Nil, err
 	}

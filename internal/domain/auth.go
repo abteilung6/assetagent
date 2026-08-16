@@ -17,9 +17,12 @@ const (
 )
 
 type User struct {
-	ID          uuid.UUID
-	DisplayName string
-	CreatedAt   time.Time
+	ID              uuid.UUID
+	DisplayName     string
+	GivenName       string // empty when unset
+	PictureURL      string // empty when unset
+	PreferredLocale string
+	CreatedAt       time.Time
 }
 
 type AuthIdentity struct {
