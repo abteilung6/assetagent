@@ -3,6 +3,8 @@ import { cleanup } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
 
 import * as sdk from "@/api/sdk.gen";
+import i18n from "@/i18n";
+import { persistLocale } from "@/i18n/locale";
 import { mockApiResponse } from "@/test/mocks";
 
 Object.defineProperty(window, "matchMedia", {
@@ -25,16 +27,20 @@ afterEach(() => {
   cleanup();
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  window.localStorage.clear();
+  persistLocale("en");
+  await i18n.changeLanguage("en");
   // Authenticated session for AuthGate in routed tests.
   vi.spyOn(sdk, "getMe").mockResolvedValue(
     mockApiResponse({
       user: {
         id: "00000000-0000-4000-8000-000000000001",
         display_name: "Test User",
+        given_name: "Test",
         email: "test@example.com",
-        preferred_locale: "de",
+        preferred_locale: "en",
       },
       household: {
         id: "00000000-0000-4000-8000-000000000002",
@@ -60,7 +66,7 @@ beforeEach(() => {
     mockApiResponse({ data: [] }),
   );
   vi.spyOn(sdk, "getBaselineOneOffImpact").mockResolvedValue(
-    mockApiResponse({ count: 0, expense_total: "0.00" }),
+    mockApiResponse({ count: 0, absolute_total: "0.00" }),
   );
   vi.spyOn(sdk, "getBaselineCategorySpend").mockResolvedValue(
     mockApiResponse({ data: [] }),

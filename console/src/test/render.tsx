@@ -4,8 +4,10 @@ import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import type React from "react";
 import { isValidElement, useState } from "react";
 
+import { LocaleSync } from "@/components/locale-sync";
 import { ThemeProvider } from "@/components/theme-provider";
 import { createAppRouter } from "@/router";
+import "@/i18n";
 
 import { createTestQueryClient } from "./query-client";
 
@@ -14,7 +16,10 @@ const TestProviders: React.FC<React.PropsWithChildren> = ({ children }) => {
 
   return (
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <LocaleSync />
+        {children}
+      </QueryClientProvider>
     </ThemeProvider>
   );
 };

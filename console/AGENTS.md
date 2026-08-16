@@ -70,6 +70,16 @@ Follow **`.cursor/rules/console-ux.mdc`** for layout, chat patterns, grounded ev
   - Isolated components: `testRender(<MyComponent />)`
 - Mock generated SDK functions via `mockApiResponse()` in `@/test/mocks`, not `fetch` directly
 - `afterEach(cleanup)` runs globally in `src/test/setup.ts`
+- Tests force **English** (`preferred_locale: "en"` + `i18n.changeLanguage("en")`) so assertions stay stable
+
+## Internationalization
+
+- Locales: `de` (product default) and `en`
+- Catalogs: `src/i18n/locales/{de,en}.json` — use `t('nav.chat')` for chrome
+- Persistence: `users.preferred_locale` via `PATCH /api/me` + `localStorage` key `assetagent.locale` (`src/lib/storage.ts`, `src/i18n/locale.ts`)
+- New user-visible chrome strings must go through i18n; do not hardcode UI copy in components touched by i18n
+- Account language control: `/account` — not a header toggle
+- Follow-ups (not yet): page body copy sweep, category slug catalogs, LLM prompt language
 
 ## Local dev
 

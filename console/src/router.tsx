@@ -16,6 +16,7 @@ import ImportsPage from "@/pages/imports/page";
 import InsightsCategoriesPage from "@/pages/insights/categories/page";
 import InsightsMonthPage from "@/pages/insights/month/page";
 import InsightsMonthsPage from "@/pages/insights/months/page";
+import AccountPage from "@/pages/account/page";
 import LoginPage from "@/pages/login/page";
 import PlanPage from "@/pages/plan/page";
 import ReviewPage from "@/pages/review/page";
@@ -37,7 +38,17 @@ const loginRoute = createRoute({
   path: "/login",
   component: LoginPage,
   staticData: {
-    title: "Anmelden",
+    titleKey: "auth.loginTitle",
+  },
+});
+
+
+const accountRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/account",
+  component: AccountPage,
+  staticData: {
+    titleKey: "account.title",
   },
 });
 
@@ -54,7 +65,7 @@ const chatRoute = createRoute({
   path: "/chat",
   component: ChatPage,
   staticData: {
-    title: "Chat",
+    titleKey: "nav.chat",
   },
   validateSearch: (search) =>
     parseChatSearchParams(search as Record<string, unknown>),
@@ -65,7 +76,7 @@ const baselineRoute = createRoute({
   path: "/baseline",
   component: BaselinePage,
   staticData: {
-    title: "Cashflow",
+    titleKey: "nav.cashflow",
   },
   validateSearch: (search) =>
     parseBaselineSearchParams(search as Record<string, unknown>),
@@ -81,7 +92,7 @@ const baselineTrackingRoute = createRoute({
   path: "/baseline/tracking",
   component: BaselineTrackingPage,
   staticData: {
-    title: "Tracking",
+    titleKey: "nav.tracking",
   },
 });
 
@@ -98,7 +109,7 @@ const baselineIncomeRoute = createRoute({
   path: "/baseline/income",
   component: BaselineIncomePage,
   staticData: {
-    title: "Income",
+    titleKey: "nav.income",
   },
 });
 
@@ -107,7 +118,7 @@ const baselineExpensesRoute = createRoute({
   path: "/baseline/expenses",
   component: BaselineExpensesPage,
   staticData: {
-    title: "Expenses",
+    titleKey: "nav.expenses",
   },
 });
 
@@ -124,7 +135,7 @@ const insightsMonthsRoute = createRoute({
   path: "/insights/months",
   component: InsightsMonthsPage,
   staticData: {
-    title: "Months",
+    titleKey: "nav.months",
   },
 });
 
@@ -133,7 +144,7 @@ const insightsCategoriesRoute = createRoute({
   path: "/insights/categories",
   component: InsightsCategoriesPage,
   staticData: {
-    title: "Categories",
+    titleKey: "nav.categories",
   },
 });
 
@@ -142,7 +153,7 @@ const insightsMonthRoute = createRoute({
   path: "/insights/months/$yyyyMm",
   component: InsightsMonthPage,
   staticData: {
-    title: "Months",
+    titleKey: "nav.months",
   },
   validateSearch: (search) =>
     parseInsightsMonthSearchParams(search as Record<string, unknown>),
@@ -176,7 +187,7 @@ const importsRoute = createRoute({
   path: "/imports",
   component: ImportsPage,
   staticData: {
-    title: "Import",
+    titleKey: "nav.imports",
   },
 });
 
@@ -185,7 +196,7 @@ const reviewRoute = createRoute({
   path: "/review",
   component: ReviewPage,
   staticData: {
-    title: "Needs review",
+    titleKey: "nav.needsReview",
   },
   validateSearch: (search) =>
     parseReviewSearchParams(search as Record<string, unknown>),
@@ -196,7 +207,7 @@ const reviewsRoute = createRoute({
   path: "/reviews",
   component: ReviewsPage,
   staticData: {
-    title: "Money Reviews",
+    titleKey: "nav.reviews",
   },
 });
 
@@ -205,7 +216,7 @@ const reviewDetailRoute = createRoute({
   path: "/reviews/$id",
   component: ReviewDetailPage,
   staticData: {
-    title: "Money Review",
+    titleKey: "nav.reviewDetail",
   },
 });
 
@@ -214,7 +225,7 @@ const planRoute = createRoute({
   path: "/plan",
   component: PlanPage,
   staticData: {
-    title: "Plan",
+    titleKey: "nav.plan",
   },
 });
 
@@ -223,7 +234,7 @@ const transactionsRoute = createRoute({
   path: "/transactions",
   component: TransactionsPage,
   staticData: {
-    title: "Transactions",
+    titleKey: "nav.transactions",
   },
   validateSearch: (search) =>
     parseTransactionSearchParams(search as Record<string, unknown>),
@@ -248,6 +259,7 @@ export {
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
+    accountRoute,
   indexRoute,
   chatRoute,
   baselineRoute,
@@ -284,6 +296,6 @@ declare module "@tanstack/react-router" {
   }
 
   interface StaticDataRouteOption {
-    title?: string;
+    titleKey?: string;
   }
 }

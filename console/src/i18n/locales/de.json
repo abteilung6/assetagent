@@ -1,0 +1,46 @@
+{
+  "common": {
+    "brand": "assetagent",
+    "loading": "Wird geladen…",
+    "themeToggle": "Design umschalten",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "themeSystem": "System"
+  },
+  "nav": {
+    "chat": "Chat",
+    "baseline": "Baseline",
+    "cashflow": "Cashflow",
+    "income": "Einkommen",
+    "expenses": "Ausgaben",
+    "tracking": "Tracking",
+    "insights": "Einblicke",
+    "months": "Monate",
+    "categories": "Kategorien",
+    "reviews": "Geld-Reviews",
+    "reviewDetail": "Geld-Review",
+    "plan": "Plan",
+    "transactions": "Transaktionen",
+    "imports": "Import",
+    "needsReview": "Zur Prüfung",
+    "account": "Konto",
+    "logOut": "Abmelden"
+  },
+  "auth": {
+    "loginTitle": "Anmelden",
+    "checkingSession": "Sitzung wird geprüft…",
+    "signInPrompt": "Melde dich an, um deine Finanzen zu sehen.",
+    "loginWithGoogle": "Mit Google anmelden"
+  },
+  "account": {
+    "title": "Konto",
+    "profileHeading": "Profil",
+    "signedInWithGoogle": "Angemeldet mit Google",
+    "languageHeading": "Sprache",
+    "languageDescription": "Wähle die Sprache für die Console.",
+    "languageDe": "Deutsch",
+    "languageEn": "English",
+    "saving": "Wird gespeichert…",
+    "saveFailed": "Sprache konnte nicht gespeichert werden. Bitte erneut versuchen."
+  }
+}

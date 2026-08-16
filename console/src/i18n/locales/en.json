@@ -1,0 +1,46 @@
+{
+  "common": {
+    "brand": "assetagent",
+    "loading": "Loading…",
+    "themeToggle": "Toggle theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System"
+  },
+  "nav": {
+    "chat": "Chat",
+    "baseline": "Baseline",
+    "cashflow": "Cashflow",
+    "income": "Income",
+    "expenses": "Expenses",
+    "tracking": "Tracking",
+    "insights": "Insights",
+    "months": "Months",
+    "categories": "Categories",
+    "reviews": "Money Reviews",
+    "reviewDetail": "Money Review",
+    "plan": "Plan",
+    "transactions": "Transactions",
+    "imports": "Import",
+    "needsReview": "Needs review",
+    "account": "Account",
+    "logOut": "Log out"
+  },
+  "auth": {
+    "loginTitle": "Sign in",
+    "checkingSession": "Checking session…",
+    "signInPrompt": "Sign in to see your finances.",
+    "loginWithGoogle": "Login with Google"
+  },
+  "account": {
+    "title": "Account",
+    "profileHeading": "Profile",
+    "signedInWithGoogle": "Signed in with Google",
+    "languageHeading": "Language",
+    "languageDescription": "Choose the language for the console.",
+    "languageDe": "Deutsch",
+    "languageEn": "English",
+    "saving": "Saving…",
+    "saveFailed": "Could not save language. Try again."
+  }
+}

@@ -1,6 +1,7 @@
 import type React from "react";
 import { Navigate } from "@tanstack/react-router";
 import { WalletIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { useMe } from "@/hooks/use-me";
@@ -28,12 +29,13 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 
 const LoginPage: React.FC = () => {
+  const { t } = useTranslation();
   const me = useMe();
 
   if (me.isPending) {
     return (
       <div className="flex min-h-svh items-center justify-center bg-muted/40">
-        <p className="text-sm text-muted-foreground">Checking session…</p>
+        <p className="text-sm text-muted-foreground">{t("auth.checkingSession")}</p>
       </div>
     );
   }
@@ -50,9 +52,11 @@ const LoginPage: React.FC = () => {
             <WalletIcon className="size-6" />
           </div>
           <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight">assetagent</h1>
+            <h1 className="text-xl font-semibold tracking-tight">
+              {t("common.brand")}
+            </h1>
             <p className="text-sm text-muted-foreground">
-              Sign in to see your finances.
+              {t("auth.signInPrompt")}
             </p>
           </div>
         </div>
@@ -67,7 +71,7 @@ const LoginPage: React.FC = () => {
           }}
         >
           <GoogleIcon className="size-4" />
-          Login with Google
+          {t("auth.loginWithGoogle")}
         </Button>
       </div>
     </div>

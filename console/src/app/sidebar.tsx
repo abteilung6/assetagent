@@ -1,19 +1,19 @@
 import type React from "react";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   ClipboardListIcon,
   GaugeIcon,
   InboxIcon,
   LineChartIcon,
-  LogOutIcon,
   MessageSquareIcon,
   Table2Icon,
   TrendingUpIcon,
   UploadIcon,
   WalletIcon,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -29,7 +29,6 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { postLogoutMutation } from "@/api/@tanstack/react-query.gen";
 import { useClassificationQueue } from "@/hooks/use-classification-queue";
 import { useUncertainRecurring } from "@/hooks/use-recurring-uncertain";
 import { useTransferCandidates } from "@/hooks/use-transfer-candidates";
@@ -43,16 +42,8 @@ function pathActive(pathname: string, target: string, exact = false): boolean {
 }
 
 export const AppSidebar: React.FC = () => {
+  const { t } = useTranslation();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const logout = useMutation({
-    ...postLogoutMutation(),
-    onSettled: async () => {
-      queryClient.clear();
-      await navigate({ to: "/login" });
-    },
-  });
   const candidatesQuery = useTransferCandidates();
   const classificationQuery = useClassificationQueue();
   const recurringQuery = useUncertainRecurring();
@@ -87,7 +78,9 @@ export const AppSidebar: React.FC = () => {
                 <WalletIcon className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">assetagent</span>
+                <span className="truncate font-semibold">
+                  {t("common.brand")}
+                </span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -99,30 +92,36 @@ export const AppSidebar: React.FC = () => {
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={<Link to="/chat" />}
-                tooltip="Chat"
+                tooltip={t("nav.chat")}
                 isActive={pathActive(pathname, "/chat", true)}
               >
                 <MessageSquareIcon />
-                <span>Chat</span>
+                <span>{t("nav.chat")}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-
             <SidebarMenuItem>
               <SidebarMenuButton
-                render={<Link to="/baseline" />}
-                tooltip="Baseline"
+                tooltip={t("nav.baseline")}
                 isActive={baselineActive}
               >
                 <GaugeIcon />
-                <span>Baseline</span>
+                <span>{t("nav.baseline")}</span>
               </SidebarMenuButton>
               <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton
+                    render={<Link to="/baseline" />}
+                    isActive={cashflowActive}
+                  >
+                    {t("nav.cashflow")}
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
                 <SidebarMenuSubItem>
                   <SidebarMenuSubButton
                     render={<Link to="/baseline/income" />}
                     isActive={incomeActive}
                   >
-                    Income
+                    {t("nav.income")}
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
                 <SidebarMenuSubItem>
@@ -130,15 +129,7 @@ export const AppSidebar: React.FC = () => {
                     render={<Link to="/baseline/expenses" />}
                     isActive={expensesActive}
                   >
-                    Expenses
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-                <SidebarMenuSubItem>
-                  <SidebarMenuSubButton
-                    render={<Link to="/baseline" />}
-                    isActive={cashflowActive}
-                  >
-                    Cashflow
+                    {t("nav.expenses")}
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
                 <SidebarMenuSubItem>
@@ -146,20 +137,18 @@ export const AppSidebar: React.FC = () => {
                     render={<Link to="/baseline/tracking" />}
                     isActive={trackingActive}
                   >
-                    Tracking
+                    {t("nav.tracking")}
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               </SidebarMenuSub>
             </SidebarMenuItem>
-
             <SidebarMenuItem>
               <SidebarMenuButton
-                render={<Link to="/insights/months" />}
-                tooltip="Insights"
+                tooltip={t("nav.insights")}
                 isActive={insightsActive}
               >
                 <LineChartIcon />
-                <span>Insights</span>
+                <span>{t("nav.insights")}</span>
               </SidebarMenuButton>
               <SidebarMenuSub>
                 <SidebarMenuSubItem>
@@ -167,7 +156,7 @@ export const AppSidebar: React.FC = () => {
                     render={<Link to="/insights/months" />}
                     isActive={monthsActive}
                   >
-                    Months
+                    {t("nav.months")}
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
                 <SidebarMenuSubItem>
@@ -175,30 +164,29 @@ export const AppSidebar: React.FC = () => {
                     render={<Link to="/insights/categories" />}
                     isActive={categoriesActive}
                   >
-                    Categories
+                    {t("nav.categories")}
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               </SidebarMenuSub>
             </SidebarMenuItem>
-
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={<Link to="/reviews" />}
-                tooltip="Money Reviews"
+                tooltip={t("nav.reviews")}
                 isActive={pathActive(pathname, "/reviews")}
               >
                 <ClipboardListIcon />
-                <span>Money Reviews</span>
+                <span>{t("nav.reviews")}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={<Link to="/plan" />}
-                tooltip="Plan"
+                tooltip={t("nav.plan")}
                 isActive={pathActive(pathname, "/plan", true)}
               >
                 <TrendingUpIcon />
-                <span>Plan</span>
+                <span>{t("nav.plan")}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -209,31 +197,31 @@ export const AppSidebar: React.FC = () => {
                     search={defaultTransactionSearchParams}
                   />
                 }
-                tooltip="Transactions"
+                tooltip={t("nav.transactions")}
                 isActive={pathActive(pathname, "/transactions", true)}
               >
                 <Table2Icon />
-                <span>Transactions</span>
+                <span>{t("nav.transactions")}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={<Link to="/imports" />}
-                tooltip="Import"
+                tooltip={t("nav.imports")}
                 isActive={pathActive(pathname, "/imports", true)}
               >
                 <UploadIcon />
-                <span>Import</span>
+                <span>{t("nav.imports")}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={<Link to="/review" />}
-                tooltip="Needs review"
+                tooltip={t("nav.needsReview")}
                 isActive={pathActive(pathname, "/review", true)}
               >
                 <InboxIcon />
-                <span>Needs review</span>
+                <span>{t("nav.needsReview")}</span>
               </SidebarMenuButton>
               {pendingCount > 0 ? (
                 <SidebarMenuBadge>{pendingCount}</SidebarMenuBadge>
@@ -243,20 +231,7 @@ export const AppSidebar: React.FC = () => {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip="Log out"
-              disabled={logout.isPending}
-              onClick={() => {
-                logout.mutate({});
-              }}
-            >
-              <LogOutIcon />
-              <span>Log out</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <NavUser />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
